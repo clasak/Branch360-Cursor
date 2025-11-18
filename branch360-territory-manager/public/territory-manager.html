@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Branch360 Territory Management</title>
+    <style>
+      :root {
+        --bg: #060510;
+        --card: #0f0d1f;
+        --card-border: rgba(255, 255, 255, 0.06);
+        --text: #f7f5ff;
+        --muted: rgba(255, 255, 255, 0.7);
+        --accent: #8f7cff;
+        --accent-2: #38bdf8;
+        --danger: #ff6b81;
+        --success: #90f7c6;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top, rgba(143, 124, 255, 0.15), var(--bg) 45%), radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.1), transparent 40%), var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      .app-shell {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 32px clamp(16px, 4vw, 48px) 64px;
+      }
+      header.app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      header.app-header h1 {
+        margin: 4px 0 0;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+      }
+      header.app-header p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .environment-badge {
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-weight: 600;
+        background: rgba(143, 124, 255, 0.15);
+        border: 1px solid rgba(143, 124, 255, 0.4);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .environment-badge.prod {
+        background: rgba(40, 205, 65, 0.15);
+        border-color: rgba(40, 205, 65, 0.4);
+      }
+      .alert-container {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        z-index: 1000;
+      }
+      .alert {
+        min-width: 240px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+      }
+      .alert-success {
+        background: rgba(144, 247, 198, 0.1);
+        border-color: rgba(144, 247, 198, 0.4);
+        color: #cffff0;
+      }
+      .alert-error {
+        background: rgba(255, 107, 129, 0.1);
+        border-color: rgba(255, 107, 129, 0.4);
+        color: #ffd7dd;
+      }
+      .alert button {
+        background: none;
+        border: none;
+        color: inherit;
+        cursor: pointer;
+        font-size: 1.1rem;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .stat-card {
+        background: var(--card);
+        border-radius: 20px;
+        border: 1px solid var(--card-border);
+        padding: 20px;
+      }
+      .stat-label {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+      }
+      .stat-value {
+        font-size: 1.8rem;
+        font-weight: 600;
+      }
+      .action-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      button.action {
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 14px;
+        padding: 12px 18px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 120ms ease, border-color 120ms ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      button.action.primary {
+        background: linear-gradient(130deg, #8f7cff, #7f5dff);
+        border: none;
+        box-shadow: 0 10px 25px rgba(133, 113, 255, 0.35);
+      }
+      button.action:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      button.action:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+      .search-panel {
+        background: var(--card);
+        border-radius: 20px;
+        border: 1px solid var(--card-border);
+        padding: 18px;
+        margin-bottom: 24px;
+      }
+      .search-panel input {
+        width: 100%;
+        border: none;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 14px 16px;
+        font-size: 1rem;
+        color: var(--text);
+      }
+      .search-panel input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .search-result {
+        margin-top: 12px;
+        font-weight: 600;
+      }
+      .territory-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 18px;
+      }
+      .territory-card {
+        background: var(--card);
+        border-radius: 24px;
+        border: 1px solid var(--card-border);
+        display: flex;
+        flex-direction: column;
+        min-height: 320px;
+        position: relative;
+        overflow: hidden;
+      }
+      .territory-card__header {
+        padding: 18px;
+        color: #fff;
+        font-weight: 700;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.1));
+      }
+      .territory-card__body {
+        padding: 18px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .ae-email {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .zip-count {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      .zip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        max-height: 110px;
+        overflow: hidden;
+        position: relative;
+      }
+      .zip-list.expanded {
+        max-height: none;
+      }
+      .zip-pill {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.88rem;
+      }
+      .card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: auto;
+      }
+      .card-actions button {
+        flex: 1;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 12px;
+        cursor: pointer;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+      }
+      .card-actions button:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .remove-panel {
+        margin-top: 10px;
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .remove-panel input {
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: transparent;
+        padding: 8px;
+        color: var(--text);
+      }
+      .remove-panel button {
+        background: var(--danger);
+      }
+      .remove-panel.active {
+        display: flex;
+      }
+      /* Modal styling */
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 24px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms ease;
+        z-index: 999;
+      }
+      .modal.open {
+        opacity: 1;
+        pointer-events: all;
+      }
+      .modal-card {
+        width: min(720px, 100%);
+        background: var(--card);
+        border-radius: 24px;
+        border: 1px solid var(--card-border);
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .modal-card header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .modal-card h3 {
+        margin: 0;
+      }
+      .modal-close {
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font-size: 1.4rem;
+        cursor: pointer;
+      }
+      textarea,
+      input,
+      select {
+        font-family: inherit;
+      }
+      textarea {
+        min-height: 220px;
+        resize: vertical;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 16px;
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .modal-card form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .modal-card form input {
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 12px;
+        color: var(--text);
+      }
+      .modal-card footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+      .modal-card footer button {
+        border-radius: 12px;
+        padding: 12px 18px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .ghost-button {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+      }
+      .solid-button {
+        background: linear-gradient(120deg, #8f7cff, #7f5dff);
+        color: #fff;
+      }
+      .loading-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.15);
+        border-top-color: var(--accent);
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @media (max-width: 768px) {
+        .card-actions {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="alert-container" id="alertContainer"></div>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p>Branch360 Platform</p>
+          <h1>🗺️ Territory Management</h1>
+          <p>Upload, search, and manage Houston territories with instant feedback.</p>
+        </div>
+        <div class="environment-badge" id="envBadge">🧪 TEST MODE</div>
+      </header>
+
+      <section class="stats-grid" id="statsGrid">
+        <article class="stat-card">
+          <p class="stat-label">Total AEs</p>
+          <p class="stat-value" id="statAes">0</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Total Zip Codes</p>
+          <p class="stat-value" id="statZips">0</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Avg Coverage / AE</p>
+          <p class="stat-value" id="statAvg">0</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Current Environment</p>
+          <p class="stat-value" id="statEnv">TEST</p>
+        </article>
+      </section>
+
+      <section class="action-bar">
+        <button class="action primary" id="btnUpload">📤 Upload Territories</button>
+        <button class="action" id="btnAdd">➕ Add Single Zip</button>
+        <button class="action" id="btnExport">💾 Export CSV</button>
+        <button class="action" id="btnSwitch">🔄 Switch Environment</button>
+        <button class="action" id="btnRefresh">🔄 Refresh</button>
+        <button class="action" id="btnSample">🧪 Load Sample Territories</button>
+        <button class="action" id="btnClear" style="color: var(--danger);">🧹 Clear Data</button>
+      </section>
+
+      <section class="search-panel">
+        <input type="text" id="searchInput" placeholder="🔍 Search for a zip code... (e.g., 77001)" maxlength="5" />
+        <p class="search-result" id="searchResult"></p>
+      </section>
+
+      <section class="territory-grid" id="territoryGrid">
+        <p style="color: var(--muted);">No territories yet. Use the actions above to get started.</p>
+      </section>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal" id="uploadModal" aria-hidden="true">
+      <div class="modal-card">
+        <header>
+          <div>
+            <h3>📤 Upload Territories CSV</h3>
+            <p style="color: var(--muted);">Paste CSV data (ZipCode, AE_Email, BranchID, TerritoryName). Lines starting with # are ignored.</p>
+          </div>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </header>
+        <textarea id="csvTextarea" placeholder="ZipCode,AE_Email,BranchID,TerritoryName
+77001,ae@email.com,BRN-001,Houston Territory"></textarea>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="action" id="btnTemplate" type="button">Load Houston Template</button>
+          <div class="loading-indicator" id="uploadStatus" hidden>
+            <span class="spinner"></span>
+            <span>Uploading...</span>
+          </div>
+        </div>
+        <footer>
+          <button class="ghost-button" data-close-modal>Cancel</button>
+          <button class="solid-button" id="btnUploadSubmit">Upload CSV</button>
+        </footer>
+        <p id="uploadSummary" style="color: var(--muted);"></p>
+      </div>
+    </div>
+
+    <!-- Add Single Zip Modal -->
+    <div class="modal" id="singleModal" aria-hidden="true">
+      <div class="modal-card">
+        <header>
+          <div>
+            <h3>➕ Add Single Zip</h3>
+            <p style="color: var(--muted);">Assign a single zip code to an AE and territory.</p>
+          </div>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </header>
+        <form id="singleForm">
+          <input type="text" id="singleZip" placeholder="Zip Code (5 digits)" maxlength="5" required />
+          <input type="email" id="singleEmail" placeholder="AE Email" required />
+          <input type="text" id="singleBranch" placeholder="Branch ID" required />
+          <input type="text" id="singleTerritory" placeholder="Territory Name" required />
+        </form>
+        <footer>
+          <button class="ghost-button" data-close-modal>Cancel</button>
+          <button class="solid-button" id="btnAddSubmit">Add Zip</button>
+        </footer>
+        <p id="singleStatus" style="color: var(--muted);"></p>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        environment: 'TEST',
+        territories: [],
+        searchTimer: null
+      };
+
+      const elements = {
+        envBadge: document.getElementById('envBadge'),
+        statAes: document.getElementById('statAes'),
+        statZips: document.getElementById('statZips'),
+        statAvg: document.getElementById('statAvg'),
+        statEnv: document.getElementById('statEnv'),
+        territoryGrid: document.getElementById('territoryGrid'),
+        alertContainer: document.getElementById('alertContainer'),
+        searchInput: document.getElementById('searchInput'),
+        searchResult: document.getElementById('searchResult'),
+        uploadModal: document.getElementById('uploadModal'),
+        singleModal: document.getElementById('singleModal'),
+        csvTextarea: document.getElementById('csvTextarea'),
+        uploadStatus: document.getElementById('uploadStatus'),
+        uploadSummary: document.getElementById('uploadSummary'),
+        singleStatus: document.getElementById('singleStatus'),
+        btnTemplate: document.getElementById('btnTemplate'),
+        btnUploadSubmit: document.getElementById('btnUploadSubmit'),
+        btnUpload: document.getElementById('btnUpload'),
+        btnAdd: document.getElementById('btnAdd'),
+        btnAddSubmit: document.getElementById('btnAddSubmit'),
+        btnExport: document.getElementById('btnExport'),
+        btnSwitch: document.getElementById('btnSwitch'),
+        btnRefresh: document.getElementById('btnRefresh'),
+        btnSample: document.getElementById('btnSample'),
+        btnClear: document.getElementById('btnClear')
+      };
+
+      function showAlert(type, message) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.innerHTML = `<span>${message}</span>`;
+        const dismiss = document.createElement('button');
+        dismiss.innerHTML = '&times;';
+        dismiss.addEventListener('click', () => alert.remove());
+        alert.appendChild(dismiss);
+        elements.alertContainer.appendChild(alert);
+        setTimeout(() => alert.remove(), 6000);
+      }
+
+      function openModal(modal) {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeModal(modal) {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+
+      document.querySelectorAll('[data-close-modal]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const modal = button.closest('.modal');
+          if (modal) closeModal(modal);
+        });
+      });
+
+      document.querySelectorAll('.modal').forEach((modal) => {
+        modal.addEventListener('click', (event) => {
+          if (event.target === modal) {
+            closeModal(modal);
+          }
+        });
+      });
+
+      elements.btnUpload.addEventListener('click', () => openModal(elements.uploadModal));
+      elements.btnAdd.addEventListener('click', () => openModal(elements.singleModal));
+
+      async function refreshDashboard(showToast = false) {
+        try {
+          const response = await fetch('/api/territories');
+          if (!response.ok) throw new Error('Failed to load territories');
+          const payload = await response.json();
+          state.environment = payload.environment;
+          state.territories = payload.territories || [];
+          updateEnvVisuals();
+          updateStats(payload.stats);
+          renderTerritories(state.territories);
+          if (showToast) showAlert('success', 'Dashboard refreshed');
+        } catch (error) {
+          console.error(error);
+          showAlert('error', 'Unable to load territories. The server may be offline.');
+        }
+      }
+
+      function updateEnvVisuals() {
+        const isProd = state.environment === 'PRODUCTION';
+        elements.envBadge.textContent = isProd ? '🚀 PRODUCTION' : '🧪 TEST MODE';
+        elements.envBadge.classList.toggle('prod', isProd);
+        elements.statEnv.textContent = state.environment;
+        elements.btnSample.disabled = isProd;
+        elements.btnClear.disabled = isProd;
+      }
+
+      function updateStats(stats = {}) {
+        elements.statAes.textContent = stats.totalAEs ?? 0;
+        elements.statZips.textContent = stats.totalZipCodes ?? 0;
+        elements.statAvg.textContent = stats.averageCoverage ?? 0;
+      }
+
+      function getHeaderGradient(name) {
+        const palette = [
+          ['#5f72ff', '#9921e8'],
+          ['#38b6ff', '#3a47d5'],
+          ['#ff6cab', '#7366ff'],
+          ['#f7971e', '#ffd200'],
+          ['#00c6ff', '#0072ff']
+        ];
+        const index = Math.abs([...name].reduce((acc, char) => acc + char.charCodeAt(0), 0)) % palette.length;
+        return `linear-gradient(135deg, ${palette[index][0]}, ${palette[index][1]})`;
+      }
+
+      function renderTerritories(territories) {
+        if (!territories.length) {
+          elements.territoryGrid.innerHTML = '<p style="color: var(--muted);">No territories yet. Upload CSV to get started.</p>';
+          return;
+        }
+        const cards = territories
+          .sort((a, b) => a.territoryName.localeCompare(b.territoryName))
+          .map((territory, index) => {
+            const previewZips = territory.zipCodes.slice(0, 20);
+            return `
+              <article class="territory-card" data-index="${index}">
+                <div class="territory-card__header" style="background:${getHeaderGradient(territory.territoryName)}">
+                  ${territory.territoryName}
+                </div>
+                <div class="territory-card__body">
+                  <div>
+                    <p class="ae-email">${territory.aeEmail}</p>
+                    <p class="zip-count">${territory.zipCount} Zip Codes</p>
+                  </div>
+                  <div class="zip-list" data-zip-container>
+                    ${previewZips.map((zip) => `<span class="zip-pill">${zip}</span>`).join('')}
+                    ${territory.zipCodes.length > 20 ? '<span class="zip-pill">...+' + (territory.zipCodes.length - 20) + '</span>' : ''}
+                  </div>
+                  <div class="card-actions">
+                    <button data-action="view-all">View All</button>
+                    <button data-action="remove">Remove</button>
+                  </div>
+                  <div class="remove-panel" data-remove-panel>
+                    <input type="text" placeholder="Zip to remove" maxlength="5" />
+                    <button data-action="confirm-remove">Remove Zip</button>
+                  </div>
+                </div>
+              </article>
+            `;
+          })
+          .join('');
+        elements.territoryGrid.innerHTML = cards;
+      }
+
+      elements.territoryGrid.addEventListener('click', (event) => {
+        const action = event.target.getAttribute('data-action');
+        if (!action) return;
+        const card = event.target.closest('.territory-card');
+        if (!card) return;
+        const territory = state.territories[Number(card.dataset.index)];
+        if (!territory) return;
+
+        if (action === 'view-all') {
+          const container = card.querySelector('[data-zip-container]');
+          container.classList.toggle('expanded');
+          event.target.textContent = container.classList.contains('expanded') ? 'Collapse' : 'View All';
+          if (container.classList.contains('expanded')) {
+            container.innerHTML = territory.zipCodes.map((zip) => `<span class="zip-pill">${zip}</span>`).join('');
+          } else {
+            const preview = territory.zipCodes.slice(0, 20)
+              .map((zip) => `<span class="zip-pill">${zip}</span>`)
+              .join('');
+            container.innerHTML = preview + (territory.zipCodes.length > 20 ? `<span class="zip-pill">...+${territory.zipCodes.length - 20}</span>` : '');
+          }
+        }
+
+        if (action === 'remove') {
+          const panel = card.querySelector('[data-remove-panel]');
+          panel.classList.toggle('active');
+        }
+
+        if (action === 'confirm-remove') {
+          const panel = card.querySelector('[data-remove-panel]');
+          const input = panel.querySelector('input');
+          const zip = input.value.trim();
+          if (zip.length !== 5) {
+            showAlert('error', 'Enter a 5-digit zip to remove.');
+            return;
+          }
+          removeZip(zip, () => {
+            input.value = '';
+            panel.classList.remove('active');
+          });
+        }
+      });
+
+      async function removeZip(zip, callback) {
+        try {
+          const response = await fetch('/api/territories/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zipCode: zip })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Unable to remove zip');
+          showAlert('success', payload.message || `Removed ${zip}`);
+          await refreshDashboard();
+          if (callback) callback();
+        } catch (error) {
+          showAlert('error', error.message);
+        }
+      }
+
+      elements.btnTemplate.addEventListener('click', () => {
+        const template = `ZipCode,AE_Email,BranchID,TerritoryName\n# Southwest Houston\n77001,southwest-ae@company.com,BRN-001,Southwest Houston\n77002,southwest-ae@company.com,BRN-001,Southwest Houston\n# Northwest Houston\n77005,northwest-ae@company.com,BRN-001,Northwest Houston`;
+        elements.csvTextarea.value = template;
+      });
+
+      elements.btnUploadSubmit.addEventListener('click', async () => {
+        const csv = elements.csvTextarea.value.trim();
+        if (!csv) {
+          showAlert('error', 'CSV content is empty.');
+          return;
+        }
+        elements.uploadStatus.hidden = false;
+        elements.uploadSummary.textContent = '';
+        try {
+          const response = await fetch('/api/territories/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ csvData: csv })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.summary?.errors?.join(', ') || 'Upload failed');
+          elements.uploadSummary.textContent = payload.message;
+          showAlert('success', payload.message);
+          await refreshDashboard();
+        } catch (error) {
+          console.error(error);
+          const friendly = error.message || 'Upload failed';
+          elements.uploadSummary.textContent = friendly;
+          showAlert('error', friendly);
+        } finally {
+          elements.uploadStatus.hidden = true;
+        }
+      });
+
+      elements.btnAddSubmit.addEventListener('click', async () => {
+        const zip = document.getElementById('singleZip').value.trim();
+        const email = document.getElementById('singleEmail').value.trim();
+        const branch = document.getElementById('singleBranch').value.trim();
+        const territory = document.getElementById('singleTerritory').value.trim();
+        if (zip.length !== 5 || !/^[0-9]{5}$/.test(zip)) {
+          showAlert('error', 'Zip must be 5 digits.');
+          return;
+        }
+        if (!email.includes('@')) {
+          showAlert('error', 'Enter a valid AE email.');
+          return;
+        }
+        if (!branch || !territory) {
+          showAlert('error', 'Branch ID and Territory are required.');
+          return;
+        }
+        elements.singleStatus.textContent = 'Saving...';
+        try {
+          const response = await fetch('/api/territories/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zipCode: zip, aeEmail: email, branchId: branch, territoryName: territory })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Failed to add zip');
+          elements.singleStatus.textContent = payload.message;
+          showAlert('success', payload.message);
+          await refreshDashboard();
+          document.getElementById('singleForm').reset();
+        } catch (error) {
+          elements.singleStatus.textContent = error.message;
+          showAlert('error', error.message);
+        }
+      });
+
+      elements.btnExport.addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/territories/export');
+          if (!response.ok) throw new Error('Export failed');
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = 'territories-export.csv';
+          anchor.click();
+          URL.revokeObjectURL(url);
+          showAlert('success', 'CSV exported.');
+        } catch (error) {
+          showAlert('error', error.message);
+        }
+      });
+
+      elements.btnSwitch.addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/environment/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Unable to switch environment');
+          showAlert('success', payload.message);
+          await refreshDashboard();
+        } catch (error) {
+          showAlert('error', error.message);
+        }
+      });
+
+      elements.btnRefresh.addEventListener('click', () => refreshDashboard(true));
+
+      elements.btnSample.addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/test/sample', { method: 'POST' });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Unable to load sample data');
+          showAlert('success', payload.message);
+          await refreshDashboard();
+        } catch (error) {
+          showAlert('error', error.message);
+        }
+      });
+
+      elements.btnClear.addEventListener('click', async () => {
+        if (!confirm('Clear all TEST data?')) return;
+        try {
+          const response = await fetch('/api/test/clear', { method: 'POST' });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Unable to clear data');
+          showAlert('success', payload.message);
+          await refreshDashboard();
+        } catch (error) {
+          showAlert('error', error.message);
+        }
+      });
+
+      elements.searchInput.addEventListener('input', () => {
+        clearTimeout(state.searchTimer);
+        const term = elements.searchInput.value.trim();
+        if (term.length < 5) {
+          elements.searchResult.textContent = '';
+          return;
+        }
+        state.searchTimer = setTimeout(() => executeSearch(term), 500);
+      });
+
+      async function executeSearch(zip) {
+        try {
+          elements.searchResult.textContent = 'Searching...';
+          const response = await fetch(`/api/territories/search/${zip}`);
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Zip not found');
+          const { record } = payload;
+          elements.searchResult.textContent = `✅ Zip ${record.zipCode} assigned to ${record.aeEmail} (${record.territoryName})`;
+        } catch (error) {
+          elements.searchResult.textContent = `⚠️ ${error.message}`;
+        }
+      }
+
+      refreshDashboard();
+    </script>
+  </body>
+</html>

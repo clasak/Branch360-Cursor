@@ -1,0 +1,2875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Branch360 Unified Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="activity-client.js"></script>
+  <script src="options-data.js"></script>
+  <style>
+    :root {
+      --brand-primary: #2563eb;
+      --brand-accent: #60a5fa;
+      --brand-dark: #0f172a;
+    }
+    .submenu-button {
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(15, 23, 42, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.85rem;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .submenu-button:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+    .hidden {
+      display: none !important;
+    }
+    body {
+      background: linear-gradient(140deg, var(--brand-dark) 0%, #1e1b4b 25%, #f1f5f9 75%);
+      min-height: 100vh;
+    }
+    .nav-button {
+      color: rgba(255, 255, 255, 0.85);
+      background-color: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+    .nav-button:hover {
+      background-color: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .nav-button.active {
+      background-color: #ffffff;
+      color: var(--brand-primary);
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+      border-color: transparent;
+    }
+    iframe.persona-frame {
+      border: none;
+      width: 100%;
+      height: 80vh;
+      background: #fff;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    aside {
+      background: linear-gradient(180deg, var(--brand-dark) 0%, #1f2a3f 100%);
+      color: #f8fafc;
+    }
+    aside h1, aside div {
+      color: #fff;
+    }
+    
+    /* Ensure select elements in sidebar are visible */
+    aside select {
+      color: #ffffff !important;
+      background-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    aside select option {
+      color: #111827 !important;
+      background-color: #ffffff !important;
+    }
+    
+    /* Ensure demoUserSelect is visible */
+    #demoUserSelect {
+      color: #ffffff !important;
+      background-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    #demoUserSelect option {
+      color: #111827 !important;
+      background-color: #ffffff !important;
+    }
+    main {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 2rem 0 0 2rem;
+      box-shadow: -30px 0 80px rgba(15, 23, 42, 0.2);
+    }
+    header, section {
+      background: transparent;
+    }
+    
+    /* Ensure header content is visible */
+    header, header * {
+      color: #111827 !important;
+    }
+    
+    header .text-gray-500 { color: #6b7280 !important; }
+    header .text-gray-900 { color: #111827 !important; }
+    header label { color: #374151 !important; }
+    header input, header select {
+      color: #111827 !important;
+      background-color: #ffffff !important;
+    }
+    header button.bg-blue-600,
+    header button[class*="bg-"] {
+      color: #ffffff !important;
+    }
+    .surface-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    }
+    input, select, textarea {
+      background: #ffffff;
+      color: #0f172a;
+      border: 1px solid #d1d5db;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+    #refreshBtn, #branchExportBtn, #pilotRunBtn, #googleEarthBtn, #prospectSearchInput {
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #refreshBtn:hover, #branchExportBtn:hover, #pilotRunBtn:hover, #prospectSearchInput:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(30, 64, 175, 0.2);
+    }
+    
+    /* Ensure all text is visible - OVERRIDE ANY CONFLICTING STYLES */
+    main, main *, section, section * {
+      color: #111827 !important;
+    }
+    
+    main h1, main h2, main h3, main h4, main h5, main h6,
+    section h1, section h2, section h3, section h4, section h5, section h6 {
+      color: #111827 !important;
+      font-weight: 700 !important;
+    }
+    
+    main p, main span, main div:not(button):not(.nav-button):not(.submenu-button),
+    section p, section span, section div:not(button):not(.nav-button):not(.submenu-button) {
+      color: #111827 !important;
+    }
+    
+    main label, section label {
+      color: #111827 !important;
+    }
+    
+    /* Ensure buttons are visible and styled - EXCEPT sidebar nav buttons */
+    main button:not(.nav-button):not(.submenu-button),
+    section button:not(.nav-button):not(.submenu-button) {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    
+    /* Colored buttons - white text on colored background */
+    main button.bg-blue-600, main button.bg-green-600, main button.bg-red-600,
+    main button.bg-purple-600, main button.bg-emerald-600, main button.bg-indigo-600,
+    main .bg-blue-600, main .bg-green-600, main .bg-red-600,
+    main .bg-purple-600, main .bg-emerald-600, main .bg-indigo-600 {
+      color: #ffffff !important;
+    }
+    
+    /* Gray/outline buttons - dark text on white background */
+    main button.border, main button:not([class*="bg-blue"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-indigo"]):not(.bg-blue-600):not(.bg-green-600):not(.bg-red-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-indigo-600) {
+      color: #374151 !important;
+      background-color: #ffffff !important;
+    }
+    
+    /* Ensure buttons with text-white class work */
+    main button.text-white, section button.text-white {
+      color: #ffffff !important;
+    }
+    
+    /* Ensure form elements are visible */
+    main input, main select, main textarea,
+    section input, section select, section textarea {
+      color: #111827 !important;
+      background-color: #ffffff !important;
+    }
+    
+    /* Ensure links are visible */
+    main a:not(.nav-button), section a:not(.nav-button) {
+      color: #2563eb !important;
+    }
+    
+    /* Ensure text-gray utilities work */
+    main .text-gray-900, section .text-gray-900 { color: #111827 !important; }
+    main .text-gray-800, section .text-gray-800 { color: #1f2937 !important; }
+    main .text-gray-700, section .text-gray-700 { color: #374151 !important; }
+    main .text-gray-600, section .text-gray-600 { color: #4b5563 !important; }
+    main .text-gray-500, section .text-gray-500 { color: #6b7280 !important; }
+    main .text-gray-400, section .text-gray-400 { color: #9ca3af !important; }
+    
+    /* Ensure tables are visible */
+    main table, section table {
+      color: #111827 !important;
+    }
+    main table th, section table th {
+      color: #6b7280 !important;
+      font-weight: 600 !important;
+    }
+    main table td, section table td {
+      color: #111827 !important;
+    }
+    
+    /* Ensure surface cards have visible content */
+    main .surface-card, main .bg-white,
+    section .surface-card, section .bg-white {
+      background-color: #ffffff !important;
+      color: #111827 !important;
+    }
+    
+    main .surface-card *, main .bg-white *,
+    section .surface-card *, section .bg-white * {
+      color: inherit !important;
+    }
+    
+    /* Toggle switch styling */
+    label.relative.inline-flex {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    /* Dark mode styles */
+    :root.dark-mode,
+    body.dark-mode {
+      background: #0f172a;
+      color: #f1f5f9;
+    }
+    
+    .dark-mode main,
+    .dark-mode .bg-white,
+    .dark-mode .surface-card {
+      background: #1e293b !important;
+      color: #f1f5f9 !important;
+      border-color: #334155 !important;
+    }
+    
+    .dark-mode .text-gray-800,
+    .dark-mode .text-gray-900 {
+      color: #f1f5f9 !important;
+    }
+    
+    .dark-mode .text-gray-600,
+    .dark-mode .text-gray-700 {
+      color: #cbd5e1 !important;
+    }
+    
+    .dark-mode .text-gray-500 {
+      color: #94a3b8 !important;
+    }
+    
+    .dark-mode input,
+    .dark-mode select,
+    .dark-mode textarea {
+      background: #334155 !important;
+      color: #f1f5f9 !important;
+      border-color: #475569 !important;
+    }
+    
+    /* Compact view styles */
+    body.compact-view .space-y-4 > * + * {
+      margin-top: var(--compact-spacing, 0.5rem) !important;
+    }
+    
+    body.compact-view .p-4,
+    body.compact-view .p-6 {
+      padding: var(--compact-padding, 0.75rem) !important;
+    }
+    
+    body.compact-view .mb-4,
+    body.compact-view .mb-6 {
+      margin-bottom: calc(var(--compact-spacing, 0.5rem) * 1.5) !important;
+    }
+    
+    /* Toggle switch container */
+    label .w-11 {
+      width: 2.75rem;
+      height: 1.5rem;
+      background-color: #e5e7eb;
+      border-radius: 9999px;
+      position: relative;
+      transition: background-color 0.2s;
+      display: block;
+    }
+    
+    /* Toggle switch circle */
+    label .w-11::after {
+      content: '';
+      position: absolute;
+      top: 0.125rem;
+      left: 0.125rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      background-color: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Checked state */
+    input:checked + .w-11,
+    .peer:checked ~ .w-11,
+    .peer-checked ~ .w-11 {
+      background-color: #2563eb;
+    }
+    
+    input:checked + .w-11::after,
+    .peer:checked ~ .w-11::after,
+    .peer-checked ~ .w-11::after {
+      transform: translateX(1.25rem);
+    }
+    
+    /* Handle Tailwind peer classes */
+    .peer:checked + div,
+    .peer-checked + div {
+      background-color: #2563eb;
+    }
+    
+    .peer:checked + div::after,
+    .peer-checked + div::after {
+      transform: translateX(1.25rem);
+    }
+    
+    /* Ensure white backgrounds are visible */
+    .bg-white {
+      background-color: #ffffff;
+    }
+    
+    /* Ensure text colors are visible */
+    .text-gray-900 { color: #111827; }
+    .text-gray-800 { color: #1f2937; }
+    .text-gray-700 { color: #374151; }
+    .text-gray-600 { color: #4b5563; }
+    .text-gray-500 { color: #6b7280; }
+    .text-white { color: #ffffff; }
+    
+    /* Ensure button colors */
+    .bg-blue-600 { background-color: #2563eb; }
+    .bg-green-600 { background-color: #16a34a; }
+    .bg-red-600 { background-color: #dc2626; }
+    .bg-gray-600 { background-color: #4b5563; }
+    .bg-purple-600 { background-color: #9333ea; }
+    .bg-emerald-600 { background-color: #059669; }
+    
+    /* Fix canvas chart heights to prevent unbounded growth */
+    #trendChart, #pilotChart, #timeChart {
+      max-height: 300px !important;
+      height: 300px !important;
+      width: 100% !important;
+    }
+    
+    /* Ensure chart containers have proper height constraints */
+    canvas[id="trendChart"],
+    canvas[id="pilotChart"],
+    canvas[id="timeChart"] {
+      max-height: 300px !important;
+      height: 300px !important;
+    }
+    </style>
+</head>
+<body>
+  <div class="flex min-h-screen">
+    <aside class="w-64 border-r border-slate-800 p-4 space-y-2">
+      <div class="flex items-center gap-3 pb-6 border-b border-white/10 mb-4">
+        <img id="brandLogo" src="https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819" alt="Brand logo" class="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow" />
+        <div>
+          <div class="text-xl font-bold text-white">Branch360</div>
+          <p class="text-xs text-white/70">Unified Pilot Dashboard</p>
+        </div>
+      </div>
+      <div class="space-y-2 mb-4">
+        <p class="text-[11px] uppercase tracking-wide text-white/60">Demo Persona</p>
+        <select id="demoUserSelect" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white">
+        </select>
+        <p id="demoUserSummary" class="text-xs text-white/70">Select a user to simulate their view.</p>
+      </div>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg font-semibold flex items-center justify-between" data-view="ae" id="navAE" data-roles="ae,branch,admin">
+        <span>Sales / AE</span>
+        <svg class="w-4 h-4 text-white/80" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div id="aeSubmenu" class="hidden ml-3 pl-3 border-l border-white/15 space-y-1">
+        <button class="submenu-button w-full text-left px-3 py-2 rounded-lg flex items-center gap-2" id="submenuStartPacket" data-roles="ae,branch,admin">
+          <span class="text-lg">📄</span>
+          <span>Import Salesforce Quote</span>
+        </button>
+      </div>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="tech" data-roles="tech,ops,branch,admin">Technician</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="ops" data-roles="ops,branch,admin">Operations</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="branch" data-roles="branch,admin">Branch Manager</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="market" data-roles="market,branch,admin">Market Director</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="executive" data-roles="branch,market,admin">Executive ROI Center</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="time" data-roles="ops,branch,market,admin">Time Saved</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="route" data-roles="ops,branch,market,admin">Route & Prospects</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="pilot" data-roles="branch,market,admin">90-Day Pilot Report</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="handoff" data-roles="ops,branch,admin">Sales → Ops Handoff</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="settings" data-roles="branch,admin">Settings</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="territory" data-roles="ops,branch,admin">Territory Manager</button>
+    </aside>
+    <main class="flex-1 p-6 space-y-4">
+      <header class="flex flex-wrap items-center justify-between bg-white p-4 rounded-xl shadow-sm">
+        <div class="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-4">
+          <div>
+            <label class="text-sm text-gray-500 block">Branch</label>
+            <select id="branchSelect" class="border rounded-lg px-3 py-2">
+              <option value="BRN-001">Houston</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500 block">Start Date</label>
+            <input type="date" id="startDate" class="border rounded-lg px-3 py-2" />
+          </div>
+          <div>
+            <label class="text-sm text-gray-500 block">End Date</label>
+            <input type="date" id="endDate" class="border rounded-lg px-3 py-2" />
+          </div>
+          <div>
+            <label class="text-sm text-gray-500 block">AE Filter</label>
+            <select id="aeFilter" class="border rounded-lg px-3 py-2">
+              <option value="">All AEs</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500 block">Service Type</label>
+            <select id="serviceFilter" class="border rounded-lg px-3 py-2">
+              <option value="">All</option>
+              <option value="GPC">GPC</option>
+              <option value="Rodent">Rodent</option>
+              <option value="Fly">Fly</option>
+              <option value="Mosquito">Mosquito</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center gap-5">
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Active User</p>
+            <p id="personaLabel" class="text-sm font-semibold text-gray-900">Demo Persona</p>
+          </div>
+          <span id="environmentTag" class="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-700">Demo</span>
+          <button id="refreshBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Refresh</button>
+        </div>
+      </header>
+
+      <section id="view-ae" class="view hidden">
+        <iframe class="persona-frame" src="ae-dashboard.html" title="AE Dashboard"></iframe>
+      </section>
+      <section id="view-tech" class="view hidden">
+        <iframe class="persona-frame" src="tech-dashboard.html" title="Tech Dashboard"></iframe>
+      </section>
+      <section id="view-ops" class="view hidden">
+        <iframe class="persona-frame" src="ops-manager-dashboard.html" title="Ops Dashboard"></iframe>
+      </section>
+
+      <section id="view-branch" class="view hidden space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1" id="branchCards"></div>
+          <button id="branchExportBtn" class="md:w-auto w-full bg-indigo-600 text-white px-4 py-2 rounded-lg">Export Branch Report</button>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <div class="flex justify-between items-center mb-2">
+            <h2 class="text-lg font-bold">AE Performance</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full" id="branchAeTable"></table>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">Ops Workload</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full" id="branchOpsTable"></table>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">Ops Timeline</h2>
+          <div id="opsTimeline" class="space-y-3"></div>
+        </div>
+      </section>
+
+      <section id="view-market" class="view hidden space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="marketCards"></div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">New Starts Trend</h2>
+          <div style="height: 300px; position: relative;">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">AE Summary</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full" id="marketAeTable"></table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-executive" class="view hidden space-y-4">
+        <div class="bg-white rounded-xl p-4 shadow">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold mb-2">Executive ROI Overview</h2>
+              <p class="text-sm text-gray-500">Track adoption and time saved as Branch360 scales from the pilot branch to every region.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700" id="execHoursBadge">-- hrs saved</span>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700" id="execDollarsBadge">$0 value</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4" id="execKpiCards"></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-white rounded-xl p-4 shadow">
+            <h3 class="text-md font-bold text-gray-800 mb-2">Pilot Adoption (Houston)</h3>
+            <table class="min-w-full text-sm" id="execAdoptionTable"></table>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow">
+            <h3 class="text-md font-bold text-gray-800 mb-2">Regional Rollout Capacity</h3>
+            <p class="text-xs text-gray-500 mb-2">How many branches per region will benefit from automation.</p>
+            <table class="min-w-full text-sm" id="execRegionTable"></table>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h3 class="text-md font-bold text-gray-800 mb-2">Executive Notes</h3>
+          <ul class="list-disc pl-5 space-y-1 text-sm text-gray-600" id="execSummaryList"></ul>
+        </div>
+      </section>
+
+      <section id="view-time" class="view hidden space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="timeCards"></div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">Weekly Hours Saved</h2>
+          <div style="height: 300px; position: relative;">
+            <canvas id="timeChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">Team Breakdown</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full" id="timeTable"></table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-route" class="view hidden space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-white rounded-xl p-4 shadow space-y-4">
+            <div id="territoryList"></div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700 mb-2">Heatmap</h4>
+              <div id="territoryHeatmap" class="space-y-2"></div>
+            </div>
+          </div>
+          <div class="lg:col-span-2 space-y-4">
+            <div class="bg-white rounded-xl p-4 shadow">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                <div>
+                  <h2 class="text-lg font-bold">Prospects</h2>
+                  <p class="text-sm text-gray-500" id="prospectSummary">Select a territory to view prospects.</p>
+                </div>
+                <input type="search" id="prospectSearchInput" placeholder="Search prospects" class="border rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div class="overflow-x-auto" id="prospectTable"></div>
+              <p id="prospectEmpty" class="text-center text-gray-500 text-sm mt-3">Select a territory to see prospects.</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow hidden" id="pricingHelperSection">
+              <h2 class="text-lg font-bold mb-4">Pricing Helper</h2>
+              <form id="pricingForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="text-sm text-gray-500">Square Feet</label>
+                  <input type="number" id="pricingSqft" value="10000" class="w-full border rounded-lg px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500">Linear Feet</label>
+                  <input type="number" id="pricingLinear" value="200" class="w-full border rounded-lg px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500">Acres</label>
+                  <input type="number" id="pricingAcres" value="1" step="0.1" class="w-full border rounded-lg px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500">Excluder Units</label>
+                  <input type="number" id="pricingExcluder" value="0" class="w-full border rounded-lg px-3 py-2" />
+                </div>
+              </form>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div class="border rounded-lg p-3">
+                  <p class="text-xs text-gray-500">Base Monthly</p>
+                  <p id="pricingMonthly" class="text-2xl font-bold">$0</p>
+                </div>
+                <div class="border rounded-lg p-3">
+                  <p class="text-xs text-gray-500">Estimated Initial</p>
+                  <p id="pricingInitial" class="text-2xl font-bold">$0</p>
+                </div>
+                <div class="border rounded-lg p-3">
+                  <p class="text-xs text-gray-500">Suggested Annual</p>
+                  <p id="pricingAnnual" class="text-2xl font-bold">$0</p>
+                </div>
+              </div>
+              <div id="pricingBreakdown" class="mt-4 text-sm text-gray-600 space-y-1"></div>
+              <button id="googleEarthBtn" class="mt-4 text-sm text-blue-600 underline">Estimate via Google Earth (Coming Soon)</button>
+              <p class="text-xs text-gray-500 mt-2">* Placeholder formulas for pilot. Future versions will auto-import sqft/lf/acres.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-pilot" class="view hidden space-y-4">
+        <div class="bg-white rounded-xl p-4 shadow">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="text-sm text-gray-500 block">Pilot Start</label>
+              <input type="date" id="pilotStart" class="border rounded-lg px-3 py-2 w-full" />
+            </div>
+            <div>
+              <label class="text-sm text-gray-500 block">Pilot End</label>
+              <input type="date" id="pilotEnd" class="border rounded-lg px-3 py-2 w-full" />
+            </div>
+            <div>
+              <label class="text-sm text-gray-500 block">Role Filter</label>
+              <select id="pilotRole" class="border rounded-lg px-3 py-2 w-full">
+                <option value="">All Roles</option>
+                <option value="Account Executive">Account Executive</option>
+                <option value="Technician">Technician</option>
+                <option value="Operations Manager">Operations Manager</option>
+                <option value="Branch Manager">Branch Manager</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button id="pilotRunBtn" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg">Run Report</button>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4" id="pilotCards"></div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">Executive Summary</h2>
+          <p class="text-sm text-gray-700" id="pilotSummary">Report will generate once data is available.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-3">
+            <h2 class="text-lg font-bold">Per-User Breakdown</h2>
+            <div class="flex gap-2">
+              <button id="pilotSortHours" class="px-3 py-2 rounded-lg border text-sm">Sort by Hours</button>
+              <button id="pilotSortDollars" class="px-3 py-2 rounded-lg border text-sm">Sort by $</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full" id="pilotTable"></table>
+          </div>
+          <p id="pilotEmpty" class="hidden text-center text-gray-500 text-sm mt-3">No activity logged for this range yet.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-2">Weekly Trend</h2>
+          <div style="height: 300px; position: relative;">
+            <canvas id="pilotChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-handoff" class="view hidden">
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-3">Sales → Ops Handoff Queue</h2>
+          <p class="text-sm text-gray-500 mb-2">Sold opportunities awaiting start packets.</p>
+          <div class="overflow-x-auto" id="handoffTable"></div>
+          <p id="handoffEmpty" class="text-center text-gray-500 text-sm mt-3">No handoffs pending.</p>
+        </div>
+      </section>
+
+      <section id="view-territory" class="view hidden space-y-4">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-white rounded-xl p-4 shadow">
+            <p class="text-sm text-gray-500 mb-1">Total AEs</p>
+            <p class="text-2xl font-bold" id="territoryStatAEs">0</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow">
+            <p class="text-sm text-gray-500 mb-1">Total Zip Codes</p>
+            <p class="text-2xl font-bold" id="territoryStatZips">0</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow">
+            <p class="text-sm text-gray-500 mb-1">Avg Coverage / AE</p>
+            <p class="text-2xl font-bold" id="territoryStatAvg">0</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow">
+            <p class="text-sm text-gray-500 mb-1">Total Territories</p>
+            <p class="text-2xl font-bold" id="territoryStatTotal">0</p>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="bg-white rounded-xl p-4 shadow">
+          <div class="flex flex-wrap gap-3">
+            <button id="territoryBtnUpload" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">
+              📤 Upload Territories CSV
+            </button>
+            <button id="territoryBtnAdd" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700">
+              ➕ Add Single Zip
+            </button>
+            <button id="territoryBtnExport" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700">
+              💾 Export CSV
+            </button>
+            <button id="territoryBtnRefresh" class="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Panel -->
+        <div class="bg-white rounded-xl p-4 shadow">
+          <input type="text" id="territorySearchInput" placeholder="🔍 Search for a zip code... (e.g., 77001)" maxlength="5" class="w-full border rounded-lg px-4 py-2" />
+          <p id="territorySearchResult" class="mt-2 text-sm font-semibold"></p>
+        </div>
+
+        <!-- Territory Grid -->
+        <div id="territoryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <p class="text-gray-500 col-span-full text-center py-8">Loading territories...</p>
+        </div>
+
+        <!-- Upload Modal -->
+        <div id="territoryUploadModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-bold">📤 Upload Territories CSV</h3>
+              <button id="territoryUploadClose" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Paste CSV data (ZipCode, AE_Email, BranchID, TerritoryName). Lines starting with # are ignored.</p>
+            <textarea id="territoryCsvTextarea" placeholder="ZipCode,AE_Email,BranchID,TerritoryName&#10;77001,ae@email.com,BRN-001,Houston Territory" class="w-full border rounded-lg px-3 py-2 h-48 font-mono text-sm"></textarea>
+            <div class="flex gap-3 mt-4">
+              <button id="territoryUploadSubmit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">
+                Upload CSV
+              </button>
+              <button id="territoryUploadCancel" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-400">
+                Cancel
+              </button>
+            </div>
+            <p id="territoryUploadStatus" class="mt-3 text-sm"></p>
+          </div>
+        </div>
+
+        <!-- Add Single Zip Modal -->
+        <div id="territoryAddModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-bold">➕ Add Single Zip</h3>
+              <button id="territoryAddClose" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Assign a single zip code to an AE and territory.</p>
+            <form id="territoryAddForm" class="space-y-3">
+              <div>
+                <label class="text-sm text-gray-700">Zip Code (5 digits)</label>
+                <input type="text" id="territoryAddZip" maxlength="5" class="w-full border rounded-lg px-3 py-2" required />
+              </div>
+              <div>
+                <label class="text-sm text-gray-700">AE Email</label>
+                <input type="email" id="territoryAddEmail" class="w-full border rounded-lg px-3 py-2" required />
+              </div>
+              <div>
+                <label class="text-sm text-gray-700">Branch ID</label>
+                <input type="text" id="territoryAddBranch" class="w-full border rounded-lg px-3 py-2" required />
+              </div>
+              <div>
+                <label class="text-sm text-gray-700">Territory Name</label>
+                <input type="text" id="territoryAddTerritory" class="w-full border rounded-lg px-3 py-2" required />
+              </div>
+            </form>
+            <div class="flex gap-3 mt-4">
+              <button id="territoryAddSubmit" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700">
+                Add Zip
+              </button>
+              <button id="territoryAddCancel" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-400">
+                Cancel
+              </button>
+            </div>
+            <p id="territoryAddStatus" class="mt-3 text-sm"></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view hidden space-y-4">
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-3">Brand Settings</h2>
+          <p class="text-sm text-gray-500 mb-4">Select which brand preset should theme Branch360. Future iterations will persist this per branch.</p>
+          <div id="brandPresetGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
+            <div class="flex flex-wrap gap-3">
+              <button id="brandSaveBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Save</button>
+              <button id="brandSaveCloseBtn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold">Save & Close</button>
+              <button id="brandCloseBtn" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold">Close</button>
+            </div>
+            <p id="brandStatus" class="text-sm text-gray-500">Previewing default brand.</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-4">Display Preferences</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Compact View</label>
+                <p class="text-xs text-gray-500">Reduce spacing and padding for a denser layout</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingCompactView" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Dark Mode</label>
+                <p class="text-xs text-gray-500">Enable dark theme for the dashboard</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingDarkMode" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Show Dollar Values</label>
+                <p class="text-xs text-gray-500">Display currency formatting in tables and cards</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingShowDollarValues" class="sr-only peer" checked>
+                <div class="w-11"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <label for="settingRefreshInterval" class="text-sm font-medium text-gray-700 block mb-1">Data Refresh Interval</label>
+                <p class="text-xs text-gray-500">How often to automatically refresh dashboard data</p>
+              </div>
+              <select id="settingRefreshInterval" class="ml-4 border rounded-lg px-3 py-2 text-sm min-w-[120px]">
+                <option value="30">30 seconds</option>
+                <option value="60" selected>1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <label for="settingItemsPerPage" class="text-sm font-medium text-gray-700 block mb-1">Items Per Page</label>
+                <p class="text-xs text-gray-500">Number of rows to display in tables</p>
+              </div>
+              <select id="settingItemsPerPage" class="ml-4 border rounded-lg px-3 py-2 text-sm min-w-[120px]">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-4">Notification Settings</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Email Notifications</label>
+                <p class="text-xs text-gray-500">Receive email alerts for important updates</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingEmailNotifications" class="sr-only peer" checked>
+                <div class="w-11"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Browser Notifications</label>
+                <p class="text-xs text-gray-500">Enable browser push notifications for real-time updates</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingBrowserNotifications" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Success Toast Messages</label>
+                <p class="text-xs text-gray-500">Display temporary success notifications when actions complete</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingSuccessToasts" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-4">Export & Data Settings</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <label for="settingExportFormat" class="text-sm font-medium text-gray-700 block mb-1">Default Export Format</label>
+                <p class="text-xs text-gray-500">Preferred file format for data exports</p>
+              </div>
+              <select id="settingExportFormat" class="ml-4 border rounded-lg px-3 py-2 text-sm min-w-[120px]">
+                <option value="csv" selected>CSV</option>
+                <option value="excel">Excel</option>
+                <option value="pdf">PDF</option>
+                <option value="json">JSON</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Include Charts in Exports</label>
+                <p class="text-xs text-gray-500">Export charts and visualizations with data</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingIncludeCharts" class="sr-only peer" checked>
+                <div class="w-11"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Auto-save Form Drafts</label>
+                <p class="text-xs text-gray-500">Automatically save form progress locally</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingAutoSaveDrafts" class="sr-only peer" checked>
+                <div class="w-11"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-4">Advanced Settings</h2>
+          <div class="space-y-3">
+            <button id="settingClearCache" class="w-full md:w-auto bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition">Clear Local Cache</button>
+            <button id="settingResetDefaults" class="w-full md:w-auto bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700 transition">Reset to Defaults</button>
+            <button id="settingBackupSettings" class="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">Backup Settings</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h2 class="text-lg font-bold mb-3">Environment</h2>
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-gray-500">Current mode mirrors the Demo/Live toggle in the header.</p>
+            <div class="text-sm text-gray-600">
+              <span class="font-semibold">Version:</span> 1.0.0-pilot | <span class="font-semibold">Environment:</span> <span id="settingsEnvironmentTag">Demo</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <script>
+    const ENVIRONMENT = new URLSearchParams(window.location.search).get('env') || 'Demo';
+    window.Branch360Environment = ENVIRONMENT;
+    document.getElementById('environmentTag').textContent = ENVIRONMENT + ' MODE';
+    const defaultPricingConfig = { baseMonthly: 150, perSqft: 0.02, perLinear: 0.5, perAcre: 25, excluderMonthly: 35, excluderInitial: 50 };
+    window.pricingConfig = Object.assign({}, defaultPricingConfig);
+    window.brandPresetsCache = [];
+    window.currentBrand = window.localStorage ? (window.localStorage.getItem('branch360Brand') || 'PRESTOX') : 'PRESTOX';
+    window.pendingBrandSelection = window.currentBrand;
+    window.hasAppliedInitialBrand = false;
+    const SESSION_KEY = 'branch360DemoUserId';
+    const ROLE_VIEWS = {
+      ae: ['view-ae'],
+      tech: ['view-tech'],
+      ops: ['view-ops','view-tech','view-time','view-route','view-handoff','view-territory'],
+      branch: ['view-branch','view-ae','view-tech','view-ops','view-market','view-executive','view-time','view-route','view-pilot','view-handoff','view-settings','view-territory'],
+      market: ['view-market','view-executive','view-branch','view-time','view-route','view-pilot'],
+      admin: ['view-branch','view-ae','view-tech','view-ops','view-market','view-executive','view-time','view-route','view-pilot','view-handoff','view-settings','view-territory']
+    };
+    const DEMO_USERS = [
+      { id: 'ae-blair', name: 'Blair Sloat', email: 'blair.sloat@rentokil-terminix.com', role: 'ae', roleLabel: 'Account Executive', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'ae' },
+      { id: 'ae-demo2', name: 'Demo AE 2', email: 'demo.ae2@example.com', role: 'ae', roleLabel: 'Account Executive', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'ae' },
+      { id: 'tech-demo', name: 'Demo Tech', email: 'demo.tech@example.com', role: 'tech', roleLabel: 'Technician', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'tech' },
+      { id: 'ops-bruce', name: 'Bruce Hockless', email: 'bruce.hockless@prestox.com', role: 'ops', roleLabel: 'Operations Manager', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'ops' },
+      { id: 'branch-brad', name: 'Brad Hudson', email: 'brad.hudson@example.com', role: 'branch', roleLabel: 'Branch Manager', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'branch' },
+      { id: 'market-adam', name: 'Adam Grier', email: 'adam.grier@rentokil.com', role: 'market', roleLabel: 'Market Director', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'market' },
+      { id: 'admin-me', name: 'Branch360 Admin', email: 'admin@branch360.demo', role: 'admin', roleLabel: 'Admin', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'branch' }
+    ];
+    const DEMO_ACCOUNTS = ['Houston Tower', 'East River Storage', 'Bayou Coffee', 'Montrose Medical'];
+    const DEMO_DASHBOARD_DATA = {
+      branch: {
+        branchCards: {
+          starts: 18,
+          revenueMonthly: 38500,
+          revenueInitial: 92500,
+          quotes: 34,
+          conversion: 53.1,
+          hoursSaved: 142,
+          dollarsSaved: 7850
+        },
+        aeTable: [
+          { name: 'Blair Sloat', aeId: 'AE-HTX-001', leads: 24, quotes: 13, starts: 7, conversion: 53.8, avgLeadToStart: 11.2, revenueMonthly: 15200, revenueInitial: 32000, hoursSaved: 38, dollarsSaved: 2100 },
+          { name: 'Demo AE 2', aeId: 'AE-HTX-002', leads: 21, quotes: 11, starts: 6, conversion: 54.5, avgLeadToStart: 12.6, revenueMonthly: 13850, revenueInitial: 30500, hoursSaved: 32, dollarsSaved: 1750 },
+          { name: 'Cody L.', aeId: 'AE-HTX-003', leads: 18, quotes: 10, starts: 5, conversion: 50, avgLeadToStart: 13.4, revenueMonthly: 9450, revenueInitial: 30000, hoursSaved: 25, dollarsSaved: 1400 }
+        ],
+        opsTable: [
+          { manager: 'Bruce Hockless', starts: 10, estimatedHours: 38, overload: false },
+          { manager: 'Ops Demo', starts: 8, estimatedHours: 44, overload: true }
+        ]
+      },
+      market: {
+        branchCards: {
+          starts: 18,
+          revenueMonthly: 38500,
+          revenueInitial: 92500,
+          conversion: 53.1,
+          hoursSaved: 142,
+          dollarsSaved: 7850
+        },
+        trend: [
+          { week: 'Aug 5', starts: 3 },
+          { week: 'Aug 12', starts: 4 },
+          { week: 'Aug 19', starts: 5 },
+          { week: 'Aug 26', starts: 3 },
+          { week: 'Sep 2', starts: 3 }
+        ],
+        aeTable: [
+          { name: 'Blair Sloat', starts: 7, conversion: 53.8, avgLeadToStart: 11.2, hoursSaved: 38, dollarsSaved: 2100 },
+          { name: 'Demo AE 2', starts: 6, conversion: 54.5, avgLeadToStart: 12.6, hoursSaved: 32, dollarsSaved: 1750 },
+          { name: 'Cody L.', starts: 5, conversion: 50, avgLeadToStart: 13.4, hoursSaved: 25, dollarsSaved: 1400 }
+        ]
+      },
+      time: {
+        totals: {
+          hoursSaved: 142,
+          hoursSavedAE: 78,
+          hoursSavedOps: 52,
+          hoursSavedBranch: 12,
+          dollarsSaved: 7850
+        },
+        weekly: [
+          { week: 'Week 1', hoursSaved: 18 },
+          { week: 'Week 2', hoursSaved: 24 },
+          { week: 'Week 3', hoursSaved: 29 },
+          { week: 'Week 4', hoursSaved: 32 },
+          { week: 'Week 5', hoursSaved: 39 }
+        ],
+        rows: [
+          { userId: 'AE-HTX-001', name: 'Blair Sloat', role: 'AE', activities: 34, hoursSpent: 18, hoursSaved: 38, avgDurationMinutes: 4.2, dollarsSaved: 2100 },
+          { userId: 'AE-HTX-002', name: 'Demo AE 2', role: 'AE', activities: 28, hoursSpent: 16, hoursSaved: 32, avgDurationMinutes: 4.1, dollarsSaved: 1750 },
+          { userId: 'OPS-HTX-001', name: 'Bruce Hockless', role: 'Ops Manager', activities: 22, hoursSpent: 14, hoursSaved: 28, avgDurationMinutes: 6.5, dollarsSaved: 2200 },
+          { userId: 'TECH-HTX-001', name: 'Demo Tech', role: 'Technician', activities: 18, hoursSpent: 12, hoursSaved: 22, avgDurationMinutes: 8.1, dollarsSaved: 1800 }
+        ]
+      },
+      territories: {
+        territories: [
+          { id: 'TERR-DT', name: 'Downtown Houston', aeName: 'Blair Sloat', aeEmail: 'blair.sloat@rentokil-terminix.com', zipCount: 6, totalProspects: 12, zipCodes: ['77002','77003','77004'] },
+          { id: 'TERR-MID', name: 'Midtown', aeName: 'Demo AE 2', aeEmail: 'demo.ae2@example.com', zipCount: 5, totalProspects: 9, zipCodes: ['77005','77006'] },
+          { id: 'TERR-GALL', name: 'Galleria / Uptown', aeName: 'Cody L.', aeEmail: 'cody@example.com', zipCount: 7, totalProspects: 8, zipCodes: ['77024','77056','77057'] }
+        ],
+        prospects: [
+          { territoryId: 'TERR-DT', customer: 'Bayou Coffee Roasters', address: '1818 Commerce St', status: 'Qualified', serviceType: 'GPC (Comm)', leadType: 'Inbound', zipCode: '77002', aeName: 'Blair Sloat' },
+          { territoryId: 'TERR-DT', customer: 'East River Storage', address: '1500 Navigation Blvd', status: 'Contacted', serviceType: 'Rodent Control', leadType: 'Creative', zipCode: '77003', aeName: 'Blair Sloat' },
+          { territoryId: 'TERR-MID', customer: 'Montrose Medical Group', address: '450 Westheimer Rd', status: 'New', serviceType: 'Fly / ILT', leadType: 'Inbound', zipCode: '77006', aeName: 'Demo AE 2' },
+          { territoryId: 'TERR-GALL', customer: 'Galleria Offices', address: '5085 Westheimer Rd', status: 'Qualified', serviceType: 'GPC (Comm)', leadType: 'TAP', zipCode: '77056', aeName: 'Cody L.' }
+        ]
+      },
+      handoff: [
+        { customer: 'Texas Thrift Midtown', address: '1234 Westheimer Rd', aeName: 'Blair Sloat', soldDate: new Date().toISOString(), packetStatus: 'Packet Drafted' },
+        { customer: 'Montrose Medical', address: '450 Westheimer Rd', aeName: 'Demo AE 2', soldDate: new Date(Date.now() - 86400000 * 3).toISOString(), packetStatus: 'Assign Specialist' },
+        { customer: 'Galleria Offices', address: '5085 Westheimer Rd', aeName: 'Cody L.', soldDate: new Date(Date.now() - 86400000 * 6).toISOString(), packetStatus: 'Awaiting Install' }
+      ]
+    };
+    let currentRole = null;
+    let currentDemoUser = null;
+    let demoLoopHandle = null;
+    const QUOTE_TRACKER_STORAGE_KEY = 'branch360QuoteTracker';
+    const PILOT_TEAM_TARGETS = {
+      aes: 4,
+      opsManagers: 5,
+      technicians: 25,
+      branchManagers: 1
+    };
+    const REGION_BRANCH_COUNTS = [
+      { region: 'Region 16', branches: 18 },
+      { region: 'Region 17', branches: 12 },
+      { region: 'Region 18', branches: 13 },
+      { region: 'Region 19', branches: 14 },
+      { region: 'Region 22', branches: 16 },
+      { region: 'Region 23', branches: 12 },
+      { region: 'Region 24', branches: 13 },
+      { region: 'Region 50', branches: 13 },
+      { region: 'Region 52', branches: 9 },
+      { region: 'Region 54', branches: 13 },
+      { region: 'Region 75', branches: 8 }
+    ];
+
+    const navButtons = document.querySelectorAll('.nav-button');
+    const submenuButtons = document.querySelectorAll('.submenu-button');
+    const demoUserSelect = document.getElementById('demoUserSelect');
+    const personaLabel = document.getElementById('personaLabel');
+    const demoUserSummary = document.getElementById('demoUserSummary');
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('hidden')) return;
+        if (btn.dataset.view) {
+          showView(btn.dataset.view);
+        }
+      });
+    });
+    const aeSubmenu = document.getElementById('aeSubmenu');
+    const submenuStartPacket = document.getElementById('submenuStartPacket');
+    if (submenuStartPacket) {
+      submenuStartPacket.addEventListener('click', function() {
+        if (!currentRole || currentRole === 'ae' || currentRole === 'branch') {
+          openSalesforceImport();
+        }
+      });
+    }
+
+    function roleCanView(view) {
+      if (!currentRole) return true;
+      const allowed = ROLE_VIEWS[currentRole] || [];
+      return allowed.includes('view-' + view);
+    }
+    
+    function getDefaultViewForRole(role) {
+      const allowed = ROLE_VIEWS[role] || ROLE_VIEWS.branch;
+      if (currentDemoUser && currentDemoUser.defaultView) {
+        const preferredId = 'view-' + currentDemoUser.defaultView;
+        if (allowed.includes(preferredId)) {
+          return currentDemoUser.defaultView;
+        }
+      }
+      return allowed.length ? allowed[0].replace('view-', '') : 'branch';
+    }
+
+    function showView(view) {
+      if (currentRole && !roleCanView(view)) {
+        const fallback = getDefaultViewForRole(currentRole);
+        if (fallback && fallback !== view) {
+          showView(fallback);
+        }
+        return;
+      }
+      activeView = view;
+      document.querySelectorAll('.view').forEach(section => section.classList.add('hidden'));
+      document.getElementById('view-' + view)?.classList.remove('hidden');
+      navButtons.forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`.nav-button[data-view="${view}"]`)?.classList.add('active');
+      if (aeSubmenu) {
+        if (view === 'ae') {
+          aeSubmenu.classList.remove('hidden');
+        } else {
+          aeSubmenu.classList.add('hidden');
+        }
+      }
+      if (view === 'pilot') {
+        loadPilotReport();
+      }
+      if (view === 'route') {
+        loadRouteView();
+      }
+      if (view === 'handoff') {
+        loadHandoffQueue();
+      }
+      if (view === 'settings') {
+        loadSettingsView();
+      }
+      if (view === 'territory') {
+        loadTerritories();
+      }
+    }
+
+    function openStartPacketGenerator() {
+      showView('ae');
+      const frame = document.querySelector('#view-ae iframe');
+      if (!frame) return;
+      function sendMessage() {
+        if (frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'OPEN_START_PACKET' }, '*');
+        }
+      }
+      if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+        sendMessage();
+      } else {
+        frame.addEventListener('load', function handleLoad() {
+          sendMessage();
+        }, { once: true });
+      }
+    }
+
+    function openSalesforceImport() {
+      showView('ae');
+      const frame = document.querySelector('#view-ae iframe');
+      if (!frame) return;
+      function sendMessage() {
+        if (frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'OPEN_SALESFORCE_IMPORT' }, '*');
+        }
+      }
+      if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+        sendMessage();
+      } else {
+        frame.addEventListener('load', function handleLoad() {
+          sendMessage();
+        }, { once: true });
+      }
+    }
+
+    function applyRolePermissions(role) {
+      currentRole = role;
+      const allowedViews = ROLE_VIEWS[role] || ROLE_VIEWS.branch;
+      const allowedViewIds = new Set(allowedViews);
+      navButtons.forEach(btn => {
+        const roleList = (btn.dataset.roles || 'branch').split(',').map(r => r.trim());
+        const allowed = role === 'admin' || roleList.includes(role);
+        btn.classList.toggle('hidden', !allowed);
+      });
+      submenuButtons.forEach(btn => {
+        const roleList = (btn.dataset.roles || 'branch').split(',').map(r => r.trim());
+        const allowed = role === 'admin' || roleList.includes(role);
+        btn.classList.toggle('hidden', !allowed);
+      });
+      document.querySelectorAll('.view').forEach(section => {
+        if (!allowedViewIds.has(section.id)) {
+          section.classList.add('hidden');
+        }
+      });
+      const currentViewAllowed = allowedViewIds.has('view-' + activeView);
+      if (!currentViewAllowed) {
+        const fallback = getDefaultViewForRole(role);
+        showView(fallback);
+      }
+      startDemoLoop();
+    }
+
+    function populateDemoUserSelect() {
+      if (!demoUserSelect) return;
+      demoUserSelect.innerHTML = DEMO_USERS.map(function(user) {
+        return `<option value="${user.id}">${user.name} • ${user.roleLabel}</option>`;
+      }).join('');
+    }
+
+    function refreshPersonaFrames() {
+      const frames = document.querySelectorAll('.persona-frame');
+      frames.forEach(function(frame) {
+        if (!frame.dataset.base) {
+          frame.dataset.base = frame.getAttribute('src') || '';
+        }
+        const base = frame.dataset.base || '';
+        if (!base) return;
+        const url = new URL(base, window.location.href);
+        if (currentDemoUser) {
+          url.searchParams.set('demoUser', currentDemoUser.id);
+          url.searchParams.set('branchId', currentDemoUser.branchId || '');
+        }
+        url.searchParams.set('ts', Date.now());
+        frame.src = url.pathname + url.search;
+      });
+    }
+
+    function applyDemoUser(userId) {
+      const user = DEMO_USERS.find(u => u.id === userId) || DEMO_USERS[0];
+      if (!user) return;
+      currentDemoUser = user;
+      currentRole = user.role;
+      if (window.localStorage) {
+        localStorage.setItem(SESSION_KEY, user.id);
+        localStorage.setItem('branch360CurrentUser', JSON.stringify(user));
+      }
+      window.Branch360CurrentUser = user;
+      if (demoUserSelect) {
+        demoUserSelect.value = user.id;
+      }
+      if (personaLabel) {
+        personaLabel.textContent = `${user.name} • ${user.roleLabel}`;
+      }
+      if (demoUserSummary) {
+        demoUserSummary.textContent = user.email;
+      }
+      const branchSelect = document.getElementById('branchSelect');
+      if (branchSelect && user.branchId) {
+        branchSelect.value = user.branchId;
+      }
+      refreshPersonaFrames();
+      applyRolePermissions(user.role);
+    }
+
+    function initializeDemoUser() {
+      populateDemoUserSelect();
+      let storedId = null;
+      if (window.localStorage) {
+        storedId = localStorage.getItem(SESSION_KEY);
+      }
+      const defaultUser = DEMO_USERS.find(u => u.id === storedId) || DEMO_USERS[0];
+      applyDemoUser(defaultUser.id);
+      if (demoUserSelect) {
+        demoUserSelect.addEventListener('change', function(e) {
+          applyDemoUser(e.target.value);
+        });
+      }
+    }
+
+    function getFilters() {
+      const branchId = document.getElementById('branchSelect').value;
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const aeId = document.getElementById('aeFilter').value;
+      const serviceType = document.getElementById('serviceFilter').value;
+      return { branchId, startDate, endDate, aeId, serviceType };
+    }
+
+    function callServer(method, handler, fallbackData) {
+      const runner = window && window.google && window.google.script && window.google.script.run;
+      if (runner && typeof runner[method] === 'function') {
+        runner
+          .withSuccessHandler(handler)
+          .withFailureHandler(err => {
+            console.error('Dashboard error', err);
+          })[method](getFilters());
+      } else if (fallbackData) {
+        handler(fallbackData);
+      }
+    }
+
+    function callServerCustom(method, payload, handler, fallbackData) {
+      const runner = window && window.google && window.google.script && window.google.script.run;
+      if (runner && typeof runner[method] === 'function') {
+        runner
+          .withSuccessHandler(handler)
+          .withFailureHandler(err => {
+            console.error('Dashboard error for', method, err);
+            // Use fallback data if available, otherwise call handler with error object
+            if (fallbackData) {
+              handler(fallbackData);
+            } else {
+              handler({ success: false, message: err && err.message ? err.message : 'Unknown error', error: err });
+            }
+          })[method](payload);
+      } else if (fallbackData) {
+        handler(fallbackData);
+      } else {
+        // No runner and no fallback - call handler with empty data
+        handler({ success: false, territories: [], stats: { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 } });
+      }
+    }
+
+    function loadBranchKPIs() {
+      callServer('getBranchManagerKPIs', renderBranchKPIs, mockBranchKpis());
+    }
+
+    function renderBranchKPIs(data) {
+      const cards = document.getElementById('branchCards');
+      const cardItems = [
+        { label: 'New Starts', value: data.branchCards.starts },
+        { label: 'Monthly Revenue', value: formatCurrency(data.branchCards.revenueMonthly) },
+        { label: 'Initial Revenue', value: formatCurrency(data.branchCards.revenueInitial) },
+        { label: 'Quote → Start %', value: data.branchCards.conversion.toFixed(1) + '%' },
+        { label: 'Hours Saved', value: formatHours(data.branchCards.hoursSaved) },
+        { label: 'Time Saved $', value: formatCurrency(data.branchCards.dollarsSaved) }
+      ];
+      cards.innerHTML = cardItems.map(card => cardTemplate(card.label, card.value)).join('');
+
+      const aeTable = document.getElementById('branchAeTable');
+      aeTable.innerHTML = tableTemplate([
+        'AE', 'Leads', 'Quotes', 'New Starts', 'Conversion %', 'Avg Days Lead → Start', 'Monthly Revenue', 'Initial Revenue', 'Hours Saved', '$ Value'
+      ], data.aeTable.map(row => [
+        row.name,
+        row.leads,
+        row.quotes,
+        row.starts,
+        row.conversion.toFixed(1) + '%',
+        row.avgLeadToStart.toFixed(1),
+        formatCurrency(row.revenueMonthly),
+        formatCurrency(row.revenueInitial),
+        formatHours(row.hoursSaved),
+        formatCurrency(row.dollarsSaved)
+      ]));
+
+      const opsTable = document.getElementById('branchOpsTable');
+      opsTable.innerHTML = tableTemplate(['Ops Manager', 'New Starts', 'Est. Hours', 'Overload'], data.opsTable.map(row => [
+        row.manager,
+        row.starts,
+        row.estimatedHours.toFixed(1),
+        row.overload ? '⚠️' : 'OK'
+      ]));
+
+      const aeFilter = document.getElementById('aeFilter');
+      const existing = new Set(Array.from(aeFilter.options).map(o => o.value));
+      data.aeTable.forEach(row => {
+        if (!existing.has(row.aeId)) {
+          const opt = document.createElement('option');
+          opt.value = row.aeId;
+          opt.textContent = row.name;
+          aeFilter.appendChild(opt);
+        }
+      });
+
+      latestBranchKPIs = data;
+      renderExecutivePanel();
+      loadOpsTimeline();
+    }
+
+    function loadMarketKPIs() {
+      callServer('getMarketDirectorKPIs', renderMarketKPIs, mockMarketKpis());
+    }
+
+    let trendChart;
+    function renderMarketKPIs(data) {
+      const cards = document.getElementById('marketCards');
+      const cardItems = [
+        { label: 'Starts', value: data.branchCards.starts },
+        { label: 'Monthly Revenue', value: formatCurrency(data.branchCards.revenueMonthly) },
+        { label: 'Initial Revenue', value: formatCurrency(data.branchCards.revenueInitial) },
+        { label: 'Conversion %', value: data.branchCards.conversion.toFixed(1) + '%' },
+        { label: 'Hours Saved', value: formatHours(data.branchCards.hoursSaved) },
+        { label: 'Time Saved $', value: formatCurrency(data.branchCards.dollarsSaved) }
+      ];
+      cards.innerHTML = cardItems.map(card => cardTemplate(card.label, card.value)).join('');
+
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      if (trendChart) trendChart.destroy();
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.trend.map(point => point.week),
+          datasets: [{ label: 'New Starts', data: data.trend.map(point => point.starts), borderColor: '#2563EB', tension: 0.2 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      const aeTable = document.getElementById('marketAeTable');
+      aeTable.innerHTML = tableTemplate(['AE', 'Starts', 'Conversion %', 'Avg Days Lead → Start', 'Hours Saved', '$ Value'], data.aeTable.map(row => [
+        row.name,
+        row.starts,
+        row.conversion.toFixed(1) + '%',
+        row.avgLeadToStart.toFixed(1),
+        formatHours(row.hoursSaved),
+        formatCurrency(row.dollarsSaved)
+      ]));
+    }
+
+    let timeChart;
+    function loadTimeSaved() {
+      callServer('getActivityAnalytics', renderTimeSaved, mockTimeAnalytics());
+    }
+
+    function renderTimeSaved(data) {
+      const cards = document.getElementById('timeCards');
+      const cardItems = [
+        { label: 'Total Hours Saved', value: data.totals.hoursSaved.toFixed(1) },
+        { label: 'AE Hours Saved', value: data.totals.hoursSavedAE.toFixed(1) },
+        { label: 'Ops Hours Saved', value: data.totals.hoursSavedOps.toFixed(1) },
+        { label: 'Dollars Saved', value: formatCurrency(data.totals.dollarsSaved) }
+      ];
+      cards.innerHTML = cardItems.map(card => cardTemplate(card.label, card.value)).join('');
+
+      const ctx = document.getElementById('timeChart').getContext('2d');
+      if (timeChart) timeChart.destroy();
+      timeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.weekly.map(point => point.week),
+          datasets: [{ label: 'Hours Saved', data: data.weekly.map(point => point.hoursSaved), backgroundColor: '#10B981' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      const table = document.getElementById('timeTable');
+      table.innerHTML = tableTemplate(['User', 'Role', 'Activities', 'Hours Spent', 'Hours Saved', 'Avg Minutes', 'Dollars Saved'], data.rows.map(row => [
+        row.name,
+        row.role,
+        row.activities,
+        row.hoursSpent.toFixed(1),
+        row.hoursSaved.toFixed(1),
+        row.avgDurationMinutes.toFixed(1),
+        formatCurrency(row.dollarsSaved)
+      ]));
+      latestTimeAnalytics = data;
+      renderExecutivePanel();
+    }
+
+    function loadOpsTimeline() {
+      callServer('getOpsTimeline', renderOpsTimeline, []);
+    }
+
+    function renderOpsTimeline(events) {
+      const container = document.getElementById('opsTimeline');
+      if (!container) return;
+      if (!events || events.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm">No lifecycle events yet.</p>';
+        return;
+      }
+      container.innerHTML = events.slice(-15).map(event => `
+        <div class="flex items-center gap-3 border-b pb-2">
+          <div class="w-28 text-xs text-gray-500">${event.date ? new Date(event.date).toLocaleDateString() : '--'}</div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold">${event.label}</p>
+            <p class="text-xs text-gray-500">${event.account || ''} • ${event.status || ''}</p>
+          </div>
+        </div>`).join('');
+    }
+
+    function loadRouteView(force) {
+      if (territoryLoaded && !force) return;
+      const payload = { branchId: document.getElementById('branchSelect').value };
+      callServerCustom('getTerritoryProspects', payload, renderRouteProspects, mockTerritoryProspects());
+    }
+
+    function renderRouteProspects(data) {
+      territoryDataCache = data.territories || [];
+      prospectDataCache = data.prospects || [];
+      if (!selectedTerritory && territoryDataCache.length > 0) {
+        selectedTerritory = territoryDataCache[0];
+      } else if (selectedTerritory) {
+        const match = territoryDataCache.find(t => t.id === selectedTerritory.id);
+        selectedTerritory = match || territoryDataCache[0];
+      }
+      renderTerritoryList();
+      renderProspects();
+      territoryLoaded = true;
+    }
+
+    function renderTerritoryList() {
+      const container = document.getElementById('territoryList');
+      if (!territoryDataCache.length) {
+        container.innerHTML = '<p class="text-gray-500">No territories configured.</p>';
+        document.getElementById('prospectSummary').textContent = 'No territories available.';
+        document.getElementById('territoryHeatmap').innerHTML = '';
+        return;
+      }
+      container.innerHTML = `
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Territories</h4>
+        ${territoryDataCache.map(territory => `
+        <div class="border rounded-lg p-3 mb-3 cursor-pointer transition-all ${selectedTerritory && selectedTerritory.id === territory.id ? 'border-blue-500 bg-blue-50 shadow-md' : 'hover:bg-gray-50 hover:border-gray-300'}" onclick="selectTerritory('${territory.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTerritory('${territory.id}')}">
+          <p class="font-semibold">${territory.name}</p>
+          <p class="text-xs text-gray-500">AE: ${territory.aeName}</p>
+          <p class="text-xs text-gray-500">ZIPs: ${territory.zipCount} | Prospects: ${territory.totalProspects}</p>
+        </div>
+      `).join('')}`;
+      renderTerritoryHeatmap();
+    }
+
+    function renderTerritoryHeatmap() {
+      const container = document.getElementById('territoryHeatmap');
+      if (!container) return;
+      if (!territoryDataCache.length) {
+        container.innerHTML = '';
+        return;
+      }
+      const maxProspects = Math.max(...territoryDataCache.map(t => t.totalProspects || 0), 1);
+      container.innerHTML = territoryDataCache.map(function(territory) {
+        const ratio = (territory.totalProspects || 0) / maxProspects;
+        const intensity = Math.min(100, Math.floor(ratio * 100));
+        return `<div class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded" onclick="selectTerritory('${territory.id}')" title="Click to view ${territory.name}">
+          <div class="w-24 text-xs text-gray-600">${territory.name}</div>
+          <div class="flex-1 h-2 bg-gray-200 rounded-full mx-3">
+            <div class="h-2 rounded-full" style="width:${intensity}%;background:${intensity > 66 ? '#16a34a' : intensity > 33 ? '#f59e0b' : '#ef4444'}"></div>
+          </div>
+          <div class="text-xs text-gray-500">${territory.totalProspects || 0}</div>
+        </div>`;
+      }).join('');
+    }
+
+    window.selectTerritory = function(id) {
+      selectedTerritory = territoryDataCache.find(t => t.id === id) || selectedTerritory;
+      renderTerritoryList();
+      renderProspects();
+    };
+
+    function renderProspects() {
+      const table = document.getElementById('prospectTable');
+      const empty = document.getElementById('prospectEmpty');
+      const summary = document.getElementById('prospectSummary');
+      if (!selectedTerritory) {
+        table.innerHTML = '';
+        empty.classList.remove('hidden');
+        summary.textContent = 'Select a territory to view prospects.';
+        return;
+      }
+      const zips = selectedTerritory.zipCodes || [];
+      const rawProspects = Array.isArray(prospectDataCache) ? prospectDataCache : [];
+      const searchTermRaw = typeof prospectSearchTerm === 'string' || typeof prospectSearchTerm === 'number'
+        ? String(prospectSearchTerm)
+        : '';
+      const searchTerm = searchTermRaw.toLowerCase();
+      prospectsFiltered = rawProspects.filter(function(prospect) {
+        if (zips.length && zips.indexOf(prospect.zipCode) === -1) return false;
+        if (searchTerm) {
+          const term = searchTerm;
+          return (
+            (prospect.customer || '').toLowerCase().includes(term) ||
+            (prospect.address || '').toLowerCase().includes(term) ||
+            (prospect.serviceType || '').toLowerCase().includes(term)
+          );
+        }
+        return true;
+      });
+      summary.textContent = `${prospectsFiltered.length} prospects in ${selectedTerritory.name}`;
+      if (!prospectsFiltered.length) {
+        table.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      const headers = ['Customer', 'Address', 'Status', 'Service', 'Zip'];
+      const rows = prospectsFiltered.map(function(prospect) {
+        return [
+          `<div>
+            <p class="font-semibold text-gray-800">${prospect.customer || ''}</p>
+            <p class="text-xs text-gray-500">${prospect.aeName || ''}</p>
+          </div>`,
+          `<span class="text-sm text-gray-600">${prospect.address || ''}</span>`,
+          `<span class="text-sm">${prospect.status || ''}</span>`,
+          `<span class="text-sm">${prospect.serviceType || ''}</span>`,
+          `<span class="text-sm">${prospect.zipCode || ''}</span>`
+        ];
+      });
+      table.innerHTML = `<table class="min-w-full">${tableTemplate(headers, rows)}</table>`;
+      // Add click handlers to prospect rows
+      const prospectRows = table.querySelectorAll('tbody tr');
+      prospectsFiltered.forEach(function(prospect, index) {
+        if (prospectRows[index]) {
+          prospectRows[index].classList.add('cursor-pointer', 'hover:bg-blue-50');
+          prospectRows[index].style.transition = 'background-color 0.2s';
+          prospectRows[index].addEventListener('click', function() {
+            viewProspectDetails(prospect);
+          });
+        }
+      });
+    }
+    
+    function viewProspectDetails(prospect) {
+      const details = [
+        `Customer: ${prospect.customer || 'N/A'}`,
+        `Address: ${prospect.address || 'N/A'}`,
+        `Status: ${prospect.status || 'N/A'}`,
+        `Service: ${prospect.serviceType || 'N/A'}`,
+        `Zip: ${prospect.zipCode || 'N/A'}`,
+        `AE: ${prospect.aeName || 'N/A'}`,
+        `Lead Type: ${prospect.leadType || 'N/A'}`
+      ].join('\n');
+      alert('Prospect Details:\n\n' + details);
+    }
+
+    const prospectInput = document.getElementById('prospectSearchInput');
+    if (prospectInput) {
+      prospectInput.addEventListener('input', function(e) {
+        prospectSearchTerm = e.target.value ? e.target.value.trim() : '';
+        renderProspects();
+      });
+    }
+
+    ['pricingSqft','pricingLinear','pricingAcres'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updatePricingHelper);
+    });
+    document.getElementById('pricingExcluder').addEventListener('input', updatePricingHelper);
+    document.getElementById('googleEarthBtn').addEventListener('click', function() {
+      alert('Google Earth integration will estimate sqft/linear feet automatically in a future iteration.');
+    });
+
+    function updatePricingHelper() {
+      const sqft = Number(document.getElementById('pricingSqft').value) || 0;
+      const linear = Number(document.getElementById('pricingLinear').value) || 0;
+      const acres = Number(document.getElementById('pricingAcres').value) || 0;
+      const excluder = Number(document.getElementById('pricingExcluder').value) || 0;
+      const config = window.pricingConfig || defaultPricingConfig;
+      const base = config.baseMonthly || 0;
+      const sqftCharge = sqft * (config.perSqft || 0);
+      const linearCharge = linear * (config.perLinear || 0);
+      const acresCharge = acres * (config.perAcre || 0);
+      const excluderMonthly = excluder * (config.excluderMonthly || 0);
+      const excluderInitial = excluder * (config.excluderInitial || 0);
+      const monthly = base + sqftCharge + linearCharge + acresCharge + excluderMonthly;
+      const initial = monthly * 2 + excluderInitial;
+      document.getElementById('pricingMonthly').textContent = formatCurrency(monthly);
+      document.getElementById('pricingInitial').textContent = formatCurrency(initial);
+      document.getElementById('pricingAnnual').textContent = formatCurrency(monthly * 12);
+      const breakdown = document.getElementById('pricingBreakdown');
+      if (breakdown) {
+        const items = [
+          { label: 'Base Coverage', value: base },
+          { label: 'Sq Ft Factor', value: sqftCharge },
+          { label: 'Linear Footage', value: linearCharge },
+          { label: 'Acreage uplift', value: acresCharge },
+          { label: 'Excluder Monthly', value: excluderMonthly },
+          { label: 'Excluder Initial', value: excluderInitial }
+        ];
+        breakdown.innerHTML = items.map(item => `<div class="flex justify-between"><span>${item.label}</span><span class="font-semibold">${formatCurrency(item.value)}</span></div>`).join('');
+      }
+    }
+
+    function mockTerritoryProspects() {
+      return cloneDemoData(DEMO_DASHBOARD_DATA.territories);
+    }
+
+    function loadHandoffQueue() {
+      callServer('getSalesOpsHandoffQueue', renderHandoffQueue, mockHandoffQueue());
+    }
+
+    function renderHandoffQueue(rows) {
+      const table = document.getElementById('handoffTable');
+      const empty = document.getElementById('handoffEmpty');
+      if (!rows || rows.length === 0) {
+        table.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      table.innerHTML = tableTemplate(['Customer', 'Address', 'AE', 'Sold Date', 'Packet Status'], rows.map(row => [
+        row.customer,
+        row.address,
+        row.aeName,
+        row.soldDate ? new Date(row.soldDate).toLocaleDateString() : '--',
+        row.packetStatus
+      ]));
+    }
+
+    function mockHandoffQueue() {
+      return cloneDemoData(DEMO_DASHBOARD_DATA.handoff);
+    }
+
+    function loadSettingsView() {
+      callServer('getBrandPresets', renderBrandPresets, mockBrandPresets());
+      loadUISettings();
+      updateSettingsEnvironmentTag();
+    }
+
+    const SETTINGS_STORAGE_KEY = 'branch360UISettings';
+    const DEFAULT_SETTINGS = {
+      compactView: false,
+      darkMode: false,
+      showDollarValues: true,
+      refreshInterval: 60,
+      itemsPerPage: 25,
+      emailNotifications: true,
+      browserNotifications: false,
+      successToasts: true,
+      exportFormat: 'csv',
+      includeCharts: true,
+      autoSaveDrafts: true
+    };
+
+    function loadUISettings() {
+      if (!window.localStorage) {
+        applyDefaultSettings();
+        return;
+      }
+      try {
+        const stored = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY) || '{}');
+        const settings = Object.assign({}, DEFAULT_SETTINGS, stored);
+        applySettings(settings);
+      } catch (err) {
+        console.warn('Failed to load UI settings', err);
+        applyDefaultSettings();
+      }
+    }
+
+    function saveUISettings() {
+      if (!window.localStorage) return;
+      try {
+        const settings = {
+          compactView: document.getElementById('settingCompactView').checked,
+          darkMode: document.getElementById('settingDarkMode').checked,
+          showDollarValues: document.getElementById('settingShowDollarValues').checked,
+          refreshInterval: document.getElementById('settingRefreshInterval').value,
+          itemsPerPage: document.getElementById('settingItemsPerPage').value,
+          emailNotifications: document.getElementById('settingEmailNotifications').checked,
+          browserNotifications: document.getElementById('settingBrowserNotifications').checked,
+          successToasts: document.getElementById('settingSuccessToasts').checked,
+          exportFormat: document.getElementById('settingExportFormat').value,
+          includeCharts: document.getElementById('settingIncludeCharts').checked,
+          autoSaveDrafts: document.getElementById('settingAutoSaveDrafts').checked
+        };
+        window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+        showSettingsToast('Settings saved successfully');
+      } catch (err) {
+        console.error('Failed to save UI settings', err);
+        showSettingsToast('Failed to save settings', 'error');
+      }
+    }
+
+    function applySettings(settings) {
+      if (document.getElementById('settingCompactView')) {
+        document.getElementById('settingCompactView').checked = settings.compactView || false;
+        applyCompactView(settings.compactView || false);
+      }
+      if (document.getElementById('settingDarkMode')) {
+        document.getElementById('settingDarkMode').checked = settings.darkMode || false;
+        applyDarkMode(settings.darkMode || false);
+      }
+      if (document.getElementById('settingShowDollarValues')) {
+        document.getElementById('settingShowDollarValues').checked = settings.showDollarValues !== false;
+      }
+      if (document.getElementById('settingRefreshInterval')) {
+        document.getElementById('settingRefreshInterval').value = settings.refreshInterval || 60;
+      }
+      if (document.getElementById('settingItemsPerPage')) {
+        document.getElementById('settingItemsPerPage').value = settings.itemsPerPage || 25;
+      }
+      if (document.getElementById('settingEmailNotifications')) {
+        document.getElementById('settingEmailNotifications').checked = settings.emailNotifications !== false;
+      }
+      if (document.getElementById('settingBrowserNotifications')) {
+        document.getElementById('settingBrowserNotifications').checked = settings.browserNotifications || false;
+      }
+      if (document.getElementById('settingSuccessToasts')) {
+        document.getElementById('settingSuccessToasts').checked = settings.successToasts !== false;
+      }
+      if (document.getElementById('settingExportFormat')) {
+        document.getElementById('settingExportFormat').value = settings.exportFormat || 'csv';
+      }
+      if (document.getElementById('settingIncludeCharts')) {
+        document.getElementById('settingIncludeCharts').checked = settings.includeCharts !== false;
+      }
+      if (document.getElementById('settingAutoSaveDrafts')) {
+        document.getElementById('settingAutoSaveDrafts').checked = settings.autoSaveDrafts !== false;
+      }
+    }
+    
+    function applyCompactView(enabled) {
+      if (enabled) {
+        document.body.classList.add('compact-view');
+        document.body.style.setProperty('--compact-spacing', '0.5rem');
+        document.body.style.setProperty('--compact-padding', '0.75rem');
+      } else {
+        document.body.classList.remove('compact-view');
+        document.body.style.removeProperty('--compact-spacing');
+        document.body.style.removeProperty('--compact-padding');
+      }
+    }
+    
+    function applyDarkMode(enabled) {
+      if (enabled) {
+        document.documentElement.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+        document.body.classList.remove('dark-mode');
+      }
+    }
+
+    function applyDefaultSettings() {
+      applySettings(DEFAULT_SETTINGS);
+    }
+
+    function resetSettingsToDefaults() {
+      if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+        if (window.localStorage) {
+          window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+        }
+        applyDefaultSettings();
+        showSettingsToast('Settings reset to defaults');
+      }
+    }
+
+    function clearLocalCache() {
+      if (confirm('Are you sure you want to clear all local cache? This will remove saved data and you may need to log in again.')) {
+        if (window.localStorage) {
+          const brand = window.localStorage.getItem('branch360Brand');
+          const demoUser = window.localStorage.getItem(SESSION_KEY);
+          window.localStorage.clear();
+          if (brand) window.localStorage.setItem('branch360Brand', brand);
+          if (demoUser) window.localStorage.setItem(SESSION_KEY, demoUser);
+        }
+        showSettingsToast('Local cache cleared');
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      }
+    }
+
+    function backupSettings() {
+      if (!window.localStorage) {
+        showSettingsToast('Local storage not available', 'error');
+        return;
+      }
+      try {
+        const settings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+        const brand = window.localStorage.getItem('branch360Brand');
+        const backup = {
+          settings: settings ? JSON.parse(settings) : null,
+          brand: brand,
+          timestamp: new Date().toISOString(),
+          version: '1.0.0-pilot'
+        };
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `branch360-settings-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSettingsToast('Settings backed up successfully');
+      } catch (err) {
+        console.error('Failed to backup settings', err);
+        showSettingsToast('Failed to backup settings', 'error');
+      }
+    }
+
+    function showSettingsToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 ${
+        type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+      }`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function updateSettingsEnvironmentTag() {
+      const tag = document.getElementById('settingsEnvironmentTag');
+      if (tag) {
+        tag.textContent = ENVIRONMENT;
+      }
+    }
+
+    function renderBrandPresets(presets) {
+      const grid = document.getElementById('brandPresetGrid');
+      if (!grid) return;
+      window.brandPresetsCache = presets || [];
+      if (!presets || presets.length === 0) {
+        grid.innerHTML = '<p class="text-gray-500">No brand presets configured.</p>';
+        updateBrandStatus('No brand presets available.');
+        return;
+      }
+      if (!window.pendingBrandSelection) {
+        window.pendingBrandSelection = window.currentBrand || presets[0].key;
+      }
+      grid.innerHTML = presets.map(function(preset) {
+        const selected = (window.pendingBrandSelection || '') === preset.key;
+        return `<div class="border rounded-xl p-4 flex gap-4 items-center ${selected ? 'border-blue-500 shadow-lg' : 'border-gray-200'}">
+          <img src="${preset.logo}" alt="${preset.name} logo" class="w-16 h-16 object-contain bg-white rounded-lg p-2" />
+          <div class="flex-1">
+            <p class="font-bold text-gray-800">${preset.name}</p>
+            <p class="text-xs text-gray-500">Primary: ${preset.colors.primary} • Accent: ${preset.colors.accent}</p>
+            <p class="text-xs text-gray-500">Legacy Color: ${preset.legacyColor || preset.colors.primary}</p>
+            <button class="mt-2 text-sm px-3 py-1 rounded-lg border ${selected ? 'bg-blue-50 border-blue-400 text-blue-700' : 'text-gray-600'}" onclick="previewBrandTheme('${preset.key}')">
+              ${selected ? 'Selected' : 'Preview Theme'}
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+      if (!window.hasAppliedInitialBrand) {
+        window.hasAppliedInitialBrand = true;
+        previewBrandTheme(window.pendingBrandSelection, { skipRender: true, skipStatus: false });
+      }
+      applyBrandStylesFromKey(window.pendingBrandSelection, presets);
+    }
+
+    function applyBrandStyles(preset) {
+      if (!preset) return;
+      document.documentElement.style.setProperty('--brand-primary', preset.colors.primary);
+      document.documentElement.style.setProperty('--brand-accent', preset.colors.accent);
+      document.documentElement.style.setProperty('--brand-dark', preset.colors.dark);
+      window.pricingConfig = Object.assign({}, defaultPricingConfig, preset.pricing || {});
+      updatePricingHelper();
+    }
+
+    function updateBrandStatus(message) {
+      const el = document.getElementById('brandStatus');
+      if (el) el.textContent = message;
+    }
+
+    window.previewBrandTheme = function(key, options) {
+      if (!window.brandPresetsCache || window.brandPresetsCache.length === 0) return;
+      const preset = findPresetByKey(key, window.brandPresetsCache);
+      if (!preset) return;
+      window.pendingBrandSelection = key;
+      applyBrandStyles(preset);
+      if (!options || !options.skipRender) {
+        renderBrandPresets(window.brandPresetsCache);
+      }
+      if (!options || !options.skipStatus) {
+        updateBrandStatus('Previewing ' + preset.name + ' theme.');
+      }
+    };
+
+    function commitBrandSelection(closeAfter) {
+      if (!window.brandPresetsCache || window.brandPresetsCache.length === 0) return;
+      const key = window.pendingBrandSelection || window.currentBrand || window.brandPresetsCache[0].key;
+      const preset = window.brandPresetsCache.find(p => p.key === key);
+      window.currentBrand = key;
+      if (window.localStorage) {
+        window.localStorage.setItem('branch360Brand', key);
+      }
+      applyBrandStyles(preset);
+      updateBrandStatus('Saved ' + (preset ? preset.name : key) + ' theme for this demo.');
+      if (closeAfter && roleCanView('branch')) {
+        showView('branch');
+      }
+    }
+
+    document.getElementById('brandSaveBtn').addEventListener('click', function() {
+      commitBrandSelection(false);
+    });
+    document.getElementById('brandSaveCloseBtn').addEventListener('click', function() {
+      commitBrandSelection(true);
+    });
+    document.getElementById('brandCloseBtn').addEventListener('click', function() {
+      window.pendingBrandSelection = window.currentBrand;
+      previewBrandTheme(window.currentBrand, { skipRender: false, skipStatus: false });
+      if (roleCanView('branch')) {
+        showView('branch');
+      }
+    });
+
+    function findPresetByKey(key, presets) {
+      const list = presets || window.brandPresetsCache || [];
+      if (!list || list.length === 0) return null;
+      const match = list.find(function(preset) { return preset.key === key; });
+      return match || list[0];
+    }
+
+    function applyBrandStylesFromKey(key, presets) {
+      const preset = findPresetByKey(key, presets);
+      if (preset) {
+        applyBrandStyles(preset);
+      }
+    }
+
+    function applyBrandStyles(preset) {
+      if (!preset) return;
+      document.documentElement.style.setProperty('--brand-primary', preset.colors.primary || '#2563eb');
+      document.documentElement.style.setProperty('--brand-accent', preset.colors.accent || preset.colors.primary || '#60a5fa');
+      document.documentElement.style.setProperty('--brand-dark', preset.colors.dark || '#0f172a');
+      const logoImg = document.getElementById('brandLogo');
+      if (logoImg && preset.logo) {
+        logoImg.src = preset.logo;
+        logoImg.alt = preset.name + ' logo';
+      }
+    }
+
+    function mockBrandPresets() {
+      return [
+        { key: 'PRESTOX', name: 'Presto-X', logo: 'https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819', colors: { primary: '#E4002B', accent: '#FF6B6B', dark: '#B00024', background: '#FDF2F2' }, legacyColor: '#E4002B', pricing: { baseMonthly: 160, perSqft: 0.022, perLinear: 0.45, perAcre: 22, excluderMonthly: 38, excluderInitial: 55 } },
+        { key: 'BUGOUT', name: 'BugOut', logo: 'https://ik.imagekit.io/9cyexhymf/BugOut%20Logo.png?updatedAt=1762651397528', colors: { primary: '#16A34A', accent: '#22C55E', dark: '#14532D', background: '#F0FDF4' }, legacyColor: '#16A34A', pricing: { baseMonthly: 145, perSqft: 0.018, perLinear: 0.4, perAcre: 20, excluderMonthly: 32, excluderInitial: 48 } },
+        { key: 'TERMINIX', name: 'Terminix', logo: 'https://ik.imagekit.io/9cyexhymf/terminix_color_lg.png?updatedAt=1762622940808', colors: { primary: '#15803D', accent: '#22C55E', dark: '#166534', background: '#ECFDF5' }, legacyColor: '#15803D', pricing: { baseMonthly: 150, perSqft: 0.019, perLinear: 0.42, perAcre: 22, excluderMonthly: 34, excluderInitial: 50 } },
+        { key: 'RENTOKIL', name: 'Rentokil', logo: 'https://ik.imagekit.io/9cyexhymf/Rentokil%20Logo.png?updatedAt=1762651397519', colors: { primary: '#E4002B', accent: '#FF6B6B', dark: '#B00024', background: '#FDF2F2' }, legacyColor: '#E4002B', pricing: { baseMonthly: 165, perSqft: 0.023, perLinear: 0.48, perAcre: 24, excluderMonthly: 40, excluderInitial: 60 } }
+      ];
+    }
+
+    function loadPilotReport() {
+      const start = document.getElementById('pilotStart').value;
+      const end = document.getElementById('pilotEnd').value;
+      const role = document.getElementById('pilotRole').value;
+      const payload = {
+        startDate: start,
+        endDate: end,
+        role: role || '',
+        branchId: document.getElementById('branchSelect').value
+      };
+      callServerCustom('getActivityAnalytics', payload, renderPilotReport, mockTimeAnalytics());
+    }
+
+    function renderPilotReport(data) {
+      pilotDataCache = data;
+      const totalHours = data.totals.hoursSaved || 0;
+      const cards = document.getElementById('pilotCards');
+      const fte = totalHours / 40;
+      const cardItems = [
+        { label: 'Total Hours Saved', value: totalHours.toFixed(1) },
+        { label: 'AE Hours', value: (data.totals.hoursSavedAE || 0).toFixed(1) },
+        { label: 'Ops/Tech Hours', value: (data.totals.hoursSavedOps || 0).toFixed(1) },
+        { label: 'Total $ Value', value: formatCurrency(data.totals.dollarsSaved || 0) },
+        { label: 'Approx. FTE', value: fte.toFixed(1) }
+      ];
+      cards.innerHTML = cardItems.map(card => cardTemplate(card.label, card.value)).join('');
+
+      document.getElementById('pilotEmpty').classList.toggle('hidden', (data.rows && data.rows.length > 0));
+
+      renderPilotSummary(data);
+      renderPilotTable();
+      renderPilotTrend(data);
+    }
+
+    function renderPilotTable() {
+      const table = document.getElementById('pilotTable');
+      if (!pilotDataCache || !pilotDataCache.rows || pilotDataCache.rows.length === 0) {
+        table.innerHTML = '<tbody><tr><td class="px-3 py-2 text-sm text-gray-500">No activity logged yet.</td></tr></tbody>';
+        return;
+      }
+      const rows = [...pilotDataCache.rows];
+      rows.sort((a, b) => {
+        if (pilotSort === 'dollars') {
+          return (b.dollarsSaved || 0) - (a.dollarsSaved || 0);
+        }
+        return (b.hoursSaved || 0) - (a.hoursSaved || 0);
+      });
+      table.innerHTML = tableTemplate(['User', 'Role', 'Activities', 'Hours Saved', '$ Value'], rows.map(row => [
+        row.name,
+        row.role,
+        row.activities,
+        (row.hoursSaved || 0).toFixed(1),
+        formatCurrency(row.dollarsSaved || 0)
+      ]));
+    }
+
+    function renderPilotTrend(data) {
+      const ctx = document.getElementById('pilotChart').getContext('2d');
+      if (pilotChart) pilotChart.destroy();
+      const labels = (data.weekly || []).map(point => point.week);
+      const dataset = (data.weekly || []).map(point => point.hoursSaved);
+      pilotChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{ label: 'Hours Saved per Week', data: dataset, borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.2)', tension: 0.2 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function renderPilotSummary(data) {
+      const totalHours = data.totals.hoursSaved || 0;
+      const aeHours = data.totals.hoursSavedAE || 0;
+      const opsHours = data.totals.hoursSavedOps || 0;
+      const branchHours = data.totals.hoursSavedBranch || 0;
+      const totalDollars = data.totals.dollarsSaved || 0;
+      const fte = totalHours / 40;
+      const aePct = totalHours > 0 ? (aeHours / totalHours) * 100 : 0;
+      const opsPct = totalHours > 0 ? (opsHours / totalHours) * 100 : 0;
+      const branchPct = totalHours > 0 ? (branchHours / totalHours) * 100 : 0;
+      const start = document.getElementById('pilotStart').value;
+      const end = document.getElementById('pilotEnd').value;
+      const summary = totalHours > 0
+        ? `From ${start} to ${end}, Branch360 saved ${totalHours.toFixed(1)} hours (~${fte.toFixed(1)} FTEs) across Houston, worth ${formatCurrency(totalDollars)}. AEs accounted for ${aePct.toFixed(1)}% of hours saved, Ops/Techs ${opsPct.toFixed(1)}%, Branch/Others ${branchPct.toFixed(1)}%.`
+        : 'No activity logged for this period. Encourage the team to track their work in Branch360 to capture ROI.';
+      document.getElementById('pilotSummary').textContent = summary;
+    }
+
+    function renderExecutivePanel() {
+      const cards = document.getElementById('execKpiCards');
+      if (!cards) return;
+      const hours = latestTimeAnalytics && latestTimeAnalytics.totals ? (latestTimeAnalytics.totals.hoursSaved || 0) : 0;
+      const dollars = latestTimeAnalytics && latestTimeAnalytics.totals ? (latestTimeAnalytics.totals.dollarsSaved || 0) : 0;
+      const starts = latestBranchKPIs ? (latestBranchKPIs.branchCards.starts || 0) : 0;
+      const conversion = latestBranchKPIs ? (latestBranchKPIs.branchCards.conversion || 0) : 0;
+      const proposals = getQuoteTrackerCount();
+      const cardsData = [
+        { label: 'Hours Saved', value: hours.toFixed(1), sub: 'Pilot period' },
+        { label: 'Labor Value', value: formatCurrency(dollars), sub: 'Loaded hourly impact' },
+        { label: 'New Starts (Houston)', value: starts, sub: conversion.toFixed ? conversion.toFixed(1) + '% conversion' : '--' },
+        { label: 'Salesforce Proposals', value: proposals, sub: 'Quotes imported' }
+      ];
+      cards.innerHTML = cardsData.map(function(card) {
+        return cardTemplate(card.label, card.value, card.sub);
+      }).join('');
+      const hoursBadge = document.getElementById('execHoursBadge');
+      const dollarsBadge = document.getElementById('execDollarsBadge');
+      if (hoursBadge) hoursBadge.textContent = hours.toFixed(1) + ' hrs saved';
+      if (dollarsBadge) dollarsBadge.textContent = formatCurrency(dollars) + ' value';
+      renderExecAdoption();
+      renderExecRegionTable();
+      renderExecSummary(hours, dollars, starts);
+    }
+
+    function renderExecAdoption() {
+      const table = document.getElementById('execAdoptionTable');
+      if (!table) return;
+      const aeCount = latestBranchKPIs && latestBranchKPIs.aeTable ? latestBranchKPIs.aeTable.length : 0;
+      const opsCount = latestBranchKPIs && latestBranchKPIs.opsTable ? latestBranchKPIs.opsTable.length : 0;
+      const rows = [
+        { role: 'Account Executives', target: PILOT_TEAM_TARGETS.aes, active: aeCount },
+        { role: 'Operations Managers', target: PILOT_TEAM_TARGETS.opsManagers, active: opsCount },
+        { role: 'Technicians', target: PILOT_TEAM_TARGETS.technicians, active: PILOT_TEAM_TARGETS.technicians },
+        { role: 'Branch Manager', target: PILOT_TEAM_TARGETS.branchManagers, active: 1 }
+      ];
+      table.innerHTML = tableTemplate(['Role', 'Active', 'Target', 'Adoption %'], rows.map(function(row) {
+        const pct = row.target ? Math.min(100, (row.active / row.target) * 100).toFixed(0) : 0;
+        return [
+          row.role,
+          row.active,
+          row.target,
+          pct + '%'
+        ];
+      }));
+    }
+
+    function renderExecRegionTable() {
+      const table = document.getElementById('execRegionTable');
+      if (!table) return;
+      const totalBranches = REGION_BRANCH_COUNTS.reduce(function(sum, region) { return sum + region.branches; }, 0);
+      const rows = REGION_BRANCH_COUNTS.map(function(region) {
+        return [
+          region.region,
+          region.branches,
+          ((region.branches / totalBranches) * 100).toFixed(1) + '%'
+        ];
+      });
+      table.innerHTML = tableTemplate(['Region', '# Branches', '% of Footprint'], rows);
+    }
+
+  function renderExecSummary(hours, dollars, starts) {
+    const list = document.getElementById('execSummaryList');
+    if (!list) return;
+    const bullets = [
+      `${hours.toFixed(1)} hours saved this period = direct leverage for 4 AEs, 5 Ops managers, and 25 techs in Houston.`,
+      `${formatCurrency(dollars)} in loaded labor value captured within the pilot branch.`,
+      `${starts} new starts logged via Branch360 this period with auto-generated Ops packets.`,
+      `${REGION_BRANCH_COUNTS.length} regions / ${REGION_BRANCH_COUNTS.reduce((sum, r) => sum + r.branches, 0)} total branches ready for rollout once Houston ROI is proven.`
+    ];
+    list.innerHTML = bullets.map(function(line) {
+      return `<li>${line}</li>`;
+    }).join('');
+  }
+
+  let quoteTrackerEntries = [];
+
+  function loadQuoteTrackerEntries() {
+    if (!window.localStorage) return [];
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(QUOTE_TRACKER_STORAGE_KEY));
+      if (!Array.isArray(stored)) return [];
+      return stored;
+    } catch (err) {
+      console.warn('Quote tracker load failed', err);
+      return [];
+    }
+  }
+
+  function saveQuoteTrackerEntries() {
+    if (!window.localStorage) return;
+    try {
+      window.localStorage.setItem(QUOTE_TRACKER_STORAGE_KEY, JSON.stringify(quoteTrackerEntries));
+    } catch (err) {
+      console.warn('Quote tracker save failed', err);
+    }
+  }
+
+  function uniqueStrings(arr) {
+    if (!Array.isArray(arr)) return [];
+    const seen = {};
+    return arr.filter(function(str) {
+      if (seen[str]) return false;
+      seen[str] = true;
+      return true;
+    });
+  }
+
+  function deriveLobsFromServices(services) {
+    if (!Array.isArray(services)) return [];
+    const matches = [];
+    const lobMap = [
+      { label: 'Crawling Insect', test: /(general pest|gpc|crawling)/i },
+      { label: 'Rodent', test: /rodent/i },
+      { label: 'Fly', test: /fly|ilt/i },
+      { label: 'Bird', test: /bird/i },
+      { label: 'Drain', test: /drain/i },
+      { label: 'Mosquito', test: /mosquito/i }
+    ];
+    services.forEach(function(service) {
+      if (!service) return;
+      const name = (service.category || service.serviceName || service.programType || '').trim();
+      if (name) {
+        matches.push(name);
+      }
+      lobMap.forEach(function(entry) {
+        if (entry.test.test(name)) {
+          matches.push(entry.label);
+        }
+      });
+    });
+    return uniqueStrings(matches);
+  }
+
+  function trackSalesforceProposal(draft) {
+    if (!draft || !draft.accountName) return null;
+    const trackerId = draft.quoteTrackerId || draft.trackerId || 'SF-' + Date.now();
+    const address = [draft.serviceAddressLine1 || draft.serviceAddress || '', draft.serviceCity || '', draft.serviceState || '', draft.serviceZip || '']
+      .filter(Boolean)
+      .join(', ');
+    const lobList = deriveLobsFromServices(draft.services || []);
+    const entry = {
+      id: trackerId,
+      accountName: draft.accountName,
+      serviceAddress: address,
+      uploadedAt: new Date().toISOString(),
+      status: 'Proposal',
+      initial: draft.combinedInitialTotal || draft.servicesInitialTotal || 0,
+      monthly: draft.combinedMonthlyTotal || draft.servicesMonthlyTotal || 0,
+      branchId: draft.branchId || 'HOUSTON',
+      lobs: lobList
+    };
+    quoteTrackerEntries = [entry].concat(quoteTrackerEntries.filter(function(item) { return item.id !== trackerId; })).slice(0, 25);
+    saveQuoteTrackerEntries();
+    renderQuoteTracker();
+    refreshTodayMetricsFromQuotes();
+    return trackerId;
+  }
+
+  function markQuoteTrackerSold(trackerId, saleRecordID) {
+    if (!trackerId && !saleRecordID) return;
+    const entry = quoteTrackerEntries.find(function(item) {
+      if (trackerId && item.id === trackerId) return true;
+      if (saleRecordID && item.saleRecordID === saleRecordID) return true;
+      return false;
+    });
+    if (entry && entry.status !== 'Sold') {
+      entry.status = 'Sold';
+      entry.saleRecordID = saleRecordID || entry.saleRecordID;
+      entry.soldAt = new Date().toISOString();
+      saveQuoteTrackerEntries();
+      renderQuoteTracker();
+      refreshTodayMetricsFromQuotes();
+    }
+  }
+
+  function renderQuoteTracker() {
+    // Stub function - quote tracker rendering not needed for dashboard demo
+  }
+
+  function refreshTodayMetricsFromQuotes() {
+    // Stub function - metrics refresh not needed for dashboard demo
+  }
+
+  // Initialize quote tracker entries on load
+  quoteTrackerEntries = loadQuoteTrackerEntries();
+
+  function getQuoteTrackerCount() {
+    if (!window.localStorage) return 0;
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(QUOTE_TRACKER_STORAGE_KEY));
+      return Array.isArray(stored) ? stored.length : 0;
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  function startDemoLoop() {
+    if (demoLoopHandle) return;
+    demoLoopHandle = setInterval(runDemoActivity, 16000);
+  }
+
+  function runDemoActivity() {
+    simulateQuoteActivity();
+    simulateTimeSavingsBoost();
+  }
+
+  function simulateQuoteActivity() {
+    const account = DEMO_ACCOUNTS[Math.floor(Math.random() * DEMO_ACCOUNTS.length)];
+    const valueInitial = 3000 + Math.floor(Math.random() * 1200);
+    const valueMonthly = 800 + Math.floor(Math.random() * 500);
+    const draft = {
+      accountName: account,
+      serviceAddressLine1: account + ' Campus',
+      serviceCity: 'Houston',
+      serviceState: 'TX',
+      serviceZip: '7700' + Math.floor(Math.random() * 9),
+      branchId: 'BRN-001',
+      services: [{
+        serviceName: 'GPC Interior/Exterior',
+        descriptionText: 'Auto-generated scope',
+        servicesPerYear: 12,
+        frequencyLabel: 'Monthly'
+      }],
+      combinedInitialTotal: valueInitial,
+      combinedMonthlyTotal: valueMonthly
+    };
+    const trackerId = trackSalesforceProposal(draft);
+    setTimeout(function() {
+      markQuoteTrackerSold(trackerId, trackerId);
+    }, 6000);
+  }
+
+  function simulateTimeSavingsBoost() {
+    if (!latestTimeAnalytics || !latestTimeAnalytics.totals) return;
+    const deltaHours = 0.4 + Math.random() * 0.4;
+    const deltaDollars = deltaHours * 55;
+    latestTimeAnalytics.totals.hoursSaved += deltaHours;
+    latestTimeAnalytics.totals.dollarsSaved += deltaDollars;
+    if (latestTimeAnalytics.totals.hoursSavedAE !== undefined) {
+      latestTimeAnalytics.totals.hoursSavedAE += deltaHours / 2;
+    }
+    if (latestTimeAnalytics.totals.hoursSavedOps !== undefined) {
+      latestTimeAnalytics.totals.hoursSavedOps += deltaHours / 2;
+    }
+    renderTimeSaved(latestTimeAnalytics);
+  }
+
+    function cardTemplate(label, value, sub) {
+      return `<div class="bg-white rounded-xl p-4 shadow"><p class="text-sm text-gray-500">${label}</p><p class="text-2xl font-bold">${value}</p>${sub ? `<span class="block text-xs text-gray-500 mt-1">${sub}</span>` : ''}</div>`;
+    }
+
+    function tableTemplate(headers, rows) {
+      const safeRows = Array.isArray(rows) ? rows : [];
+      const thead = `<thead><tr>${headers.map(h => `<th class="text-left text-xs uppercase tracking-wide text-gray-500 px-3 py-2">${h}</th>`).join('')}</tr></thead>`;
+      const tbody = `<tbody>${safeRows.map(row => {
+        const cols = Array.isArray(row) ? row : [row];
+        return `<tr class="border-t">${cols.map(cell => `<td class="px-3 py-2 text-sm">${cell}</td>`).join('')}</tr>`;
+      }).join('')}</tbody>`;
+      return `${thead}${tbody}`;
+    }
+
+    function formatCurrency(value) {
+      return '$' + (Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function formatHours(value) {
+      const hours = Number(value) || 0;
+      if (hours >= 1) {
+        return hours.toFixed(1) + ' hrs';
+      }
+      return Math.round(hours * 60) + ' mins';
+    }
+
+    function cloneDemoData(source) {
+      if (!source) return {};
+      return JSON.parse(JSON.stringify(source));
+    }
+
+    function mockBranchKpis() {
+      return cloneDemoData(DEMO_DASHBOARD_DATA.branch);
+    }
+
+    function mockMarketKpis() {
+      return cloneDemoData(DEMO_DASHBOARD_DATA.market);
+    }
+
+    function mockTimeAnalytics() {
+      return cloneDemoData(DEMO_DASHBOARD_DATA.time);
+    }
+
+    function exportBranchReport() {
+      const filters = getFilters();
+      let activityToken = window.ActivityClient ? ActivityClient.start('BM_EXPORT_REPORT', filters.branchId, { role: 'Branch Manager' }) : null;
+      callServerCustom('exportBranchReport', filters, function(result) {
+        if (activityToken && window.ActivityClient) {
+          ActivityClient.finish(activityToken, { success: result && result.success });
+          activityToken = null;
+        }
+        if (result && result.content) {
+          const blob = new Blob([result.content], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = result.fileName || 'branch-report.txt';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } else {
+          alert('Branch report prepared.');
+        }
+      }, { success: true });
+    }
+
+    applyBrandStylesFromKey(window.currentBrand, mockBrandPresets());
+
+    ['branchSelect','startDate','endDate','aeFilter','serviceFilter'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => {
+        loadBranchKPIs();
+        loadMarketKPIs();
+        loadTimeSaved();
+        loadPilotReport();
+        territoryLoaded = false;
+        loadRouteView(true);
+      });
+    });
+
+    let pilotChart;
+    let pilotSort = 'hours';
+    let pilotDataCache = null;
+    let territoryDataCache = [];
+    let prospectDataCache = [];
+    let selectedTerritory = null;
+    let prospectsFiltered = [];
+    let territoryLoaded = false;
+    let prospectSearchTerm = '';
+    let activeView = 'branch';
+    let latestBranchKPIs = null;
+    let latestTimeAnalytics = null;
+
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      loadBranchKPIs();
+      loadMarketKPIs();
+      loadTimeSaved();
+      loadPilotReport();
+      territoryLoaded = false;
+      loadRouteView(true);
+      loadHandoffQueue();
+      loadSettingsView();
+    });
+    document.getElementById('branchExportBtn').addEventListener('click', exportBranchReport);
+
+    document.getElementById('pilotRunBtn').addEventListener('click', loadPilotReport);
+    document.getElementById('pilotSortHours').addEventListener('click', () => {
+      pilotSort = 'hours';
+      renderPilotTable();
+    });
+    document.getElementById('pilotSortDollars').addEventListener('click', () => {
+      pilotSort = 'dollars';
+      renderPilotTable();
+    });
+    ['pilotStart','pilotEnd','pilotRole'].forEach(id => {
+      document.getElementById(id).addEventListener('change', loadPilotReport);
+    });
+
+    // Settings event listeners
+    const settingsInputs = [
+      'settingCompactView', 'settingDarkMode', 'settingShowDollarValues',
+      'settingEmailNotifications', 'settingBrowserNotifications', 'settingSuccessToasts',
+      'settingIncludeCharts', 'settingAutoSaveDrafts'
+    ];
+    settingsInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', function() {
+          if (id === 'settingCompactView') {
+            applyCompactView(this.checked);
+          } else if (id === 'settingDarkMode') {
+            applyDarkMode(this.checked);
+          }
+          saveUISettings();
+        });
+      }
+    });
+    ['settingRefreshInterval', 'settingItemsPerPage', 'settingExportFormat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', saveUISettings);
+      }
+    });
+    const clearCacheBtn = document.getElementById('settingClearCache');
+    if (clearCacheBtn) {
+      clearCacheBtn.addEventListener('click', clearLocalCache);
+    }
+    const resetDefaultsBtn = document.getElementById('settingResetDefaults');
+    if (resetDefaultsBtn) {
+      resetDefaultsBtn.addEventListener('click', resetSettingsToDefaults);
+    }
+    const backupSettingsBtn = document.getElementById('settingBackupSettings');
+    if (backupSettingsBtn) {
+      backupSettingsBtn.addEventListener('click', backupSettings);
+    }
+
+    // Default dates: current month & pilot range (90 days)
+    function populateServiceFilterOptions() {
+      if (!window.Branch360Options) return;
+      const filter = document.getElementById('serviceFilter');
+      if (!filter) return;
+      const existingValues = new Set(Array.from(filter.options).map(opt => opt.value));
+      window.Branch360Options.serviceTypes.forEach(function(type) {
+        if (!existingValues.has(type)) {
+          const opt = document.createElement('option');
+          opt.value = type;
+          opt.textContent = type;
+          filter.appendChild(opt);
+        }
+      });
+    }
+
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+    document.getElementById('endDate').value = now.toISOString().slice(0, 10);
+
+    const pilotEnd = document.getElementById('pilotEnd');
+    const pilotStart = document.getElementById('pilotStart');
+    pilotEnd.value = now.toISOString().slice(0, 10);
+    const ninetyDaysAgo = new Date(now.getTime() - 89 * 86400000);
+    pilotStart.value = ninetyDaysAgo.toISOString().slice(0, 10);
+
+    populateServiceFilterOptions();
+    initializeDemoUser();
+    loadBranchKPIs();
+    loadMarketKPIs();
+    loadTimeSaved();
+    loadPilotReport();
+    loadRouteView();
+    updatePricingHelper();
+    loadHandoffQueue();
+    loadSettingsView();
+  </script>
+
+  <script>
+    // Territory Manager Functions
+    let territoryManagerData = {
+      territories: [],
+      stats: { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 },
+      searchTimer: null
+    };
+
+    function initializeTerritoryManager() {
+      // Event listeners
+      document.getElementById('territoryBtnUpload').addEventListener('click', () => {
+        document.getElementById('territoryUploadModal').classList.remove('hidden');
+      });
+      document.getElementById('territoryBtnAdd').addEventListener('click', () => {
+        document.getElementById('territoryAddModal').classList.remove('hidden');
+      });
+      document.getElementById('territoryBtnExport').addEventListener('click', exportTerritories);
+      document.getElementById('territoryBtnRefresh').addEventListener('click', loadTerritories);
+
+      // Modal close handlers
+      document.getElementById('territoryUploadClose').addEventListener('click', () => {
+        document.getElementById('territoryUploadModal').classList.add('hidden');
+      });
+      document.getElementById('territoryUploadCancel').addEventListener('click', () => {
+        document.getElementById('territoryUploadModal').classList.add('hidden');
+      });
+      document.getElementById('territoryAddClose').addEventListener('click', () => {
+        document.getElementById('territoryAddModal').classList.add('hidden');
+      });
+      document.getElementById('territoryAddCancel').addEventListener('click', () => {
+        document.getElementById('territoryAddModal').classList.add('hidden');
+      });
+
+      // Upload submit
+      document.getElementById('territoryUploadSubmit').addEventListener('click', uploadTerritoriesCSV);
+      
+      // Add zip submit
+      document.getElementById('territoryAddSubmit').addEventListener('click', addSingleZip);
+
+      // Search input
+      document.getElementById('territorySearchInput').addEventListener('input', function() {
+        clearTimeout(territoryManagerData.searchTimer);
+        const term = this.value.trim();
+        if (term.length < 5) {
+          document.getElementById('territorySearchResult').textContent = '';
+          return;
+        }
+        territoryManagerData.searchTimer = setTimeout(() => searchTerritoryZip(term), 500);
+      });
+
+      // Initial load if already on territory view
+      if (activeView === 'territory') {
+        loadTerritories();
+      }
+    }
+
+    function loadTerritories() {
+      const branchId = document.getElementById('branchSelect') ? document.getElementById('branchSelect').value : null;
+      const payload = branchId ? { branchId: branchId } : {};
+      
+      // Show loading state
+      const grid = document.getElementById('territoryGrid');
+      if (grid) {
+        grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">Loading territories...</p>';
+      }
+      
+      callServerCustom('getAllTerritories', payload, function(data) {
+        if (data && data.success !== false) {
+          territoryManagerData.territories = data.territories || [];
+          territoryManagerData.stats = data.stats || { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 };
+          renderTerritoryStats();
+          renderTerritoryGrid();
+        } else {
+          // Even on error, show empty state instead of alert
+          const errorMsg = data && data.message ? data.message : 'No territories found';
+          console.log('Territory load result:', errorMsg);
+          territoryManagerData.territories = [];
+          territoryManagerData.stats = { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 };
+          renderTerritoryStats();
+          renderTerritoryGrid();
+          // Only show toast if there's an actual error (not just empty data)
+          if (data && data.success === false && data.message && !data.message.includes('not found')) {
+            showTerritoryToast(errorMsg, 'error');
+          }
+        }
+      }, { success: true, territories: [], stats: { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 } });
+    }
+
+    function renderTerritoryStats() {
+      const stats = territoryManagerData.stats;
+      document.getElementById('territoryStatAEs').textContent = stats.totalAEs || 0;
+      document.getElementById('territoryStatZips').textContent = stats.totalZipCodes || 0;
+      document.getElementById('territoryStatAvg').textContent = stats.averageCoverage || 0;
+      document.getElementById('territoryStatTotal').textContent = stats.totalTerritories || 0;
+    }
+
+    function renderTerritoryGrid() {
+      const container = document.getElementById('territoryGrid');
+      const territories = territoryManagerData.territories;
+
+      if (!territories || territories.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">No territories configured. Upload CSV or add zip codes to get started.</p>';
+        return;
+      }
+
+      const gradientColors = [
+        ['#5f72ff', '#9921e8'],
+        ['#38b6ff', '#3a47d5'],
+        ['#ff6cab', '#7366ff'],
+        ['#f7971e', '#ffd200'],
+        ['#00c6ff', '#0072ff']
+      ];
+
+      container.innerHTML = territories.map(function(territory, index) {
+        const colorIndex = Math.abs([...territory.territoryName].reduce((acc, char) => acc + char.charCodeAt(0), 0)) % gradientColors.length;
+        const gradient = `linear-gradient(135deg, ${gradientColors[colorIndex][0]}, ${gradientColors[colorIndex][1]})`;
+        const previewZips = territory.zipCodes.slice(0, 15);
+        
+        return `
+          <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="p-4 text-white font-bold" style="background: ${gradient}">
+              ${territory.territoryName}
+            </div>
+            <div class="p-4 space-y-3">
+              <div>
+                <p class="text-sm text-gray-500">${territory.aeName}</p>
+                <p class="text-sm text-gray-500">${territory.aeEmail}</p>
+              </div>
+              <div>
+                <p class="text-lg font-semibold">${territory.zipCount} Zip Codes</p>
+                <p class="text-sm text-gray-500">${territory.prospectCount} Prospects</p>
+              </div>
+              <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                ${previewZips.map(zip => `<span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">${zip}</span>`).join('')}
+                ${territory.zipCodes.length > 15 ? `<span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">+${territory.zipCodes.length - 15} more</span>` : ''}
+              </div>
+              <button onclick="removeZipFromTerritory('${territory.territoryID}')" class="w-full bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-200">
+                Remove Zip
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function uploadTerritoriesCSV() {
+      const csvData = document.getElementById('territoryCsvTextarea').value.trim();
+      if (!csvData) {
+        showTerritoryToast('CSV content is empty', 'error');
+        return;
+      }
+
+      const statusEl = document.getElementById('territoryUploadStatus');
+      statusEl.textContent = 'Uploading...';
+      statusEl.className = 'mt-3 text-sm text-blue-600';
+
+      callServerCustom('uploadTerritories', { csvData: csvData }, function(result) {
+        if (result && result.success) {
+          statusEl.textContent = `✅ ${result.message || 'Territories uploaded successfully'}`;
+          statusEl.className = 'mt-3 text-sm text-green-600';
+          document.getElementById('territoryCsvTextarea').value = '';
+          setTimeout(() => {
+            document.getElementById('territoryUploadModal').classList.add('hidden');
+            loadTerritories();
+          }, 1500);
+        } else {
+          statusEl.textContent = `❌ ${result.message || 'Upload failed'}`;
+          statusEl.className = 'mt-3 text-sm text-red-600';
+        }
+      }, { success: false, message: 'Upload failed' });
+    }
+
+    function addSingleZip() {
+      const zip = document.getElementById('territoryAddZip').value.trim();
+      const email = document.getElementById('territoryAddEmail').value.trim();
+      const branch = document.getElementById('territoryAddBranch').value.trim();
+      const territory = document.getElementById('territoryAddTerritory').value.trim();
+
+      if (zip.length !== 5 || !/^[0-9]{5}$/.test(zip)) {
+        showTerritoryToast('Zip must be 5 digits', 'error');
+        return;
+      }
+
+      if (!email.includes('@')) {
+        showTerritoryToast('Enter a valid AE email', 'error');
+        return;
+      }
+
+      if (!branch || !territory) {
+        showTerritoryToast('Branch ID and Territory are required', 'error');
+        return;
+      }
+
+      const statusEl = document.getElementById('territoryAddStatus');
+      statusEl.textContent = 'Adding...';
+      statusEl.className = 'mt-3 text-sm text-blue-600';
+
+      callServerCustom('addTerritoryZip', { zipCode: zip, aeEmail: email, branchID: branch, territoryName: territory }, function(result) {
+        if (result && result.success) {
+          statusEl.textContent = `✅ ${result.message || 'Zip added successfully'}`;
+          statusEl.className = 'mt-3 text-sm text-green-600';
+          document.getElementById('territoryAddForm').reset();
+          setTimeout(() => {
+            document.getElementById('territoryAddModal').classList.add('hidden');
+            loadTerritories();
+          }, 1500);
+        } else {
+          statusEl.textContent = `❌ ${result.message || 'Failed to add zip'}`;
+          statusEl.className = 'mt-3 text-sm text-red-600';
+        }
+      }, { success: false, message: 'Failed to add zip' });
+    }
+
+    function searchTerritoryZip(zip) {
+      const resultEl = document.getElementById('territorySearchResult');
+      resultEl.textContent = 'Searching...';
+      resultEl.className = 'mt-2 text-sm font-semibold text-blue-600';
+
+      callServerCustom('searchTerritoryZip', { zipCode: zip }, function(result) {
+        if (result && result.success && result.record) {
+          const r = result.record;
+          resultEl.textContent = `✅ Zip ${r.zipCode} assigned to ${r.aeName} (${r.territoryName})`;
+          resultEl.className = 'mt-2 text-sm font-semibold text-green-600';
+        } else {
+          resultEl.textContent = `⚠️ ${result && result.message ? result.message : 'Zip not assigned'}`;
+          resultEl.className = 'mt-2 text-sm font-semibold text-yellow-600';
+        }
+      }, { success: false, message: 'Zip not assigned' });
+    }
+
+    function exportTerritories() {
+      callServerCustom('exportTerritoriesCSV', {}, function(csvData) {
+        if (csvData) {
+          const blob = new Blob([csvData], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = 'territories-export-' + new Date().toISOString().split('T')[0] + '.csv';
+          anchor.click();
+          URL.revokeObjectURL(url);
+          showTerritoryToast('CSV exported successfully', 'success');
+        } else {
+          showTerritoryToast('Export failed', 'error');
+        }
+      }, '');
+    }
+
+    function removeZipFromTerritory(territoryID) {
+      const zip = prompt('Enter the zip code to remove:');
+      if (!zip || zip.length !== 5 || !/^[0-9]{5}$/.test(zip)) {
+        if (zip) showTerritoryToast('Zip must be 5 digits', 'error');
+        return;
+      }
+
+      if (!confirm(`Remove zip code ${zip} from this territory?`)) {
+        return;
+      }
+
+      callServerCustom('removeTerritoryZip', { zipCode: zip }, function(result) {
+        if (result && result.success) {
+          showTerritoryToast(result.message || 'Zip removed successfully', 'success');
+          loadTerritories();
+        } else {
+          showTerritoryToast(result && result.message ? result.message : 'Failed to remove zip', 'error');
+        }
+      }, { success: false, message: 'Failed to remove zip' });
+    }
+
+
+    // Helper to show toast messages - check for existing toast system first
+    function showTerritoryToast(message, type) {
+      // Check if there's an existing toast system (not our own)
+      const existingToast = window.showToast;
+      if (existingToast && typeof existingToast === 'function' && existingToast !== showTerritoryToast) {
+        existingToast(message, type);
+      } else if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+      } else {
+        // Fallback to alert
+        alert(message);
+      }
+    }
+    
+    // Initialize Territory Manager after DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(initializeTerritoryManager, 100);
+      });
+    } else {
+      setTimeout(initializeTerritoryManager, 100);
+    }
+  </script>
+</body>
+</html>

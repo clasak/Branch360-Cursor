@@ -4,6 +4,7 @@
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="activity-client.js"></script>
 </head>
 <body class="bg-gray-50 p-4">
 
@@ -171,29 +172,53 @@
   
   function contactLead(leadID) {
     if (!confirm('Mark this lead as contacted?')) return;
+    var activityToken = window.ActivityClient ? ActivityClient.start('AE_MARK_CONTACTED', leadID, { role: 'AE' }) : null;
     
     google.script.run
       .withSuccessHandler(function(success) {
+        if (activityToken && window.ActivityClient) {
+          ActivityClient.finish(activityToken, { success: success });
+          activityToken = null;
+        }
         if (success) {
           loadLeads(); // Refresh list
         } else {
           alert('Failed to update lead');
         }
       })
+      .withFailureHandler(function(error) {
+        if (activityToken && window.ActivityClient) {
+          ActivityClient.finish(activityToken, { error: true, message: error.message });
+          activityToken = null;
+        }
+        alert('Failed to update lead: ' + error.message);
+      })
       .markLeadContacted(leadID);
   }
   
   function convertLead(leadID) {
     if (!confirm('Convert this lead to an opportunity in your sales pipeline?')) return;
+    var activityToken = window.ActivityClient ? ActivityClient.start('AE_CONVERT_LEAD', leadID, { role: 'AE' }) : null;
     
     google.script.run
       .withSuccessHandler(function(result) {
+        if (activityToken && window.ActivityClient) {
+          ActivityClient.finish(activityToken, { success: result.success, trackerId: result.entryID || '' });
+          activityToken = null;
+        }
         if (result.success) {
           alert('Lead converted successfully! Opportunity ID: ' + result.entryID);
           loadLeads(); // Refresh list
         } else {
           alert('Conversion failed: ' + result.message);
         }
+      })
+      .withFailureHandler(function(error) {
+        if (activityToken && window.ActivityClient) {
+          ActivityClient.finish(activityToken, { error: true, message: error.message });
+          activityToken = null;
+        }
+        alert('Conversion failed: ' + error.message);
       })
       .convertLeadToOpportunity(leadID);
   }
@@ -207,4 +232,3 @@
 
 </body>
 </html>
-

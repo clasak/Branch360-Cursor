@@ -3,6 +3,101 @@
  * Helper utilities used across all modules
  */
 
+// Brand presets for logos + theme colors (Houston pilot defaults to Presto-X)
+const BRAND_PRESETS = {
+  PRESTOX: {
+    key: 'PRESTOX',
+    name: 'Presto-X',
+    logo: 'https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819',
+    colors: {
+      primary: '#E4002B',
+      accent: '#FF6B6B',
+      dark: '#B00024',
+      background: '#FDF2F2',
+      legacy: '#E4002B'
+    }
+  },
+  BUGOUT: {
+    key: 'BUGOUT',
+    name: 'BugOut',
+    logo: 'https://ik.imagekit.io/9cyexhymf/BugOut%20Logo.png?updatedAt=1762651397528',
+    colors: {
+      primary: '#16A34A',
+      accent: '#22C55E',
+      dark: '#14532D',
+      background: '#F0FDF4',
+      legacy: '#16A34A'
+    }
+  },
+  TERMINIX: {
+    key: 'TERMINIX',
+    name: 'Terminix',
+    logo: 'https://ik.imagekit.io/9cyexhymf/terminix_color_lg.png?updatedAt=1762622940808',
+    colors: {
+      primary: '#15803D',
+      accent: '#22C55E',
+      dark: '#166534',
+      background: '#ECFDF5',
+      legacy: '#15803D'
+    }
+  },
+  RENTOKIL: {
+    key: 'RENTOKIL',
+    name: 'Rentokil',
+    logo: 'https://ik.imagekit.io/9cyexhymf/Rentokil%20Logo.png?updatedAt=1762651397519',
+    colors: {
+      primary: '#E4002B',
+      accent: '#FF6B6B',
+      dark: '#B00024',
+      background: '#FFFFFF',
+      legacy: '#E4002B'
+    }
+  }
+};
+
+const DEFAULT_BRAND_KEY = 'PRESTOX';
+const DEFAULT_BRAND_LOGO = BRAND_PRESETS[DEFAULT_BRAND_KEY].logo;
+
+/**
+ * Gets brand configuration by key (defaults to Presto-X)
+ * @param {string} brandKey - brand identifier
+ * @return {Object} config object
+ */
+function getBrandConfig(brandKey) {
+  const key = (brandKey || DEFAULT_BRAND_KEY || '').toUpperCase();
+  return BRAND_PRESETS[key] || BRAND_PRESETS[DEFAULT_BRAND_KEY];
+}
+
+/**
+ * Convenience helper to fetch dashboard theme colors
+ * @param {string} brandKey
+ * @return {Object} color palette
+ */
+function getBrandColors(brandKey) {
+  const config = getBrandConfig(brandKey);
+  return config.colors;
+}
+
+/**
+ * Returns the logo URL for a brand (defaults to Presto-X)
+ */
+function getBrandLogoUrl(brandKey) {
+  const config = getBrandConfig(brandKey);
+  return config.logo;
+}
+
+function getBrandPresets() {
+  return Object.keys(BRAND_PRESETS).map(function(key) {
+    const preset = BRAND_PRESETS[key];
+    return {
+      key: preset.key,
+      name: preset.name,
+      logo: preset.logo,
+      colors: preset.colors
+    };
+  });
+}
+
 /**
  * Generates a unique ID with prefix
  * @param {string} prefix - ID prefix (e.g., 'USR', 'BRN', 'LEAD')
@@ -258,4 +353,3 @@ function calculateDailySummaries() {
   // This will be populated by other agents
   Logger.log('Daily summaries complete');
 }
-

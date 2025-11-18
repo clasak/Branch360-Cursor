@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pipeline Redirect</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9;margin:0; }
+    .card { background:#fff; padding:2rem; border-radius:1rem; box-shadow:0 20px 40px rgba(15,23,42,0.15); text-align:center; max-width:360px; }
+    a { color:#2563eb; font-weight:600; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Pipeline Lives Inside the AE Dashboard</h1>
+    <p>Use the unified dashboard and click “Sales / AE” → “Start Packet Generator” or scroll to the Lead Pipeline section to manage opportunities.</p>
+    <p><a href="dashboard.html">Return to Branch360</a></p>
+  </div>
+  <script>
+    setTimeout(function() {
+      if (window.top && window.top !== window) {
+        window.top.location.href = 'dashboard.html';
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    }, 0);
+  </script>
+</body>
+</html>

@@ -32,6 +32,23 @@ function getAEDashboard(userID) {
   };
 }
 
+function parseOptionList(cellValue) {
+  if (!cellValue) return [];
+  if (Array.isArray(cellValue)) return cellValue;
+  return String(cellValue)
+    .split(',')
+    .map(function(item) { return item.trim(); })
+    .filter(function(item) { return item.length > 0; });
+}
+
+function serializeOptionList(value) {
+  if (!value) return '';
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  return String(value);
+}
+
 /**
  * Get today's metrics for AE
  */
@@ -48,28 +65,27 @@ function getTodayMetrics(aeUserID) {
   
   if (todayActivity) {
     return {
-      tapGoal: todayActivity.TAP_Goal || 10,
-      tapActual: todayActivity.TAP_Actual || 0,
-      appointmentsSet: todayActivity.Appointments_Set || 0,
-      appointmentsCompleted: todayActivity.Appointments_Completed || 0,
-      quotesCreated: todayActivity.Quotes_Created || 0,
-      quotesWon: todayActivity.Quotes_Won || 0,
-      salesGoal: todayActivity.Daily_Sales_Goal || 5000,
-      salesActual: todayActivity.Daily_Sales_Actual || 0,
+      proposalsDelivered: Number(todayActivity.Proposals_Delivered) || 0,
+      lobsOnProposals: parseOptionList(todayActivity.LOBs_On_Proposals),
+      lobsSold: parseOptionList(todayActivity.LOBs_Sold),
+      dollarsSold: Number(todayActivity.Dollars_Sold) || 0,
+      dollarsProposed: Number(todayActivity.Dollars_Proposed) || 0,
+      nextDayConfCount: Number(todayActivity.NextDay_CONF_Count) || 0,
+      eventsCount: Number(todayActivity.Events_Completed) || 0,
+      eventsSummary: todayActivity.Events_Summary || '',
       hasEntry: true
     };
   }
   
-  // No entry yet, return default goals
   return {
-    tapGoal: 10,
-    tapActual: 0,
-    appointmentsSet: 0,
-    appointmentsCompleted: 0,
-    quotesCreated: 0,
-    quotesWon: 0,
-    salesGoal: 5000,
-    salesActual: 0,
+    proposalsDelivered: 0,
+    lobsOnProposals: [],
+    lobsSold: [],
+    dollarsSold: 0,
+    dollarsProposed: 0,
+    nextDayConfCount: 0,
+    eventsCount: 0,
+    eventsSummary: '',
     hasEntry: false
   };
 }
@@ -88,28 +104,30 @@ function getMonthMetrics(aeUserID) {
            row.AE_UserID === aeUserID;
   });
   
-  var totalTAP = 0;
-  var totalAppointments = 0;
-  var totalQuotes = 0;
-  var totalSales = 0;
-  var totalQuotesWon = 0;
+  var totalProposals = 0;
+  var totalEvents = 0;
+  var totalSoldValue = 0;
+  var totalProposedValue = 0;
+  var totalWins = 0;
   
   monthActivities.forEach(function(activity) {
-    totalTAP += Number(activity.TAP_Actual) || 0;
-    totalAppointments += Number(activity.Appointments_Completed) || 0;
-    totalQuotes += Number(activity.Quotes_Created) || 0;
-    totalQuotesWon += Number(activity.Quotes_Won) || 0;
-    totalSales += Number(activity.Daily_Sales_Actual) || 0;
+    totalProposals += Number(activity.Proposals_Delivered) || 0;
+    totalEvents += Number(activity.Events_Completed) || 0;
+    totalSoldValue += Number(activity.Dollars_Sold) || 0;
+    totalProposedValue += Number(activity.Dollars_Proposed) || 0;
+    const soldList = parseOptionList(activity.LOBs_Sold);
+    totalWins += soldList.length;
   });
   
   return {
-    totalTAP: totalTAP,
-    totalAppointments: totalAppointments,
-    totalQuotes: totalQuotes,
-    totalQuotesWon: totalQuotesWon,
-    totalSales: totalSales,
-    winRate: totalQuotes > 0 ? ((totalQuotesWon / totalQuotes) * 100).toFixed(1) : 0,
-    daysActive: monthActivities.length
+    totalTAP: totalProposals,
+    totalAppointments: totalEvents,
+    totalQuotes: totalProposals,
+    totalQuotesWon: totalWins,
+    totalSales: totalSoldValue,
+    winRate: totalProposals > 0 ? ((totalWins / totalProposals) * 100).toFixed(1) : 0,
+    daysActive: monthActivities.length,
+    proposedValue: totalProposedValue
   };
 }
 
@@ -258,21 +276,19 @@ function saveDailySalesActivity(activityData) {
     
     const hierarchy = getBranchHierarchy(currentUser.branchID);
     
+    const writePayload = {
+      'Proposals_Delivered': activityData.proposalsDelivered || 0,
+      'LOBs_On_Proposals': serializeOptionList(activityData.lobsOnProposals),
+      'LOBs_Sold': serializeOptionList(activityData.lobsSold),
+      'Dollars_Sold': Number(activityData.dollarsSold) || 0,
+      'Dollars_Proposed': Number(activityData.dollarsProposed) || 0,
+      'NextDay_CONF_Count': activityData.nextDayConfCount || 0,
+      'Events_Completed': activityData.eventsCount || 0,
+      'Events_Summary': activityData.eventsSummary || ''
+    };
+    
     if (existingEntry) {
-      // Update existing entry
-      updateRowByID(SHEETS.SALES_ACTIVITY, 'ActivityID', existingEntry.ActivityID, {
-        'TAP_Goal': activityData.tapGoal || 10,
-        'TAP_Actual': activityData.tapActual || 0,
-        'Appointments_Set': activityData.appointmentsSet || 0,
-        'Appointments_Completed': activityData.appointmentsCompleted || 0,
-        'Quotes_Created': activityData.quotesCreated || 0,
-        'Quotes_Won': activityData.quotesWon || 0,
-        'Quote_Value': activityData.quoteValue || 0,
-        'WinRate_Percent': activityData.quotesCreated > 0 ? 
-          ((activityData.quotesWon / activityData.quotesCreated) * 100).toFixed(1) : 0,
-        'Daily_Sales_Goal': activityData.salesGoal || 5000,
-        'Daily_Sales_Actual': activityData.salesActual || 0
-      });
+      updateRowByID(SHEETS.SALES_ACTIVITY, 'ActivityID', existingEntry.ActivityID, writePayload);
       
       logAudit('UPDATE_SALES_ACTIVITY', SHEETS.SALES_ACTIVITY, existingEntry.ActivityID, 
         'Updated daily activity');
@@ -284,27 +300,26 @@ function saveDailySalesActivity(activityData) {
       const activityID = generateUniqueID('ACT');
       const activitySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.SALES_ACTIVITY);
       
-      activitySheet.appendRow([
+      const row = [
         activityID,
         today,
         currentUser.userID,
         currentUser.branchID,
         hierarchy.region ? hierarchy.region.RegionID : '',
         hierarchy.market ? hierarchy.market.MarketID : '',
-        activityData.tapGoal || 10,
-        activityData.tapActual || 0,
-        activityData.appointmentsSet || 0,
-        activityData.appointmentsCompleted || 0,
-        activityData.quotesCreated || 0,
-        activityData.quotesWon || 0,
-        activityData.quoteValue || 0,
-        activityData.quotesCreated > 0 ? 
-          ((activityData.quotesWon / activityData.quotesCreated) * 100).toFixed(1) : 0,
-        activityData.salesGoal || 5000,
-        activityData.salesActual || 0,
+        writePayload['Proposals_Delivered'],
+        writePayload['LOBs_On_Proposals'],
+        writePayload['LOBs_Sold'],
+        writePayload['Dollars_Sold'],
+        writePayload['Dollars_Proposed'],
+        writePayload['NextDay_CONF_Count'],
+        writePayload['Events_Completed'],
+        writePayload['Events_Summary'],
         new Date(),
         new Date()
-      ]);
+      ];
+      
+      activitySheet.appendRow(row);
       
       logAudit('CREATE_SALES_ACTIVITY', SHEETS.SALES_ACTIVITY, activityID, 
         'Created daily activity');
@@ -423,6 +438,7 @@ function createStartPacket(trackerEntryID) {
     
     packetsSheet.appendRow([
       packetID,
+      entry.BranchID || '',
       trackerEntryID,
       entry.Date_Sold || new Date(),
       entry.Customer_Name,
@@ -441,6 +457,7 @@ function createStartPacket(trackerEntryID) {
       entry.POC_Name + ' / ' + entry.POC_Phone,
       null, // Confirmed_Start_Date
       entry.Notes || '',
+      'Submitted',
       entry.PestPac_ID || '',
       new Date(),
       new Date()
@@ -448,6 +465,8 @@ function createStartPacket(trackerEntryID) {
     
     logAudit('CREATE_START_PACKET', SHEETS.START_PACKETS, packetID, 
       'Auto-created from sold opportunity: ' + trackerEntryID);
+
+    logServerActivity('CREATE_START_PACKET', packetID, { trackerEntryID: trackerEntryID });
     
     return { success: true, packetID: packetID };
     
@@ -498,4 +517,3 @@ function searchOpportunities(searchTerm, filters) {
   
   return data;
 }
-

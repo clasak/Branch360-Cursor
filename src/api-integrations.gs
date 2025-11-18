@@ -5,7 +5,7 @@
 
 // ===== MAPBOX (ACTIVE) =====
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA';
+const MAPBOX_TOKEN = API_TOKENS.MAPBOX;
 
 /**
  * Geocode an address using Mapbox
@@ -168,6 +168,20 @@ function authenticateWithOkta() {
     message: 'Okta SSO awaiting tenant configuration',
     authenticated: false
   };
+}
+
+/**
+ * Get Mapbox token for client-side use
+ */
+function getMapboxToken() {
+  // Try to get from PropertiesService first (for runtime access)
+  const props = PropertiesService.getScriptProperties();
+  const storedToken = props.getProperty('MAPBOX_TOKEN');
+  if (storedToken) {
+    return storedToken;
+  }
+  // Fallback to config constant
+  return API_TOKENS.MAPBOX;
 }
 
 /**

@@ -10,6 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="Branch360">
   <link rel="manifest" href="manifest.json">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="activity-client.js"></script>
 </head>
 <body class="bg-gray-100">
 
@@ -22,26 +23,26 @@
 
 <div class="max-w-7xl mx-auto px-4 py-6">
   
-  <!-- Today's Metrics -->
+  <!-- Today's Operations -->
   <div class="mb-6">
     <h2 class="text-lg font-bold text-gray-800 mb-3">Today's Operations</h2>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow" onclick="viewMetricDetails('TMX')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewMetricDetails('TMX')}">
         <div class="text-sm text-gray-600 mb-1">Missed Stops (TMX)</div>
         <div class="text-3xl font-bold text-red-600" id="missedTMX">0</div>
       </div>
       
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow" onclick="viewMetricDetails('RNA')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewMetricDetails('RNA')}">
         <div class="text-sm text-gray-600 mb-1">Missed Stops (RNA)</div>
         <div class="text-3xl font-bold text-orange-600" id="missedRNA">0</div>
       </div>
       
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow" onclick="viewMetricDetails('Backlog')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewMetricDetails('Backlog')}">
         <div class="text-sm text-gray-600 mb-1">Backlog %</div>
         <div class="text-3xl font-bold text-yellow-600"><span id="backlog">0</span>%</div>
       </div>
       
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow" onclick="viewMetricDetails('OT')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewMetricDetails('OT')}">
         <div class="text-sm text-gray-600 mb-1">OT %</div>
         <div class="text-3xl font-bold text-purple-600"><span id="ot">0</span>%</div>
       </div>
@@ -82,6 +83,16 @@
     <div id="techList" class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <p class="text-gray-500">Loading...</p>
     </div>
+  </div>
+
+  <!-- Start Packets -->
+  <div class="mt-6 bg-white rounded-lg shadow p-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+      <h3 class="text-lg font-bold text-gray-800">🚀 Start Packets</h3>
+      <p class="text-sm text-gray-500">AEs now generate packets automatically; Ops can monitor status and readiness here.</p>
+    </div>
+    <div class="overflow-x-auto" id="startPacketTable"></div>
+    <p id="startPacketEmpty" class="text-center text-gray-500 text-sm mt-3">Loading...</p>
   </div>
   
 </div>
@@ -137,51 +148,80 @@
   </div>
 </div>
 
+
 <script>
+  var opsQueue = [];
+  var currentBranchId = 'HOUSTON';
+  var currentOpsUser = {};
+  var Branch360OpsDemoState = window.Branch360OpsDemoState || initializeOpsDemoState();
+  window.Branch360OpsDemoState = Branch360OpsDemoState;
+
+  function hasAppsScript() {
+    return typeof google !== 'undefined' && google.script && google.script.run;
+  }
+
   function loadDashboard() {
-    google.script.run
-      .withSuccessHandler(function(data) {
-        document.getElementById('managerName').textContent = data.user.name;
-        
-        // Metrics
-        document.getElementById('missedTMX').textContent = data.todayMetrics.missedStopsTMX;
-        document.getElementById('missedRNA').textContent = data.todayMetrics.missedStopsRNA;
-        document.getElementById('backlog').textContent = data.todayMetrics.backlogPercent;
-        document.getElementById('ot').textContent = data.todayMetrics.otPercent;
-        
-        renderIssues(data.openIssues);
-        renderInstalls(data.pendingInstalls);
-        renderTechnicians(data.teamTechnicians);
-      })
-      .withFailureHandler(function(error) {
-        console.error('Failed to load dashboard:', error);
-        alert('Failed to load dashboard: ' + error.message);
-      })
-      .getOpsManagerDashboard();
+    if (hasAppsScript() && google.script.run.getOpsManagerDashboard) {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          renderOpsDashboard(data);
+          var branch = data && data.user ? (data.user.branchID || data.user.BranchID || currentBranchId) : currentBranchId;
+          currentBranchId = branch;
+          loadOpsQueue(branch);
+        })
+        .withFailureHandler(function(error) {
+          console.warn('Ops dashboard falling back to demo data', error.message);
+          const demo = getDemoOpsDashboard();
+          renderOpsDashboard(demo);
+          loadOpsQueue(demo.user.branchID);
+        })
+        .getOpsManagerDashboard();
+    } else {
+      const demo = getDemoOpsDashboard();
+      renderOpsDashboard(demo);
+      loadOpsQueue(demo.user.branchID);
+    }
+  }
+  
+  function renderOpsDashboard(data) {
+    if (!data) return;
+    currentOpsUser = data.user || {};
+    document.getElementById('managerName').textContent = currentOpsUser.name || 'Operations Manager';
+    
+    const today = data.todayMetrics || {};
+    document.getElementById('missedTMX').textContent = today.missedStopsTMX || 0;
+    document.getElementById('missedRNA').textContent = today.missedStopsRNA || 0;
+    document.getElementById('backlog').textContent = today.backlogPercent || 0;
+    document.getElementById('ot').textContent = today.otPercent || 0;
+    
+    renderIssues(data.openIssues || []);
+    renderInstalls(data.pendingInstalls || []);
+    renderTechnicians(data.teamTechnicians || []);
   }
   
   function renderIssues(issues) {
     const container = document.getElementById('issuesList');
     
-    if (issues.length === 0) {
+    if (!issues.length) {
       container.innerHTML = '<p class="text-gray-500">No open issues</p>';
       return;
     }
     
-    container.innerHTML = issues.map(issue => `
-      <div class="border-l-4 ${getSeverityBorder(issue.severity)} bg-gray-50 p-3 rounded mb-3">
-        <div class="flex justify-between items-start mb-1">
-          <p class="font-semibold">${issue.customer}</p>
-          <span class="text-xs px-2 py-1 rounded ${getSeverityColor(issue.severity)}">${issue.severity}</span>
-        </div>
-        <p class="text-sm text-gray-700 mb-1">${issue.description}</p>
-        <p class="text-xs text-gray-600">Assigned: ${issue.assignedTech}</p>
-        <button onclick="resolveIssue('${issue.issueID}')" 
-          class="mt-2 text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
-          Resolve
-        </button>
-      </div>
-    `).join('');
+    container.innerHTML = issues.map(function(issue) {
+      return `
+        <div class="border-l-4 ${getSeverityBorder(issue.severity)} bg-gray-50 p-3 rounded mb-3">
+          <div class="flex justify-between items-start mb-1">
+            <p class="font-semibold">${issue.customer}</p>
+            <span class="text-xs px-2 py-1 rounded ${getSeverityColor(issue.severity)}">${issue.severity}</span>
+          </div>
+          <p class="text-sm text-gray-700 mb-1">${issue.description}</p>
+          <p class="text-xs text-gray-600">Assigned: ${issue.assignedTech || 'Unassigned'}</p>
+          <button onclick="resolveIssue('${issue.issueID}')" 
+            class="mt-2 text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
+            Resolve
+          </button>
+        </div>`;
+    }).join('');
   }
   
   function getSeverityBorder(severity) {
@@ -201,51 +241,358 @@
       default: return 'bg-gray-100 text-gray-800';
     }
   }
+
+  function formatCurrency(value) {
+    const num = Number(value) || 0;
+    return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
   
   function renderInstalls(installs) {
     const container = document.getElementById('installsList');
     
-    if (installs.length === 0) {
+    if (!installs.length) {
       container.innerHTML = '<p class="text-gray-500">No pending installations</p>';
       return;
     }
     
-    container.innerHTML = installs.slice(0, 5).map(install => `
-      <div class="p-3 border-b">
-        <p class="font-semibold">${install.customer}</p>
-        <p class="text-sm text-gray-600">${install.address}</p>
-        <p class="text-xs text-gray-500 mt-1">
-          ${install.assignedSpecialist ? 'Assigned: ' + install.assignedSpecialist : 'Not assigned'}
-        </p>
-        ${!install.assignedSpecialist && install.packetID ? `
-          <button onclick="assignSpecialist('${install.packetID}')" 
-            class="mt-2 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
-            Assign Specialist
-          </button>
-        ` : ''}
-      </div>
-    `).join('');
+    container.innerHTML = installs.slice(0, 5).map(function(install) {
+      return `
+        <div class="p-3 border-b">
+          <p class="font-semibold">${install.customer}</p>
+          <p class="text-sm text-gray-600">${install.address}</p>
+          <p class="text-xs text-gray-500 mt-1">
+            ${install.assignedSpecialist ? 'Assigned: ' + install.assignedSpecialist : 'Not assigned'}
+          </p>
+          ${!install.assignedSpecialist && install.packetID ? `
+            <button onclick="assignSpecialist('${install.packetID}')" 
+              class="mt-2 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+              Assign Specialist
+            </button>` : ''}
+        </div>`;
+    }).join('');
   }
   
   function renderTechnicians(technicians) {
     const container = document.getElementById('techList');
     
-    if (technicians.length === 0) {
+    if (!technicians.length) {
       container.innerHTML = '<p class="text-gray-500">No technicians found</p>';
       return;
     }
     
-    container.innerHTML = technicians.map(tech => `
-      <div class="p-4 border rounded-lg ${tech.active ? 'bg-green-50' : 'bg-gray-50'}">
-        <p class="font-semibold">${tech.name}</p>
-        <p class="text-sm text-gray-600">${tech.email}</p>
-        <span class="text-xs ${tech.active ? 'text-green-600' : 'text-gray-400'}">
-          ${tech.active ? '● Active' : '○ Inactive'}
-        </span>
-      </div>
-    `).join('');
+    container.innerHTML = technicians.map(function(tech) {
+      return `
+        <div class="p-4 border rounded-lg ${tech.active ? 'bg-green-50' : 'bg-gray-50'}">
+          <p class="font-semibold">${tech.name}</p>
+          <p class="text-sm text-gray-600">${tech.email}</p>
+          <span class="text-xs ${tech.active ? 'text-green-600' : 'text-gray-400'}">
+            ${tech.active ? '● Active' : '○ Inactive'}
+          </span>
+        </div>`;
+    }).join('');
+  }
+
+  function loadOpsQueue(branchId) {
+    const branch = branchId || currentBranchId || 'HOUSTON';
+    if (hasAppsScript() && google.script.run.getOpsQueue) {
+      google.script.run
+        .withSuccessHandler(function(rows) {
+          opsQueue = rows || [];
+          renderOpsQueue();
+        })
+        .withFailureHandler(function(error) {
+          console.warn('Ops queue fallback to demo', error.message);
+          opsQueue = getDemoOpsQueue(branch);
+          renderOpsQueue();
+        })
+        .getOpsQueue({ branchId: branch });
+    } else {
+      opsQueue = getDemoOpsQueue(branch);
+      renderOpsQueue();
+    }
+  }
+
+  function renderOpsQueue() {
+    const table = document.getElementById('startPacketTable');
+    const empty = document.getElementById('startPacketEmpty');
+    if (!opsQueue.length) {
+      table.innerHTML = '';
+      empty.classList.remove('hidden');
+      empty.textContent = 'No unified start packets yet.';
+      return;
+    }
+    empty.classList.add('hidden');
+    const headers = ['Account', 'Ops Owner', 'Status', 'Start Date', 'Readiness', 'Actions'];
+    const rows = opsQueue.map(function(entry) {
+      const startDate = entry.confirmedStartDate ? new Date(entry.confirmedStartDate).toLocaleDateString() : '--';
+      const statusBadge = getStatusBadge(entry.status || 'New Sale');
+      const owner = entry.operationsManager ? `<p class="font-semibold">${entry.operationsManager}</p>` :
+        `<button onclick="claimWorkflow('${entry.recordID}')" class="text-xs bg-gray-200 px-2 py-1 rounded">Claim</button>`;
+      const readiness = `
+        <button onclick="toggleMaterials('${entry.recordID}', ${entry.materialsOrdered ? 'true' : 'false'})"
+          class="text-xs px-3 py-1 rounded ${entry.materialsOrdered ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+          ${entry.materialsOrdered ? 'Materials Ready' : 'Materials Pending'}
+        </button>
+        <button onclick="toggleInstall('${entry.recordID}', ${entry.installStarted ? 'true' : 'false'})"
+          class="text-xs px-3 py-1 rounded ${entry.installStarted ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}">
+          ${entry.installStarted ? 'Install Started' : 'Install Pending'}
+        </button>`;
+      const actions = `
+        <div class="flex flex-wrap gap-2">
+          <button onclick="promptSchedule('${entry.recordID}', '${entry.confirmedStartDate || ''}')"
+            class="text-xs bg-indigo-600 text-white px-3 py-1 rounded">Schedule</button>
+          <button onclick="updateWorkflowStatus('${entry.recordID}', 'Completed')"
+            class="text-xs bg-green-600 text-white px-3 py-1 rounded">Mark Complete</button>
+        </div>`;
+      return `<tr class="border-t">
+        <td class="px-3 py-2">
+          <p class="font-semibold">${entry.account || ''}</p>
+          <p class="text-xs text-gray-500">${entry.serviceAddress || ''}</p>
+          <p class="text-xs text-gray-400">Sold ${entry.soldDate ? new Date(entry.soldDate).toLocaleDateString() : '--'}</p>
+        </td>
+        <td class="px-3 py-2">${owner}</td>
+        <td class="px-3 py-2 text-sm">${statusBadge}</td>
+        <td class="px-3 py-2 text-sm">${startDate}</td>
+        <td class="px-3 py-2 text-sm space-y-1">${readiness}</td>
+        <td class="px-3 py-2 text-sm">${actions}</td>
+      </tr>`;
+    }).join('');
+    table.innerHTML = `<table class="min-w-full">${tableTemplate(headers, rows)}</table>`;
+  }
+
+  function getStatusBadge(status) {
+    const normalized = (status || '').toLowerCase();
+    var classes = 'bg-gray-100 text-gray-700';
+    if (normalized.indexOf('schedule') !== -1) classes = 'bg-indigo-100 text-indigo-700';
+    if (normalized.indexOf('complete') !== -1) classes = 'bg-green-100 text-green-700';
+    if (normalized.indexOf('draft') !== -1 || normalized.indexOf('new') !== -1) classes = 'bg-yellow-100 text-yellow-700';
+    return `<span class="px-2 py-1 rounded-full text-xs ${classes}">${status}</span>`;
+  }
+
+  function tableTemplate(headers, rows) {
+    return `<thead><tr>${headers.map(function(h) {
+      return `<th class="text-left text-xs uppercase tracking-wide text-gray-500 px-3 py-2">${h}</th>`;
+    }).join('')}</tr></thead><tbody>${rows}</tbody>`;
+  }
+
+  function claimWorkflow(recordID) {
+    const managerName = currentOpsUser.name || Branch360OpsDemoState.user.name;
+    submitOpsWorkflowUpdate(recordID, {
+      operationsManager: managerName,
+      status: 'Claimed'
+    }, 'OPS_CLAIM_WORKFLOW', 'Workflow claimed');
+  }
+
+  function toggleMaterials(recordID, currentValue) {
+    submitOpsWorkflowUpdate(recordID, {
+      materialsOrdered: !currentValue
+    }, 'OPS_MATERIALS_UPDATE', !currentValue ? 'Materials marked ordered' : 'Materials reset');
+  }
+
+  function toggleInstall(recordID, currentValue) {
+    submitOpsWorkflowUpdate(recordID, {
+      installStarted: !currentValue,
+      status: !currentValue ? 'Install Started' : 'Scheduled'
+    }, 'OPS_INSTALL_UPDATE', !currentValue ? 'Install started' : 'Install reset');
+  }
+
+  function promptSchedule(recordID, currentDate) {
+    const existing = currentDate ? currentDate.substring(0, 10) : '';
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const defaultDate = existing || tomorrow.toISOString().substring(0, 10);
+    const input = prompt('Enter confirmed start date (YYYY-MM-DD):', defaultDate);
+    if (input === null) return; // User cancelled
+    if (!input || input.trim() === '') {
+      alert('Please enter a valid date.');
+      return;
+    }
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(input)) {
+      alert('Please enter date in YYYY-MM-DD format.');
+      return;
+    }
+    submitOpsWorkflowUpdate(recordID, {
+      confirmedStartDate: input.trim(),
+      status: 'Scheduled'
+    }, 'OPS_SCHEDULE_START', 'Start date scheduled successfully');
+  }
+
+  function updateWorkflowStatus(recordID, status) {
+    if (!confirm('Mark this workflow as ' + status + '?')) return;
+    submitOpsWorkflowUpdate(recordID, { status: status }, 'OPS_UPDATE_WORKFLOW', 'Workflow status updated successfully');
+    // Remove completed items from the queue
+    if (status === 'Completed' || status === 'Complete') {
+      opsQueue = opsQueue.filter(function(entry) {
+        return entry.recordID !== recordID;
+      });
+      renderOpsQueue();
+    }
   }
   
+  function viewMetricDetails(metricType) {
+    const today = Branch360OpsDemoState.todayMetrics || {};
+    const weekly = Branch360OpsDemoState.weeklyMetrics || {};
+    let details = 'Operations Metrics - ' + metricType + '\n';
+    details += '═══════════════════════════════════\n\n';
+    switch(metricType) {
+      case 'TMX':
+        details += 'Missed Stops (TMX): ' + (today.missedStopsTMX || 0) + '\n';
+        details += 'Target: 0\n';
+        details += 'Status: ' + ((today.missedStopsTMX || 0) === 0 ? '✓ On Target' : '⚠ Needs Attention') + '\n\n';
+        details += 'Weekly Average: ' + (weekly.avgMissedTMX || 0) + '\n';
+        details += 'Trend: ' + (weekly.trendTMX || 'Stable');
+        break;
+      case 'RNA':
+        details += 'Missed Stops (RNA): ' + (today.missedStopsRNA || 0) + '\n';
+        details += 'Target: 0\n';
+        details += 'Status: ' + ((today.missedStopsRNA || 0) === 0 ? '✓ On Target' : '⚠ Needs Attention') + '\n\n';
+        details += 'Weekly Average: ' + (weekly.avgMissedRNA || 0) + '\n';
+        details += 'Trend: ' + (weekly.trendRNA || 'Stable');
+        break;
+      case 'Backlog':
+        details += 'Backlog Percentage: ' + (today.backlogPercent || 0) + '%\n';
+        details += 'Target: < 10%\n';
+        const backlogStatus = (today.backlogPercent || 0) < 10 ? '✓ On Target' : (today.backlogPercent < 15 ? '⚠ Watch' : '✗ Over Target');
+        details += 'Status: ' + backlogStatus + '\n\n';
+        details += 'Weekly Average: ' + (weekly.avgBacklog || 0) + '%\n';
+        details += 'Trend: ' + (weekly.trendBacklog || 'Stable');
+        break;
+      case 'OT':
+        details += 'Overtime Percentage: ' + (today.otPercent || 0) + '%\n';
+        details += 'Target: < 5%\n';
+        const otStatus = (today.otPercent || 0) < 5 ? '✓ On Target' : (today.otPercent < 10 ? '⚠ Watch' : '✗ Over Target');
+        details += 'Status: ' + otStatus + '\n\n';
+        details += 'Weekly Average: ' + (weekly.avgOT || 0) + '%\n';
+        details += 'Trend: ' + (weekly.trendOT || 'Stable');
+        break;
+      default:
+        details += 'Details for this metric will be available soon.';
+    }
+    alert(details);
+  }
+
+  function submitOpsWorkflowUpdate(recordID, updates, activityType, successMessage) {
+    var payload = Object.assign({ recordID: recordID }, updates);
+    var token = window.ActivityClient ? ActivityClient.start(activityType || 'OPS_UPDATE_WORKFLOW', recordID, { role: 'Ops Manager' }) : null;
+    function finish(success, extra) {
+      if (token && window.ActivityClient) {
+        ActivityClient.finish(token, Object.assign({ success: success }, extra || {}));
+        token = null;
+      }
+    }
+    if (hasAppsScript() && google.script.run.saveOpsWorkflow) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          finish(true, { workflowID: result && result.workflowID });
+          if (result && result.success) {
+            loadOpsQueue(currentBranchId);
+            if (successMessage) {
+              showSuccessToast(successMessage);
+            }
+          } else {
+            alert('Update failed: ' + (result.message || 'Unknown error'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          finish(false, { message: error.message });
+          alert('Error: ' + error.message);
+        })
+        .saveOpsWorkflow(payload);
+    } else {
+      saveDemoOpsWorkflow(payload);
+      finish(true, { demo: true });
+      // Update local state immediately
+      if (payload.status === 'Completed' || payload.status === 'Complete') {
+        opsQueue = opsQueue.filter(function(entry) {
+          return entry.recordID !== payload.recordID;
+        });
+      } else {
+        // Update the entry in the queue
+        const index = opsQueue.findIndex(function(entry) {
+          return entry.recordID === payload.recordID;
+        });
+        if (index !== -1) {
+          Object.assign(opsQueue[index], payload);
+        }
+      }
+      renderOpsQueue();
+      if (successMessage) {
+        showSuccessToast(successMessage + ' (demo mode)');
+      }
+    }
+  }
+  
+  function showSuccessToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function() {
+      toast.style.transition = 'opacity 0.3s';
+      toast.style.opacity = '0';
+      setTimeout(function() {
+        toast.remove();
+      }, 300);
+    }, 3000);
+  }
+
+  function getDemoOpsDashboard() {
+    return {
+      user: Branch360OpsDemoState.user,
+      todayMetrics: Branch360OpsDemoState.todayMetrics,
+      openIssues: Branch360OpsDemoState.openIssues,
+      pendingInstalls: Branch360OpsDemoState.pendingInstalls,
+      teamTechnicians: Branch360OpsDemoState.teamTechnicians,
+      weeklyMetrics: {
+        avgMissedTMX: 1.2,
+        avgMissedRNA: 0.8,
+        avgBacklog: 7.5,
+        avgOT: 3.2,
+        trendTMX: 'Improving',
+        trendRNA: 'Stable',
+        trendBacklog: 'Stable',
+        trendOT: 'Stable'
+      }
+    };
+  }
+
+  function getDemoOpsQueue(branchId) {
+    return Branch360OpsDemoState.unifiedSales
+      .filter(function(record) { return !branchId || record.BranchID === branchId; })
+      .map(function(record) {
+        const workflow = Branch360OpsDemoState.opsWorkflows[record.RecordID] || {};
+        return {
+          recordID: record.RecordID,
+          account: record.AccountName,
+          serviceAddress: record.ServiceAddress,
+          soldDate: record.SoldDate,
+          operationsManager: workflow.OperationsManager || '',
+          status: workflow.Status || record.Status || 'New Sale',
+          confirmedStartDate: workflow.ConfirmedStartDate || '',
+          materialsOrdered: workflow.MaterialsOrdered || false,
+          installStarted: workflow.InstallStarted || false,
+          monthlyPrice: record.MaintenancePrice,
+          initialPrice: record.InitialPrice
+        };
+      });
+  }
+
+  function saveDemoOpsWorkflow(payload) {
+    const id = payload.recordID;
+    if (!Branch360OpsDemoState.opsWorkflows[id]) {
+      Branch360OpsDemoState.opsWorkflows[id] = {};
+    }
+    const target = Branch360OpsDemoState.opsWorkflows[id];
+    if (payload.operationsManager !== undefined) target.OperationsManager = payload.operationsManager;
+    if (payload.confirmedStartDate !== undefined) target.ConfirmedStartDate = payload.confirmedStartDate;
+    if (payload.materialsOrdered !== undefined) target.MaterialsOrdered = payload.materialsOrdered;
+    if (payload.installStarted !== undefined) target.InstallStarted = payload.installStarted;
+    if (payload.status !== undefined) target.Status = payload.status;
+    target.UpdatedOn = new Date().toISOString();
+    return { success: true, workflowID: 'WF-' + id };
+  }
+
   function openMetricsForm() {
     document.getElementById('metricsModal').classList.remove('hidden');
   }
@@ -256,75 +603,227 @@
   
   document.getElementById('metricsForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
     const metricsData = {
-      missedStopsTMX: parseInt(document.getElementById('formMissedTMX').value),
-      missedStopsRNA: parseInt(document.getElementById('formMissedRNA').value),
+      missedStopsTMX: parseInt(document.getElementById('formMissedTMX').value, 10),
+      missedStopsRNA: parseInt(document.getElementById('formMissedRNA').value, 10),
       backlogPercent: parseFloat(document.getElementById('formBacklog').value),
       otPercent: parseFloat(document.getElementById('formOT').value),
-      coachingRides: parseInt(document.getElementById('formCoaching').value),
-      tapFromCoaching: parseInt(document.getElementById('formTAPCoaching').value)
+      coachingRides: parseInt(document.getElementById('formCoaching').value, 10),
+      tapFromCoaching: parseInt(document.getElementById('formTAPCoaching').value, 10)
     };
-    
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.success) {
-          closeMetricsForm();
-          loadDashboard();
-          alert('Metrics saved!');
-        } else {
-          alert('Save failed: ' + result.message);
-        }
-      })
-      .withFailureHandler(function(error) {
-        alert('Error: ' + error.message);
-      })
-      .saveDailyOpsMetrics(metricsData);
+    if (hasAppsScript() && google.script.run.saveDailyOpsMetrics) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            closeMetricsForm();
+            loadDashboard();
+            alert('Metrics saved!');
+          } else {
+            alert('Save failed: ' + result.message);
+          }
+        })
+        .withFailureHandler(function(error) {
+          alert('Error: ' + error.message);
+        })
+        .saveDailyOpsMetrics(metricsData);
+    } else {
+      Branch360OpsDemoState.todayMetrics = Object.assign({}, Branch360OpsDemoState.todayMetrics, metricsData);
+      closeMetricsForm();
+      renderOpsDashboard(getDemoOpsDashboard());
+      alert('Metrics captured (demo)');
+    }
   });
   
   function resolveIssue(issueID) {
     const notes = prompt('Resolution notes:');
-    if (!notes) return;
+    if (notes === null) return; // User cancelled
+    if (!notes || notes.trim() === '') {
+      alert('Please provide resolution notes.');
+      return;
+    }
+    var activityToken = window.ActivityClient ? ActivityClient.start('OPS_RESOLVE_ISSUE', issueID, { role: 'Operations Manager' }) : null;
     
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.success) {
-          loadDashboard();
-          alert('Issue resolved!');
-        } else {
-          alert('Failed: ' + result.message);
-        }
-      })
-      .withFailureHandler(function(error) {
-        alert('Error: ' + error.message);
-      })
-      .resolveServiceIssue(issueID, notes);
+    if (hasAppsScript() && google.script.run.resolveServiceIssue) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (activityToken && window.ActivityClient) {
+            ActivityClient.finish(activityToken, { success: result.success });
+            activityToken = null;
+          }
+          if (result.success) {
+            loadDashboard();
+            alert('Issue resolved successfully!');
+          } else {
+            alert('Failed to resolve issue: ' + (result.message || 'Unknown error'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          if (activityToken && window.ActivityClient) {
+            ActivityClient.finish(activityToken, { error: true, message: error.message });
+            activityToken = null;
+          }
+          alert('Error resolving issue: ' + error.message);
+        })
+        .resolveServiceIssue(issueID, notes);
+    } else {
+      if (activityToken && window.ActivityClient) {
+        ActivityClient.finish(activityToken, { success: true, demo: true });
+        activityToken = null;
+      }
+      Branch360OpsDemoState.openIssues = Branch360OpsDemoState.openIssues.filter(function(issue) {
+        return issue.issueID !== issueID;
+      });
+      renderIssues(Branch360OpsDemoState.openIssues);
+      alert('Issue resolved successfully (demo mode).');
+    }
   }
   
   function assignSpecialist(packetID) {
-    // In production, show modal with specialist dropdown
-    const specialistID = prompt('Enter Specialist User ID:');
-    if (!specialistID) return;
+    const technicians = Branch360OpsDemoState.teamTechnicians || [];
+    let specialistOptions = 'Available Technicians:\n\n';
+    technicians.forEach(function(tech, index) {
+      if (tech.active) {
+        specialistOptions += (index + 1) + '. ' + tech.name + ' (' + tech.email + ')\n';
+      }
+    });
+    specialistOptions += '\nEnter Specialist User ID or email:';
+    const specialistID = prompt(specialistOptions);
+    if (specialistID === null) return; // User cancelled
+    if (!specialistID || specialistID.trim() === '') {
+      alert('Please enter a specialist user ID or email.');
+      return;
+    }
+    var activityToken = window.ActivityClient ? ActivityClient.start('OPS_ASSIGN_TECH', packetID, { specialist: specialistID, role: 'Operations Manager' }) : null;
     
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.success) {
-          loadDashboard();
-          alert('Specialist assigned!');
-        } else {
-          alert('Failed: ' + result.message);
+    if (hasAppsScript() && google.script.run.assignSpecialistToInstall) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (activityToken && window.ActivityClient) {
+            ActivityClient.finish(activityToken, { success: result.success });
+            activityToken = null;
+          }
+          if (result.success) {
+            loadDashboard();
+            alert('Specialist assigned successfully!');
+          } else {
+            alert('Failed to assign specialist: ' + (result.message || 'Unknown error'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          if (activityToken && window.ActivityClient) {
+            ActivityClient.finish(activityToken, { error: true, message: error.message });
+            activityToken = null;
+          }
+          alert('Error assigning specialist: ' + error.message);
+        })
+        .assignSpecialistToInstall(packetID, specialistID.trim());
+    } else {
+      if (activityToken && window.ActivityClient) {
+        ActivityClient.finish(activityToken, { success: true, demo: true });
+        activityToken = null;
+      }
+      Branch360OpsDemoState.pendingInstalls = Branch360OpsDemoState.pendingInstalls.map(function(install) {
+        if (install.packetID === packetID) {
+          install.assignedSpecialist = specialistID.trim();
         }
-      })
-      .withFailureHandler(function(error) {
-        alert('Error: ' + error.message);
-      })
-      .assignSpecialistToInstall(packetID, specialistID);
+        return install;
+      });
+      renderInstalls(Branch360OpsDemoState.pendingInstalls);
+      alert('Specialist assigned successfully (demo mode).');
+    }
   }
-  
+
+  function initializeOpsDemoState() {
+    const now = new Date();
+    const unifiedSales = [
+      {
+        RecordID: 'SALE-2001',
+        BranchID: 'HOUSTON',
+        SoldDate: new Date(now - 86400000 * 3).toISOString(),
+        AccountName: 'Texas Thrift - Midtown',
+        ServiceAddress: '1234 Westheimer Rd, Houston, TX',
+        ServiceName: 'GPC Interior/Exterior',
+        MaintenancePrice: 950,
+        InitialPrice: 3200,
+        Status: 'Proposal'
+      },
+      {
+        RecordID: 'SALE-2002',
+        BranchID: 'HOUSTON',
+        SoldDate: new Date(now - 86400000 * 7).toISOString(),
+        AccountName: 'Montrose Medical Group',
+        ServiceAddress: '450 Westheimer Rd, Houston, TX',
+        ServiceName: 'Rodent & Fly Program',
+        MaintenancePrice: 1200,
+        InitialPrice: 5800,
+        Status: 'Negotiation'
+      },
+      {
+        RecordID: 'SALE-2003',
+        BranchID: 'HOUSTON',
+        SoldDate: new Date(now - 86400000 * 10).toISOString(),
+        AccountName: 'Bayou Coffee Roasters',
+        ServiceAddress: '2121 Main St, Houston, TX',
+        ServiceName: 'Mosquito & GPC Combo',
+        MaintenancePrice: 600,
+        InitialPrice: 2500,
+        Status: 'Sold'
+      }
+    ];
+    const opsWorkflows = {
+      'SALE-2001': {
+        OperationsManager: 'Maria Lopez',
+        Status: 'Scheduled',
+        ConfirmedStartDate: new Date(now.getTime() + 86400000 * 2).toISOString(),
+        MaterialsOrdered: true,
+        InstallStarted: false
+      },
+      'SALE-2002': {
+        OperationsManager: '',
+        Status: 'New Sale',
+        MaterialsOrdered: false,
+        InstallStarted: false
+      },
+      'SALE-2003': {
+        OperationsManager: 'Maria Lopez',
+        Status: 'Install Started',
+        ConfirmedStartDate: new Date(now.getTime() - 86400000).toISOString(),
+        MaterialsOrdered: true,
+        InstallStarted: true
+      }
+    };
+    return {
+      user: {
+        name: 'Maria Lopez',
+        email: 'maria.lopez@branch360.com',
+        branchID: 'HOUSTON'
+      },
+      todayMetrics: {
+        missedStopsTMX: 2,
+        missedStopsRNA: 1,
+        backlogPercent: 8,
+        otPercent: 3.5
+      },
+      openIssues: [
+        { issueID: 'ISS-1', customer: 'Texas Thrift - Midtown', severity: 'High', description: 'Leak in bait station', assignedTech: 'J. Owens' },
+        { issueID: 'ISS-2', customer: 'Bayou Coffee Roasters', severity: 'Medium', description: 'Need follow-up fly catch data', assignedTech: 'S. Rivera' }
+      ],
+      pendingInstalls: [
+        { packetID: 'PACKET-1', customer: 'Montrose Medical Group', address: '450 Westheimer Rd', assignedSpecialist: '' }
+      ],
+      teamTechnicians: [
+        { name: 'Jared Owens', email: 'jared.owens@branch360.com', active: true },
+        { name: 'Sofia Rivera', email: 'sofia.rivera@branch360.com', active: true },
+        { name: 'Hank Nguyen', email: 'hank.nguyen@branch360.com', active: false }
+      ],
+      unifiedSales: unifiedSales,
+      opsWorkflows: opsWorkflows
+    };
+  }
+
   loadDashboard();
-  setInterval(loadDashboard, 120000); // Refresh every 2 minutes
+  setInterval(loadDashboard, 120000);
   
-  // Register service worker for PWA
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
       navigator.serviceWorker.register('service-worker.js')
@@ -340,4 +839,3 @@
 
 </body>
 </html>
-

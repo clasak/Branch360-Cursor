@@ -128,7 +128,7 @@ function initializeProperties() {
   props.setProperty('DB_INITIALIZED', 'true');
   props.setProperty('DB_VERSION', '1.0.0');
   props.setProperty('SETUP_DATE', new Date().toISOString());
-  props.setProperty('MAPBOX_TOKEN', 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA');
+  props.setProperty('MAPBOX_TOKEN', API_TOKENS.MAPBOX);
   
   Logger.log('✓ Properties initialized');
 }

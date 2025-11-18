@@ -49,6 +49,13 @@ function runAllTests() {
     Logger.log('❌ Branch manager module tests failed: ' + e.message);
     allPassed = false;
   }
+
+  try {
+    testSalesforceParser();
+  } catch (e) {
+    Logger.log('❌ Salesforce parser tests failed: ' + e.message);
+    allPassed = false;
+  }
   
   if (allPassed) {
     Logger.log('\n✅ All tests passed!');
@@ -185,6 +192,77 @@ function testBranchManagerModule() {
   assertEqual(typeof generateDailyCadenceReport, 'function', 'generateDailyCadenceReport function exists');
   
   Logger.log('✓ Branch manager module tests passed\n');
+}
+
+function testSalesforceParser() {
+  Logger.log('Testing: Salesforce Parser');
+
+  var sampleQuote = [
+    'Taylor 4 Tayho',
+    'Lee Morrison',
+    '17213 Aldine Westfield Road',
+    'Houston, TX 77073',
+    'lee.morrison@tayho.com',
+    'Prepared By',
+    'Amy AE',
+    'amy.ae@branch360.com',
+    'Equipment',
+    'Wide Multicatch Mouse Trap - Standard, Solid Lid 22',
+    'Eradico Exterior Rodent Bait Station - Weighted, Black 14',
+    'Lumnia Ultimate LED Insect Light Trap 4',
+    'Total Cost of Equipment $3,455.60',
+    'Routine Management Services',
+    'General Pest Control Maintenance',
+    'General Pest Control Service Frequency - Monthly (12 x)',
+    'Interior Monitoring Service Frequency - Semi-Monthly (24 x)',
+    'Exterior Monitoring Service Frequency - Monthly (12 x)',
+    'Insect Light Trap Maintenance Service Frequency - Monthly (12 x)',
+    'Investment Summary',
+    'One-Time Cost $3,455.60',
+    'Initial Svc Cost $924.34',
+    'Avg Monthly Cost $397.52',
+    'REQUESTED START DATE 11-19-2025'
+  ].join('\n');
+
+  var result = parseSalesforceQuoteTextToStartPacketDraft(sampleQuote);
+
+  assertEqual(result.accountName, 'Tayho', 'Account name parsed from Taylor 4 label');
+  assertEqual(result.contactName, 'Lee Morrison', 'Contact name parsed');
+  assertEqual(result.contactEmail, 'lee.morrison@tayho.com', 'Contact email parsed from header block');
+  assertEqual(result.serviceAddressLine1, '17213 Aldine Westfield Road', 'Service address line parsed');
+  assertEqual(result.serviceCity, 'Houston', 'Service city parsed');
+  assertEqual(result.serviceState, 'TX', 'Service state parsed');
+  assertEqual(result.serviceZip, '77073', 'Service zip parsed');
+  assertEqual(result.aeName, 'Amy AE', 'AE name parsed');
+  assertEqual(result.aeEmail, 'amy.ae@branch360.com', 'AE email parsed');
+  assertEqual(result.equipment.multCatchQty, 22, 'Multicatch quantity tallied');
+  assertEqual(result.equipment.rbsQty, 14, 'RBS quantity tallied');
+  assertEqual(result.equipment.iltQty, 4, 'ILT quantity tallied');
+  assertEqual(result.equipment.otherEquipment.length, 0, 'No other equipment captured');
+  assertEqual(result.equipment.summary, '22 MRT, 14 RBS, 4 ILT', 'Equipment summary formatted for MRT/RBS/ILT');
+  assertEqual(result.equipmentOneTimeTotal, 3455.6, 'One-time cost from Investment Summary');
+  assertEqual(result.servicesInitialTotal, 924.34, 'Initial service cost from Investment Summary');
+  assertEqual(result.servicesMonthlyTotal, 397.52, 'Monthly cost parsed from Investment Summary');
+  assertEqual(result.servicesAnnualTotal, 4770.24, 'Annual cost derived from monthly');
+  assertEqual(result.combinedInitialTotal, 4379.94, 'Combined initial total sums correctly');
+  assertEqual(result.combinedMonthlyTotal, 397.52, 'Combined monthly total equals monthly cost');
+  assertEqual(result.combinedAnnualTotal, 4770.24, 'Combined annual total derived from monthly');
+  assertEqual(result.monthlyCost, 397.52, 'Monthly cost surfaced on draft');
+  assertEqual(result.annualCost, 4770.24, 'Annual cost surfaced on draft');
+  assertEqual(result.jobType, 'Contract', 'Job type defaults to Contract when recurring services exist');
+  assertEqual(result.requestedStartDate, '2025-11-19', 'Requested start date parsed');
+  assertEqual(result.startMonth, 'November', 'Requested start month derived from date');
+  assertEqual(result.services.length, 4, 'Service list built from Routine Management Services');
+  assertEqual(result.services[0].serviceName, 'General Pest Control', 'First service is GPC');
+  assertEqual(result.services[1].serviceName, 'Interior Rodent Monitoring', 'Second service interior rodent');
+  assertEqual(result.services[2].serviceName, 'Exterior Rodent Monitoring', 'Third service exterior rodent');
+  assertEqual(result.services[3].serviceName, 'Insect Light Trap Maintenance', 'Fourth service ILT maintenance');
+  assertEqual(result.coveredPests.length, 4, 'Covered pests derived from services/equipment');
+  assertEqual(result.coveredPests[0], 'Pavement Ants', 'Derived pests include pavement ants');
+  assertEqual(result.coveredPests[1], 'Common Rodents', 'Derived pests include rodents');
+  assertEqual(result.coveredPests[2], 'Common Roaches', 'Derived pests include roaches');
+  assertEqual(result.coveredPests[3], 'Common House Fly', 'Derived pests include house fly');
+  Logger.log('✓ Salesforce parser tests passed\n');
 }
 
 function assertEqual(actual, expected, message) {

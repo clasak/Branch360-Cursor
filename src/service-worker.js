@@ -5,6 +5,8 @@ const urlsToCache = [
   '/tech-dashboard.html',
   '/ops-manager-dashboard.html',
   '/branch-manager-dashboard.html',
+  '/dashboard.html',
+  '/activity-client.js',
   '/ae-leads-widget.html',
   '/tech-lead-form.html',
   'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css'
@@ -89,4 +91,3 @@ self.addEventListener('fetch', function(event) {
       })
   );
 });
-

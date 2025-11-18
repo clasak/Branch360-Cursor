@@ -40,11 +40,15 @@ function uploadMyTerritories() {
  * Upload territory assignments from CSV
  * CSV Format: ZipCode, AE_Email, BranchID, TerritoryName
  * 
- * @param {string} csvData - CSV content
+ * @param {Object} params - Parameters object with csvData
  * @return {Object} Upload result
  */
-function uploadTerritories(csvData) {
+function uploadTerritories(params) {
   try {
+    const csvData = params && params.csvData ? params.csvData : '';
+    if (!csvData) {
+      throw new Error('CSV data is required');
+    }
     const lines = csvData.split('\n');
     const territoriesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TERRITORIES);
     const usersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.USERS);
@@ -541,5 +545,346 @@ function markNotificationRead(notificationID) {
   return updateRowByID(SHEETS.NOTIFICATIONS, 'NotificationID', notificationID, {
     'Read': true
   });
+}
+
+/**
+ * Get all territories with stats
+ * @param {Object} params - Parameters object with optional branchId
+ * @return {Object} Territories with stats
+ */
+function getAllTerritories(params) {
+  try {
+    // Handle empty or null params
+    if (!params) params = {};
+    const branchId = params.branchId || null;
+    
+    // Get territories sheet - handle if it doesn't exist
+    let territories = [];
+    try {
+      territories = getSheetData(SHEETS.TERRITORIES) || [];
+    } catch (e) {
+      Logger.log('⚠ Territories sheet not found or empty: ' + e.message);
+      territories = [];
+    }
+    
+    territories = territories.filter(function(territory) {
+      if (branchId && territory.BranchID !== branchId) return false;
+      return territory.Active !== false;
+    });
+    
+    // Get users
+    let users = [];
+    try {
+      users = getSheetData(SHEETS.USERS) || [];
+    } catch (e) {
+      Logger.log('⚠ Users sheet not found: ' + e.message);
+      users = [];
+    }
+    
+    const userMap = {};
+    users.forEach(function(user) {
+      if (user.UserID) {
+        userMap[user.UserID] = user;
+      }
+    });
+    
+    // Get leads
+    let leads = [];
+    try {
+      leads = getSheetData(SHEETS.LEADS) || [];
+    } catch (e) {
+      Logger.log('⚠ Leads sheet not found: ' + e.message);
+      leads = [];
+    }
+    
+    const territoryList = territories.map(function(territory) {
+      const ae = userMap[territory.AE_UserID] || {};
+      const zipList = String(territory.ZipCodes || '').split('|').filter(Boolean);
+      const territoryProspects = leads.filter(function(lead) {
+        return zipList.indexOf(lead.ZipCode) !== -1;
+      });
+      
+      return {
+        territoryID: territory.TerritoryID,
+        territoryName: territory.TerritoryName,
+        aeUserID: territory.AE_UserID,
+        aeName: ae.Name || 'Unassigned',
+        aeEmail: ae.Email || '',
+        branchID: territory.BranchID || '',
+        zipCodes: zipList,
+        zipCount: zipList.length,
+        prospectCount: territoryProspects.length,
+        active: territory.Active !== false
+      };
+    });
+    
+    // Calculate stats
+    const totalAEs = new Set(territoryList.map(t => t.aeEmail).filter(Boolean)).size;
+    const totalZips = territoryList.reduce((sum, t) => sum + t.zipCount, 0);
+    const avgCoverage = totalAEs > 0 ? (totalZips / totalAEs).toFixed(2) : 0;
+    
+    return {
+      success: true,
+      territories: territoryList,
+      stats: {
+        totalAEs: totalAEs,
+        totalZipCodes: totalZips,
+        averageCoverage: parseFloat(avgCoverage),
+        totalTerritories: territoryList.length
+      }
+    };
+    
+  } catch (e) {
+    Logger.log('❌ Get territories failed: ' + e.message);
+    return {
+      success: false,
+      message: 'Failed to load territories: ' + e.message,
+      territories: [],
+      stats: { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 }
+    };
+  }
+}
+
+/**
+ * Add or update a single zip code assignment
+ * @param {Object} params - Parameters object with zipCode, aeEmail, branchID, territoryName
+ * @return {Object} Result
+ */
+function addTerritoryZip(params) {
+  try {
+    const zipCode = params && params.zipCode ? params.zipCode : null;
+    const aeEmail = params && params.aeEmail ? params.aeEmail : null;
+    const branchID = params && params.branchID ? params.branchID : null;
+    const territoryName = params && params.territoryName ? params.territoryName : null;
+    
+    if (!zipCode || !/^\d{5}$/.test(zipCode)) {
+      throw new Error('Zip code must be 5 digits');
+    }
+    
+    if (!aeEmail || !aeEmail.includes('@')) {
+      throw new Error('Valid AE email is required');
+    }
+    
+    // Find AE user
+    const users = getSheetData(SHEETS.USERS);
+    const ae = users.find(function(u) {
+      return u.Email && u.Email.toLowerCase() === aeEmail.toLowerCase();
+    });
+    
+    if (!ae) {
+      throw new Error('AE not found: ' + aeEmail);
+    }
+    
+    // Check if territory exists for this AE
+    const territories = getSheetData(SHEETS.TERRITORIES);
+    let territory = territories.find(function(t) {
+      return t.AE_UserID === ae.UserID && 
+             t.TerritoryName === territoryName &&
+             t.BranchID === branchID;
+    });
+    
+    const zipList = String(territory ? territory.ZipCodes : '').split('|').filter(Boolean);
+    
+    // Check if zip already assigned to another territory
+    const existingTerritory = territories.find(function(t) {
+      const zips = String(t.ZipCodes || '').split('|').filter(Boolean);
+      return zips.indexOf(zipCode) !== -1 && t.TerritoryID !== (territory ? territory.TerritoryID : null);
+    });
+    
+    if (existingTerritory) {
+      throw new Error('Zip code ' + zipCode + ' is already assigned to ' + existingTerritory.TerritoryName);
+    }
+    
+    // Add zip if not already in list
+    if (zipList.indexOf(zipCode) === -1) {
+      zipList.push(zipCode);
+    }
+    
+    // Create or update territory
+    if (!territory) {
+      const territoryID = generateUniqueID('TER');
+      const territoriesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TERRITORIES);
+      territoriesSheet.appendRow([
+        territoryID,
+        ae.UserID,
+        branchID,
+        zipList.join('|'),
+        territoryName,
+        true,
+        new Date(),
+        new Date()
+      ]);
+      
+      logAudit('CREATE_TERRITORY', SHEETS.TERRITORIES, territoryID, 'Created territory: ' + territoryName);
+    } else {
+      updateRowByID(SHEETS.TERRITORIES, 'TerritoryID', territory.TerritoryID, {
+        'ZipCodes': zipList.join('|'),
+        'UpdatedOn': new Date()
+      });
+      
+      logAudit('UPDATE_TERRITORY', SHEETS.TERRITORIES, territory.TerritoryID, 'Added zip: ' + zipCode);
+    }
+    
+    // Update user's TerritoryZips
+    updateRowByID(SHEETS.USERS, 'UserID', ae.UserID, {
+      'TerritoryZips': zipList.join('|')
+    });
+    
+    return {
+      success: true,
+      message: 'Zip code ' + zipCode + ' assigned successfully',
+      territoryID: territory ? territory.TerritoryID : null
+    };
+    
+  } catch (e) {
+    Logger.log('❌ Add territory zip failed: ' + e.message);
+    return {
+      success: false,
+      message: e.message
+    };
+  }
+}
+
+/**
+ * Remove a zip code from a territory
+ * @param {Object} params - Parameters object with zipCode
+ * @return {Object} Result
+ */
+function removeTerritoryZip(params) {
+  try {
+    const zipCode = params && params.zipCode ? params.zipCode : null;
+    if (!zipCode || !/^\d{5}$/.test(zipCode)) {
+      throw new Error('Zip code must be 5 digits');
+    }
+    
+    const territories = getSheetData(SHEETS.TERRITORIES);
+    const territory = territories.find(function(t) {
+      const zips = String(t.ZipCodes || '').split('|').filter(Boolean);
+      return zips.indexOf(zipCode) !== -1;
+    });
+    
+    if (!territory) {
+      throw new Error('Zip code ' + zipCode + ' not found in any territory');
+    }
+    
+    const zipList = String(territory.ZipCodes || '').split('|').filter(Boolean);
+    const index = zipList.indexOf(zipCode);
+    if (index !== -1) {
+      zipList.splice(index, 1);
+    }
+    
+    // Update territory
+    updateRowByID(SHEETS.TERRITORIES, 'TerritoryID', territory.TerritoryID, {
+      'ZipCodes': zipList.join('|'),
+      'UpdatedOn': new Date()
+    });
+    
+    // Update AE's TerritoryZips
+    const ae = findRowByID(SHEETS.USERS, 'UserID', territory.AE_UserID);
+    if (ae) {
+      updateRowByID(SHEETS.USERS, 'UserID', territory.AE_UserID, {
+        'TerritoryZips': zipList.join('|')
+      });
+    }
+    
+    logAudit('REMOVE_TERRITORY_ZIP', SHEETS.TERRITORIES, territory.TerritoryID, 'Removed zip: ' + zipCode);
+    
+    return {
+      success: true,
+      message: 'Zip code ' + zipCode + ' removed successfully'
+    };
+    
+  } catch (e) {
+    Logger.log('❌ Remove territory zip failed: ' + e.message);
+    return {
+      success: false,
+      message: e.message
+    };
+  }
+}
+
+/**
+ * Search for a zip code assignment
+ * @param {Object} params - Parameters object with zipCode
+ * @return {Object} Territory assignment or null
+ */
+function searchTerritoryZip(params) {
+  try {
+    const zipCode = params && params.zipCode ? params.zipCode : null;
+    if (!zipCode || !/^\d{5}$/.test(zipCode)) {
+      return {
+        success: false,
+        message: 'Zip code must be 5 digits'
+      };
+    }
+    
+    const territories = getSheetData(SHEETS.TERRITORIES);
+    const territory = territories.find(function(t) {
+      const zips = String(t.ZipCodes || '').split('|').filter(Boolean);
+      return zips.indexOf(zipCode) !== -1;
+    });
+    
+    if (!territory) {
+      return {
+        success: false,
+        message: 'Zip code not assigned'
+      };
+    }
+    
+    const ae = findRowByID(SHEETS.USERS, 'UserID', territory.AE_UserID);
+    
+    return {
+      success: true,
+      record: {
+        zipCode: zipCode,
+        territoryID: territory.TerritoryID,
+        territoryName: territory.TerritoryName,
+        aeUserID: territory.AE_UserID,
+        aeName: ae ? ae.Name : 'Unknown',
+        aeEmail: ae ? ae.Email : '',
+        branchID: territory.BranchID || ''
+      }
+    };
+    
+  } catch (e) {
+    Logger.log('❌ Search territory zip failed: ' + e.message);
+    return {
+      success: false,
+      message: 'Search failed: ' + e.message
+    };
+  }
+}
+
+/**
+ * Export territories to CSV
+ * @return {string} CSV content
+ */
+function exportTerritoriesCSV() {
+  try {
+    const territories = getSheetData(SHEETS.TERRITORIES);
+    const users = getSheetData(SHEETS.USERS);
+    const userMap = {};
+    users.forEach(function(user) {
+      userMap[user.UserID] = user;
+    });
+    
+    const csvLines = ['ZipCode,AE_Email,BranchID,TerritoryName'];
+    
+    territories.forEach(function(territory) {
+      const ae = userMap[territory.AE_UserID] || {};
+      const zipList = String(territory.ZipCodes || '').split('|').filter(Boolean);
+      
+      zipList.forEach(function(zip) {
+        const sanitizedName = (territory.TerritoryName || '').replace(/"/g, "''");
+        csvLines.push(zip + ',' + (ae.Email || '') + ',' + (territory.BranchID || '') + ',"' + sanitizedName + '"');
+      });
+    });
+    
+    return csvLines.join('\n');
+    
+  } catch (e) {
+    Logger.log('❌ Export territories failed: ' + e.message);
+    throw new Error('Export failed: ' + e.message);
+  }
 }
 

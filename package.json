@@ -1,0 +1,18 @@
+{
+  "name": "branch360-local-preview",
+  "version": "1.0.0",
+  "description": "Local preview server for the Branch360 HTML dashboards",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon scripts/dev-server.js",
+    "clasp:login": "clasp login",
+    "clasp:push": "clasp push",
+    "clasp:watch": "clasp watch",
+    "clasp:pull": "clasp pull",
+    "clasp:open": "clasp open"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.1.1",
+    "nodemon": "^3.1.11"
+  }
+}

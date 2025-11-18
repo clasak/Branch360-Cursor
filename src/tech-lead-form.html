@@ -4,6 +4,8 @@
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="activity-client.js"></script>
+  <script src="options-data.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .loading { display: none; }
@@ -13,7 +15,13 @@
 <body class="bg-gray-100 p-4">
 
 <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
-  <h2 class="text-2xl font-bold text-gray-800 mb-6">📝 Submit New Lead</h2>
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">📝 Submit New Lead</h2>
+    <button type="button" onclick="returnToDashboard()" class="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+      <span>⬅</span>
+      Back to Dashboard
+    </button>
+  </div>
   
   <form id="leadForm" class="space-y-4">
     <!-- Customer Name -->
@@ -69,13 +77,25 @@
       <label class="block text-sm font-medium text-gray-700 mb-1">Service Type *</label>
       <select id="serviceType" required
         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-        <option value="Pest Control">Pest Control</option>
-        <option value="Termite">Termite</option>
-        <option value="Wildlife">Wildlife</option>
-        <option value="Lawn Care">Lawn Care</option>
-        <option value="Mosquito">Mosquito</option>
-        <option value="Rodent">Rodent</option>
-        <option value="Other">Other</option>
+        <option value="">Select Service Type</option>
+      </select>
+    </div>
+
+    <!-- Lead Type -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Lead Type *</label>
+      <select id="leadType" required
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <option value="">Select Lead Type</option>
+      </select>
+    </div>
+
+    <!-- Job Type -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Job Type *</label>
+      <select id="jobType" required
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <option value="">Select Job Type</option>
       </select>
     </div>
     
@@ -104,15 +124,57 @@
   <div id="successMessage" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
     <p class="text-green-800 font-semibold">✅ Lead submitted successfully!</p>
     <p class="text-green-700 text-sm mt-1" id="assignmentMessage"></p>
+    <button onclick="returnToDashboard()" class="mt-3 text-blue-600 hover:text-blue-800 font-semibold text-sm">⬅ Back to Dashboard</button>
   </div>
 </div>
 
 <script>
+  (function ensureGoogleStub() {
+    if (typeof window === 'undefined') return;
+    if (typeof window.google === 'undefined') {
+      window.google = {};
+    }
+    if (!window.google.script) {
+      window.google.script = { run: null };
+    }
+  })();
+
+  function populateDropdown(id, options, placeholder) {
+    const select = document.getElementById(id);
+    if (!select || !Array.isArray(options)) return;
+    select.innerHTML = '';
+    const base = document.createElement('option');
+    base.value = '';
+    base.textContent = placeholder || 'Select';
+    select.appendChild(base);
+    options.forEach(function(option) {
+      const opt = document.createElement('option');
+      opt.value = option;
+      opt.textContent = option;
+      select.appendChild(opt);
+    });
+  }
+
+  if (window.Branch360Options) {
+    populateDropdown('serviceType', Branch360Options.serviceTypes, 'Select Service Type');
+    populateDropdown('leadType', Branch360Options.leadTypes, 'Select Lead Type');
+    populateDropdown('jobType', Branch360Options.jobTypes, 'Select Job Type');
+  }
+
+  function hasAppsScript() {
+    return !!(window.google && window.google.script && window.google.script.run);
+  }
+
+  function getRunner() {
+    return hasAppsScript() ? window.google.script.run : null;
+  }
+
   // Zip code lookup
   document.getElementById('zipCode').addEventListener('blur', function() {
     const zip = this.value.trim();
-    if (zip.length === 5) {
-      google.script.run
+    const runner = getRunner();
+    if (zip.length === 5 && runner) {
+      runner
         .withSuccessHandler(function(ae) {
           if (ae) {
             document.getElementById('assignedAEName').textContent = ae.name;
@@ -126,13 +188,23 @@
           console.error('Lookup failed:', error);
         })
         .getAEForZipCode(zip);
+    } else if (zip.length === 5) {
+      document.getElementById('assignedAEName').textContent = 'Demo AE (Houston)';
+      document.getElementById('assignmentPreview').classList.remove('hidden');
     }
   });
   
   // Form submission
+  var leadActivityToken = null;
+  document.getElementById('leadForm').addEventListener('input', function() {
+    if (!leadActivityToken && window.ActivityClient) {
+      leadActivityToken = ActivityClient.start('CREATE_LEAD', '', { form: 'tech-lead-form' });
+    }
+  }, { once: true });
+
   document.getElementById('leadForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const leadData = {
       customer_name: document.getElementById('customerName').value.trim(),
       service_address: document.getElementById('serviceAddress').value.trim(),
@@ -140,42 +212,86 @@
       phone: document.getElementById('phone').value.trim(),
       email: document.getElementById('email').value.trim(),
       service_type: document.getElementById('serviceType').value,
+      lead_type: document.getElementById('leadType').value,
+      job_type: document.getElementById('jobType').value,
       notes: document.getElementById('notes').value.trim()
     };
     
     // Show loading
-    document.querySelector('.loading').classList.add('active');
-    document.querySelector('button[type="submit"]').disabled = true;
-    
-    google.script.run
-      .withSuccessHandler(function(result) {
-        document.querySelector('.loading').classList.remove('active');
-        
-        if (result.success) {
-          document.getElementById('leadForm').reset();
-          document.getElementById('assignmentPreview').classList.add('hidden');
-          document.getElementById('assignmentMessage').textContent = 
-            'Assigned to: ' + result.assignedTo + ' (Lead ID: ' + result.leadID + ')';
-          document.getElementById('successMessage').classList.remove('hidden');
-          
-          setTimeout(function() {
-            document.getElementById('successMessage').classList.add('hidden');
-            document.querySelector('button[type="submit"]').disabled = false;
-          }, 5000);
-        } else {
-          alert('Error: ' + result.message);
-          document.querySelector('button[type="submit"]').disabled = false;
-        }
-      })
-      .withFailureHandler(function(error) {
-        document.querySelector('.loading').classList.remove('active');
-        document.querySelector('button[type="submit"]').disabled = false;
-        alert('Submission failed: ' + error.message);
-      })
-      .submitLead(leadData);
+    const loadingEl = document.querySelector('.loading');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    loadingEl.classList.add('active');
+    submitBtn.disabled = true;
+
+    function handleSuccess(result) {
+      loadingEl.classList.remove('active');
+      submitBtn.disabled = false;
+      if (!result || !result.success) {
+        alert('Error: ' + (result && result.message ? result.message : 'Unable to submit lead.'));
+        return;
+      }
+      if (leadActivityToken && window.ActivityClient) {
+        ActivityClient.finish(leadActivityToken, { leadId: result.leadID, assignedTo: result.assignedTo });
+        leadActivityToken = null;
+      }
+      document.getElementById('leadForm').reset();
+      document.getElementById('assignmentPreview').classList.add('hidden');
+      document.getElementById('assignmentMessage').textContent = 
+        'Assigned to: ' + result.assignedTo + ' (Lead ID: ' + result.leadID + ')';
+      document.getElementById('successMessage').classList.remove('hidden');
+      
+      setTimeout(function() {
+        document.getElementById('successMessage').classList.add('hidden');
+      }, 5000);
+    }
+
+    function handleFailure(error) {
+      loadingEl.classList.remove('active');
+      submitBtn.disabled = false;
+      if (leadActivityToken && window.ActivityClient) {
+        ActivityClient.finish(leadActivityToken, { error: true, message: error.message });
+        leadActivityToken = null;
+      }
+      alert('Submission failed: ' + (error && error.message ? error.message : 'Unknown error'));
+    }
+
+    const runner = getRunner();
+    if (runner) {
+      runner
+        .withSuccessHandler(handleSuccess)
+        .withFailureHandler(handleFailure)
+        .submitLead(leadData);
+    } else {
+      setTimeout(function() {
+        handleSuccess({
+          success: true,
+          assignedTo: 'Demo AE (Houston)',
+          leadID: 'LEAD-' + Math.floor(Math.random() * 9000 + 1000)
+        });
+      }, 600);
+    }
   });
+
+  function returnToDashboard() {
+    // Check if we're in an iframe (unified dashboard)
+    if (window.parent && window.parent !== window) {
+      // Try to communicate with parent
+      if (window.parent.postMessage) {
+        window.parent.postMessage({ type: 'NAVIGATE_TO_TECH_DASHBOARD' }, '*');
+        return;
+      }
+      // Fallback: try to navigate parent
+      try {
+        window.parent.location.href = 'tech-dashboard.html';
+        return;
+      } catch (e) {
+        // Cross-origin, can't access parent
+      }
+    }
+    // Not in iframe, navigate directly
+    window.location.href = 'tech-dashboard.html';
+  }
 </script>
 
 </body>
 </html>
-

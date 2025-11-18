@@ -23,12 +23,17 @@ const SHEETS = {
   OPERATIONS_METRICS: "Operations_Metrics",
   START_PACKETS: "StartPackets",
   SERVICE_ISSUES: "Service_Issues",
-  
+  UNIFIED_SALES: "Unified_Sales",
+  SERVICE_MONTHS: "Service_Months",
+  SRA_HAZARDS: "SRA_Hazards",
+  OPS_PIPELINE: "Ops_Pipeline",
+
   // Reporting Tables
   BRANCH_DAILY_SUMMARY: "Branch_Daily_Summary",
   REGION_SUMMARY: "Region_Summary",
   MARKET_SUMMARY: "Market_Summary",
   REVENUE: "Revenue",
+  ACTIVITY_LOG: "ActivityLog",
   
   // System Tables
   AUDIT_LOG: "AuditLog",
@@ -79,9 +84,9 @@ const DB_SCHEMA = {
   
   [SHEETS.SALES_ACTIVITY]: [
     "ActivityID", "Date", "AE_UserID", "BranchID", "RegionID", "MarketID",
-    "TAP_Goal", "TAP_Actual", "Appointments_Set", "Appointments_Completed",
-    "Quotes_Created", "Quotes_Won", "Quote_Value", "WinRate_Percent",
-    "Daily_Sales_Goal", "Daily_Sales_Actual", "CreatedOn", "UpdatedOn"
+    "Proposals_Delivered", "LOBs_On_Proposals", "LOBs_Sold", "Dollars_Sold",
+    "Dollars_Proposed", "NextDay_CONF_Count", "Events_Completed", "Events_Summary",
+    "CreatedOn", "UpdatedOn"
   ],
   
   [SHEETS.ACCOUNTS]: [
@@ -106,11 +111,11 @@ const DB_SCHEMA = {
   ],
   
   [SHEETS.START_PACKETS]: [
-    "PacketID", "TrackerEntryID", "Sold_Date", "Account_Name", "Service_Address",
+    "PacketID", "BranchID", "TrackerEntryID", "Sold_Date", "Account_Name", "Service_Address",
     "Sales_Rep", "Initial_Job_Price", "Maintenance_Price", "Service_Type",
     "Frequency", "Operations_Manager", "Assigned_Specialist", "Date_Install_Scheduled",
     "Status_Install_Complete", "Materials_Ordered", "Log_Book_Needed",
-    "POC_Name_Phone", "Confirmed_Start_Date", "Special_Notes", "PestPac_ID",
+    "POC_Name_Phone", "Confirmed_Start_Date", "Special_Notes", "Status", "PestPac_ID",
     "CreatedOn", "UpdatedOn"
   ],
   
@@ -118,6 +123,28 @@ const DB_SCHEMA = {
     "IssueID", "Date", "Customer_Name", "TrackerEntryID", "AccountID",
     "Issue_Type", "Severity", "Description", "Assigned_Tech_UserID",
     "Status", "Resolution_Notes", "ReportedBy_UserID", "CreatedOn", "ResolvedOn"
+  ],
+
+  [SHEETS.UNIFIED_SALES]: [
+    "RecordID", "BranchID", "SoldDate", "AccountName", "Service_Address", "SalesRepIDs",
+    "POCName", "POCPhone", "RequestedStartMonth", "PestPacConfirmed", "TapLeadFlag",
+    "InitialPrice", "MaintenancePrice", "ServiceType", "LeadType", "JobType",
+    "Frequency", "ServiceName", "ServiceMonths", "CoveredPests", "SpecialNotes",
+    "LogBookNeeded", "PNOLRequired", "SRACompletedBy", "SRADate", "SRATime",
+    "SRAAdditionalHazards", "SRAHazardRef", "Status", "CreatedOn", "UpdatedOn"
+  ],
+
+  [SHEETS.SERVICE_MONTHS]: [
+    "ServiceMonthID", "RecordID", "MonthName", "CreatedOn"
+  ],
+
+  [SHEETS.SRA_HAZARDS]: [
+    "HazardID", "RecordID", "Hazard", "ControlMeasure", "SafeToProceed", "CreatedOn"
+  ],
+
+  [SHEETS.OPS_PIPELINE]: [
+    "WorkflowID", "RecordID", "OperationsManager", "ConfirmedStartDate", "AssignedSpecialist",
+    "MaterialsOrdered", "InstallStarted", "Status", "Notes", "UpdatedOn"
   ],
   
   [SHEETS.BRANCH_DAILY_SUMMARY]: [
@@ -152,6 +179,12 @@ const DB_SCHEMA = {
     "RevID", "Date", "BranchID", "RegionID", "MarketID",
     "Daily_Goal", "Daily_Actual", "Scheduled_Tomorrow", "Forecasted_Revenue",
     "YOY_Target", "YOY_Actual", "CreatedOn", "UpdatedOn"
+  ],
+
+  [SHEETS.ACTIVITY_LOG]: [
+    "ActivityID", "UserID", "Role", "BranchID", "ActionType",
+    "ContextID", "StartedAt", "CompletedAt", "DurationSeconds",
+    "TimeSavedSeconds", "Meta", "Environment"
   ],
   
   [SHEETS.AUDIT_LOG]: [
@@ -190,3 +223,7 @@ const STATUSES = {
   INSTALL: ["Pending", "Scheduled", "In Progress", "Complete", "Cancelled"]
 };
 
+// EXTERNAL API TOKENS
+const API_TOKENS = {
+  MAPBOX: 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA'
+};

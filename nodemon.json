@@ -1,0 +1,8 @@
+{
+  "watch": ["src", "scripts"],
+  "ext": "html,js,css,json",
+  "ignore": ["node_modules", ".git"],
+  "delay": 500,
+  "verbose": true
+}
+

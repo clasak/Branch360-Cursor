@@ -231,6 +231,7 @@ function completeInstallation(packetID, completionData) {
     if (success) {
       logAudit('COMPLETE_INSTALL', SHEETS.START_PACKETS, packetID, 
         'Installation completed');
+      logServerActivity('TECH_COMPLETE_INSTALL', packetID, { completionNotes: completionData.notes || '' });
     }
     
     return { success: success };
@@ -539,6 +540,7 @@ function assignSpecialistToInstall(packetID, specialistUserID) {
     if (success) {
       logAudit('ASSIGN_SPECIALIST', SHEETS.START_PACKETS, packetID, 
         'Assigned to: ' + specialistUserID);
+      logServerActivity('OPS_ASSIGN_TECH', packetID, { specialist: specialistUserID });
       
       // Notify specialist
       notifyTechOfAssignment(specialistUserID, packetID);
@@ -552,6 +554,284 @@ function assignSpecialistToInstall(packetID, specialistUserID) {
   }
 }
 
+function getStartPackets(branchId) {
+  const currentUser = getCurrentUser();
+  const targetBranch = branchId || (currentUser ? (currentUser.branchID || currentUser.BranchID) : 'BRN-001');
+  const trackerMap = {};
+  const trackerData = getSheetData(SHEETS.TRACKER);
+  trackerData.forEach(function(entry) {
+    trackerMap[entry.EntryID] = entry;
+  });
+  const packets = getSheetData(SHEETS.START_PACKETS);
+  return packets
+    .filter(function(packet) {
+      if (packet.BranchID) {
+        return String(packet.BranchID) === String(targetBranch);
+      }
+      const tracker = trackerMap[packet.TrackerEntryID];
+      return tracker ? String(tracker.BranchID) === String(targetBranch) : true;
+    })
+    .map(function(packet) {
+      const tracker = trackerMap[packet.TrackerEntryID];
+      return {
+        packetID: packet.PacketID,
+        accountName: packet.Account_Name,
+        serviceAddress: packet.Service_Address,
+        salesRep: packet.Sales_Rep,
+        serviceType: packet.Service_Type,
+        frequency: packet.Frequency,
+        monthlyPrice: packet.Maintenance_Price,
+        initialPrice: packet.Initial_Job_Price,
+        operationsManager: packet.Operations_Manager,
+        assignedSpecialist: packet.Assigned_Specialist,
+        status: packet.Status || 'Draft',
+        soldDate: packet.Sold_Date,
+        installDate: packet.Date_Install_Scheduled,
+        confirmedDate: packet.Confirmed_Start_Date,
+        notes: packet.Special_Notes,
+        branchId: packet.BranchID || (tracker ? tracker.BranchID : ''),
+        trackerEntryID: packet.TrackerEntryID
+      };
+    });
+}
+
+function saveStartPacket(packetData) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.START_PACKETS);
+  if (!sheet) throw new Error('StartPackets sheet missing');
+  const packetID = packetData.packetID || generateUniqueID('PKT');
+  const status = packetData.status || 'Draft';
+  const branchId = packetData.branchID || currentUser.branchID;
+  const payload = {
+    PacketID: packetID,
+    BranchID: branchId,
+    TrackerEntryID: packetData.trackerEntryID || '',
+    Sold_Date: packetData.soldDate ? new Date(packetData.soldDate) : new Date(),
+    Account_Name: packetData.accountName || '',
+    Service_Address: packetData.serviceAddress || '',
+    Sales_Rep: packetData.salesRep || currentUser.name,
+    Initial_Job_Price: Number(packetData.initialPrice) || 0,
+    Maintenance_Price: Number(packetData.monthlyPrice) || 0,
+    Service_Type: packetData.serviceType || 'General Pest',
+    Frequency: packetData.frequency || 12,
+    Operations_Manager: packetData.operationsManager || currentUser.name,
+    Assigned_Specialist: packetData.assignedSpecialist || '',
+    Date_Install_Scheduled: packetData.installDate ? new Date(packetData.installDate) : '',
+    Status_Install_Complete: false,
+    Materials_Ordered: packetData.materialsOrdered || false,
+    Log_Book_Needed: packetData.logBookNeeded || false,
+    POC_Name_Phone: packetData.pocInfo || '',
+    Confirmed_Start_Date: packetData.confirmedStartDate ? new Date(packetData.confirmedStartDate) : '',
+    Special_Notes: packetData.notes || buildStartPacketScope(packetData),
+    Status: status,
+    PestPac_ID: packetData.pestPacId || '',
+    UpdatedOn: new Date()
+  };
+  const existing = findRowByID(SHEETS.START_PACKETS, 'PacketID', packetID);
+  if (existing) {
+    updateRowByID(SHEETS.START_PACKETS, 'PacketID', packetID, payload);
+  } else {
+    payload.CreatedOn = new Date();
+    insertRow(SHEETS.START_PACKETS, payload);
+  }
+  if (status === 'Submitted') {
+    logServerActivity('OPS_CREATE_START_PACKET', packetID, {
+      account: payload.Account_Name,
+      branchId: branchId
+    });
+  }
+  return { success: true, packetID: packetID };
+}
+
+function generateStartPacketFromUnifiedSale(draft) {
+  if (!draft) throw new Error('Missing start packet draft payload');
+  const primaryService = draft.services && draft.services.length ? draft.services[0] : null;
+  const serviceType = draft.serviceName || (primaryService ? (primaryService.serviceName || primaryService.programType) : (draft.coveredPests ? 'Custom Program' : 'General Pest'));
+  const frequency = primaryService && primaryService.servicesPerYear ? primaryService.servicesPerYear : (draft.frequency || 12);
+  const notes = buildStartPacketNotesFromDraft(draft, primaryService);
+  
+  // Create tracker entry first (single source of truth)
+  const trackerEntryID = createTrackerEntryFromUnifiedSale(draft);
+  
+  const packetPayload = {
+    accountName: draft.accountName || '',
+    serviceAddress: draft.serviceAddress || '',
+    salesRep: (draft.salesRepIDs && draft.salesRepIDs.join ? draft.salesRepIDs.join(', ') : draft.aeName) || draft.aeName || '',
+    initialPrice: draft.initialPrice || draft.combinedInitialTotal || draft.servicesInitialTotal || 0,
+    monthlyPrice: draft.maintenancePrice || draft.combinedMonthlyTotal || draft.servicesMonthlyTotal || 0,
+    serviceType: serviceType,
+    frequency: frequency,
+    branchID: draft.branchId || 'BRN-001',
+    confirmedStartDate: draft.requestedStartDate || '',
+    pocInfo: buildPocInfoString(draft),
+    notes: notes,
+    soldDate: draft.soldDate || new Date().toISOString(),
+    trackerEntryID: trackerEntryID
+  };
+  const result = saveStartPacket(packetPayload);
+  if (draft.sraHazards && draft.sraHazards.length) {
+    replaceHazards(result.packetID, draft.sraHazards);
+  }
+  return result;
+}
+
+/**
+ * Create tracker entry from unified sale (single source of truth)
+ */
+function createTrackerEntryFromUnifiedSale(draft) {
+  try {
+    const currentUser = getCurrentUser();
+    if (!currentUser) throw new Error('User not authenticated');
+    
+    const entryID = generateUniqueID('TRK');
+    const trackerSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TRACKER);
+    
+    const soldDate = draft.soldDate ? new Date(draft.soldDate) : new Date();
+    const initialPrice = Number(draft.initialPrice || draft.combinedInitialTotal || 0);
+    const monthlyPrice = Number(draft.maintenancePrice || draft.combinedMonthlyTotal || 0);
+    const annualValue = monthlyPrice * (draft.frequency || 12);
+    
+    trackerSheet.appendRow([
+      entryID,
+      new Date(), // Date
+      currentUser.userID || currentUser.UserID, // AE_UserID
+      draft.branchId || currentUser.branchID || currentUser.BranchID || 'BRN-001', // BranchID
+      'Sold', // Stage (already sold when creating from unified sale)
+      draft.accountName || '',
+      draft.serviceAddress || '',
+      extractZipFromAddress(draft.serviceAddress || ''),
+      draft.pocName || draft.contactName || '',
+      draft.pocPhone || '',
+      draft.pocEmail || draft.contactEmail || '',
+      'Salesforce Import', // Source
+      'New Business', // Sale_Type
+      draft.serviceName || draft.serviceType || '',
+      initialPrice, // Initial_Fee
+      monthlyPrice, // Monthly_Fee
+      draft.frequency || 12, // Frequency
+      annualValue, // Annual_Value
+      '', // PestPac_ID
+      soldDate, // Date_Proposal (use sold date as proposal date)
+      soldDate, // Date_Sold
+      null, // Date_Dead
+      'Sold', // Status
+      'Created from Salesforce import. ' + (draft.specialNotes || ''), // Notes
+      new Date(), // CreatedOn
+      new Date() // UpdatedOn
+    ]);
+    
+    logAudit('CREATE_TRACKER_FROM_UNIFIED_SALE', SHEETS.TRACKER, entryID, 
+      'Created tracker entry from unified sale: ' + (draft.accountName || ''));
+    
+    return entryID;
+    
+  } catch (e) {
+    Logger.log('❌ Create tracker entry failed: ' + e.message);
+    // Don't throw - allow start packet creation to continue
+    return null;
+  }
+}
+
+function extractZipFromAddress(address) {
+  if (!address) return '';
+  const zipMatch = address.match(/\b\d{5}(?:-\d{4})?\b/);
+  return zipMatch ? zipMatch[0] : '';
+}
+
+function buildStartPacketNotesFromDraft(draft, primaryService) {
+  var serviceSummary = '';
+  if (primaryService && (primaryService.descriptionText || primaryService.programType)) {
+    serviceSummary = (primaryService.serviceName || primaryService.programType) + ': ' + (primaryService.descriptionText || primaryService.programType || '');
+  } else if (draft.specialNotes) {
+    serviceSummary = draft.specialNotes;
+  }
+  const hazardSummary = buildSraSummaryBlock(draft);
+  return [serviceSummary, hazardSummary].filter(Boolean).join('\n\n');
+}
+
+function buildSraSummaryBlock(draft) {
+  var lines = [];
+  lines.push('SRA Review (include in Sales Agreement)');
+  var hazards = draft.sraHazards || [];
+  hazards.forEach(function(hazard) {
+    lines.push('- ' + hazard.hazard + ' | ' + hazard.control + ' | Safe: ' + (hazard.safeToProceed !== false ? 'Yes' : 'No'));
+  });
+  if (draft.sraAdditionalHazards && draft.sraAdditionalHazards !== 'None') {
+    lines.push('Additional Hazards: ' + draft.sraAdditionalHazards);
+  }
+  if (draft.sraCompletedBy || draft.sraCompletedAt) {
+    lines.push('Completed By: ' + (draft.sraCompletedBy || 'N/A') + ' | Date: ' + (draft.sraCompletedAt || 'N/A'));
+  }
+  return lines.join('\n');
+}
+
+function buildPocInfoString(draft) {
+  const parts = [];
+  if (draft.pocName) parts.push(draft.pocName);
+  if (draft.pocPhone) parts.push(draft.pocPhone);
+  if (draft.contactEmail) parts.push(draft.contactEmail);
+  return parts.join(' | ');
+}
+
+function updateStartPacketStatus(packetID, status) {
+  const success = updateRowByID(SHEETS.START_PACKETS, 'PacketID', packetID, {
+    Status: status || 'Draft'
+  });
+  if (success && status === 'Submitted') {
+    logServerActivity('OPS_CREATE_START_PACKET', packetID, { manualSubmit: true });
+  }
+  return { success: success };
+}
+
+function buildStartPacketScope(packetData) {
+  const service = String(packetData.serviceType || '').toLowerCase();
+  var tasks = [];
+  if (service.indexOf('rodent') !== -1) {
+    tasks.push('Install rodent bait stations along perimeter');
+    tasks.push('Seal primary openings / exclusion');
+  } else if (service.indexOf('mosquito') !== -1) {
+    tasks.push('Deploy mosquito misting units');
+    tasks.push('Treat standing water zones');
+  } else {
+    tasks.push('General pest perimeter treatment');
+    tasks.push('Interior inspection + targeted applications');
+  }
+  return 'Scope: ' + tasks.join('; ');
+}
+
+function generateStartPacketPDF(packetID) {
+  const packet = findRowByID(SHEETS.START_PACKETS, 'PacketID', packetID);
+  if (!packet) {
+    return { success: false, message: 'Start packet not found' };
+  }
+  const html = `<h1>Start Packet ${packet.PacketID}</h1>
+    <p><strong>Account:</strong> ${packet.Account_Name}</p>
+    <p><strong>Service Address:</strong> ${packet.Service_Address}</p>
+    <p><strong>Service Type:</strong> ${packet.Service_Type}</p>
+    <p><strong>Monthly:</strong> ${packet.Maintenance_Price}</p>
+    <p><strong>Initial:</strong> ${packet.Initial_Job_Price}</p>
+    <p><strong>Notes:</strong> ${packet.Special_Notes}</p>`;
+  const blob = Utilities.newBlob(html, 'text/html', 'start-packet-' + packetID + '.html');
+  logServerActivity('OPS_CREATE_START_PACKET', packetID, { action: 'PDF_EXPORT' }, 5);
+  return {
+    success: true,
+    content: Utilities.base64Encode(blob.getBytes()),
+    mimeType: 'text/html',
+    fileName: 'start-packet-' + packetID + '.html'
+  };
+}
+
+function getStartPacketScope(packetID) {
+  const packet = findRowByID(SHEETS.START_PACKETS, 'PacketID', packetID);
+  if (!packet) {
+    return { success: false, message: 'Start packet not found' };
+  }
+  return {
+    success: true,
+    scope: packet.Special_Notes || buildStartPacketScope(packet)
+  };
+}
 /**
  * Notify technician of new assignment
  */
@@ -598,6 +878,7 @@ function resolveServiceIssue(issueID, resolutionNotes) {
     
     if (success) {
       logAudit('RESOLVE_ISSUE', SHEETS.SERVICE_ISSUES, issueID, resolutionNotes);
+      logServerActivity('UPDATE_LEAD', issueID, { resolution: resolutionNotes });
     }
     
     return { success: success };
@@ -607,4 +888,3 @@ function resolveServiceIssue(issueID, resolutionNotes) {
     return { success: false, message: e.message };
   }
 }
-
