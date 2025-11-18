@@ -1,0 +1,28 @@
+{
+  "name": "Branch360 CRM",
+  "short_name": "Branch360",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1F2937",
+  "theme_color": "#2563EB",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "description": "Branch360 CRM - Complete sales and operations management for pest control businesses",
+  "scope": "/",
+  "prefer_related_applications": false
+}
+

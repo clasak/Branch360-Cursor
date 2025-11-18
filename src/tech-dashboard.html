@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Branch360">
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+<nav class="bg-blue-900 text-white p-4">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold">Branch360 Technician</h1>
+        <p class="text-sm opacity-75" id="techName">Loading...</p>
+      </div>
+      <button onclick="openLeadForm()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-semibold">
+        + Submit Lead
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+  
+  <!-- Quick Actions -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <button onclick="viewRoute()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">🗺️</div>
+      <div class="font-semibold">My Route</div>
+    </button>
+    
+    <button onclick="openLeadForm()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">📝</div>
+      <div class="font-semibold">Submit Lead</div>
+    </button>
+    
+    <button onclick="viewInstalls()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">🔧</div>
+      <div class="font-semibold">Installations</div>
+      <div class="text-sm text-gray-600" id="pendingInstallsCount">0</div>
+    </button>
+    
+    <button onclick="reportIssue()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">⚠️</div>
+      <div class="font-semibold">Report Issue</div>
+    </button>
+  </div>
+  
+  <!-- Pending Installations -->
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">🔧 Pending Installations</h2>
+    <div id="installsList">
+      <p class="text-gray-500">Loading...</p>
+    </div>
+  </div>
+  
+  <!-- Recent Leads Submitted -->
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">📋 Leads I've Submitted</h2>
+    <div id="leadsList">
+      <p class="text-gray-500">Loading...</p>
+    </div>
+  </div>
+  
+</div>
+
+<script>
+  function loadDashboard() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        document.getElementById('techName').textContent = data.user.name;
+        renderInstalls(data.pendingInstalls);
+        renderLeads(data.leadsSubmitted);
+        document.getElementById('pendingInstallsCount').textContent = data.pendingInstalls.length;
+      })
+      .withFailureHandler(function(error) {
+        console.error('Failed to load dashboard:', error);
+        alert('Failed to load dashboard: ' + error.message);
+      })
+      .getTechnicianDashboard();
+  }
+  
+  function renderInstalls(installs) {
+    const container = document.getElementById('installsList');
+    
+    if (installs.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">No pending installations</p>';
+      return;
+    }
+    
+    container.innerHTML = installs.map(install => `
+      <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded mb-3">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h3 class="font-bold text-gray-800">${install.accountName}</h3>
+            <p class="text-sm text-gray-600">${install.serviceAddress}</p>
+          </div>
+          ${install.scheduledDate ? `
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              ${formatDate(install.scheduledDate)}
+            </span>
+          ` : ''}
+        </div>
+        <p class="text-sm mb-2"><strong>Service:</strong> ${install.serviceType}</p>
+        <p class="text-sm mb-2"><strong>Contact:</strong> ${install.pocInfo}</p>
+        ${install.notes ? `<p class="text-sm text-gray-700 bg-yellow-50 p-2 rounded">${install.notes}</p>` : ''}
+        <div class="mt-3 flex gap-2">
+          <button onclick="completeInstall('${install.packetID}')" 
+            class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded">
+            Mark Complete
+          </button>
+          <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(install.serviceAddress)}" 
+            target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded">
+            Directions
+          </a>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function renderLeads(leads) {
+    const container = document.getElementById('leadsList');
+    
+    if (leads.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">No leads submitted yet</p>';
+      return;
+    }
+    
+    container.innerHTML = leads.map(lead => `
+      <div class="flex justify-between items-center p-3 border-b">
+        <div>
+          <p class="font-semibold">${lead.customer}</p>
+          <p class="text-sm text-gray-600">${formatDate(lead.date)}</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs px-2 py-1 rounded ${getStatusColor(lead.status)}">${lead.status}</span>
+          <p class="text-xs text-gray-500 mt-1">AE: ${lead.assignedAE}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function getStatusColor(status) {
+    switch(status) {
+      case 'New': return 'bg-blue-100 text-blue-800';
+      case 'Contacted': return 'bg-yellow-100 text-yellow-800';
+      case 'Converted': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+  
+  function formatDate(date) {
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  
+  function openLeadForm() {
+    window.location.href = 'tech-lead-form.html';
+  }
+  
+  function completeInstall(packetID) {
+    const notes = prompt('Installation notes (optional):');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          alert('Installation marked complete!');
+          loadDashboard();
+        } else {
+          alert('Failed: ' + result.message);
+        }
+      })
+      .withFailureHandler(function(error) {
+        alert('Error: ' + error.message);
+      })
+      .completeInstallation(packetID, { 
+        completionDate: new Date(), 
+        notes: notes 
+      });
+  }
+  
+  function viewRoute() {
+    alert('Route1 integration coming soon!');
+  }
+  
+  function viewInstalls() {
+    document.querySelector('#installsList').scrollIntoView({ behavior: 'smooth' });
+  }
+  
+  function reportIssue() {
+    // Navigate to issue reporting form
+    window.location.href = 'report-issue.html';
+  }
+  
+  loadDashboard();
+  
+  // Register service worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(function(registration) {
+          console.log('ServiceWorker registration successful');
+        })
+        .catch(function(error) {
+          console.log('ServiceWorker registration failed:', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>
+

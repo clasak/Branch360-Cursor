@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Branch360">
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .metric-card { transition: transform 0.2s; }
+    .metric-card:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body class="bg-gray-100">
+
+<!-- Navigation -->
+<nav class="bg-white shadow-sm border-b">
+  <div class="max-w-7xl mx-auto px-4 py-3">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">Branch360</h1>
+        <p class="text-sm text-gray-600">Account Executive Dashboard</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-semibold" id="userName">Loading...</p>
+        <p class="text-xs text-gray-500" id="userBranch"></p>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+  
+  <!-- Today's Metrics -->
+  <div class="mb-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-3">Today's Performance</h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="todayMetrics">
+      <div class="metric-card bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600 mb-1">TAP</div>
+        <div class="text-3xl font-bold text-blue-600">
+          <span id="tapActual">0</span>/<span id="tapGoal">10</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+          <div id="tapProgress" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <div class="metric-card bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600 mb-1">Appointments</div>
+        <div class="text-3xl font-bold text-green-600">
+          <span id="appointmentsCompleted">0</span>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">
+          <span id="appointmentsSet">0</span> set
+        </div>
+      </div>
+      
+      <div class="metric-card bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600 mb-1">Quotes</div>
+        <div class="text-3xl font-bold text-purple-600">
+          <span id="quotesCreated">0</span>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">
+          <span id="quotesWon">0</span> won
+        </div>
+      </div>
+      
+      <div class="metric-card bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600 mb-1">Sales</div>
+        <div class="text-3xl font-bold text-emerald-600">
+          $<span id="salesActual">0</span>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">
+          Goal: $<span id="salesGoal">0</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Quick Entry Button -->
+    <div class="mt-3">
+      <button onclick="openDailyActivityForm()" 
+        class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
+        📝 Log Today's Activity
+      </button>
+    </div>
+  </div>
+  
+  <!-- Two Column Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <!-- Left Column: Pipeline & Leads -->
+    <div class="space-y-6">
+      
+      <!-- New Leads Widget (from Agent 2) -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold text-gray-800">🎯 New Leads</h3>
+          <span id="newLeadsCount" class="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">0</span>
+        </div>
+        <div id="newLeadsList" class="space-y-3">
+          <p class="text-gray-500 text-sm">Loading...</p>
+        </div>
+        <button onclick="viewAllLeads()" class="w-full mt-3 text-blue-600 hover:text-blue-800 text-sm font-semibold">
+          View All Leads →
+        </button>
+      </div>
+      
+      <!-- Pipeline Overview -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">💼 Sales Pipeline</h3>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center p-3 bg-blue-50 rounded">
+            <div>
+              <span class="font-semibold">Proposal</span>
+              <span class="text-sm text-gray-600 ml-2">(<span id="proposalCount">0</span>)</span>
+            </div>
+            <span class="font-bold text-blue-600">$<span id="proposalValue">0</span></span>
+          </div>
+          
+          <div class="flex justify-between items-center p-3 bg-yellow-50 rounded">
+            <div>
+              <span class="font-semibold">Negotiation</span>
+              <span class="text-sm text-gray-600 ml-2">(<span id="negotiationCount">0</span>)</span>
+            </div>
+            <span class="font-bold text-yellow-600">$<span id="negotiationValue">0</span></span>
+          </div>
+          
+          <div class="flex justify-between items-center p-3 bg-green-50 rounded">
+            <div>
+              <span class="font-semibold">Sold (This Month)</span>
+              <span class="text-sm text-gray-600 ml-2">(<span id="soldCount">0</span>)</span>
+            </div>
+            <span class="font-bold text-green-600">$<span id="soldValue">0</span></span>
+          </div>
+        </div>
+        <button onclick="viewPipeline()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg">
+          Manage Pipeline
+        </button>
+      </div>
+      
+    </div>
+    
+    <!-- Right Column: Activity & Tasks -->
+    <div class="space-y-6">
+      
+      <!-- Month-to-Date Stats -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">📊 Month-to-Date</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-sm text-gray-600">Total TAP</p>
+            <p class="text-2xl font-bold text-gray-800" id="monthTAP">0</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Win Rate</p>
+            <p class="text-2xl font-bold text-gray-800"><span id="monthWinRate">0</span>%</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Total Sales</p>
+            <p class="text-2xl font-bold text-gray-800">$<span id="monthSales">0</span></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Appointments</p>
+            <p class="text-2xl font-bold text-gray-800" id="monthAppointments">0</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Upcoming Tasks -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">📅 Follow-Up Needed</h3>
+        <div id="tasksList" class="space-y-3">
+          <p class="text-gray-500 text-sm">No pending tasks</p>
+        </div>
+      </div>
+      
+      <!-- Recent Activity -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">🕒 Recent Activity</h3>
+        <div id="recentActivity" class="space-y-2">
+          <p class="text-gray-500 text-sm">Loading...</p>
+        </div>
+      </div>
+      
+    </div>
+    
+  </div>
+  
+</div>
+
+<!-- Daily Activity Modal -->
+<div id="dailyActivityModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+    <h3 class="text-xl font-bold text-gray-800 mb-4">Log Today's Activity</h3>
+    <form id="dailyActivityForm" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">TAP Goal</label>
+          <input type="number" id="formTapGoal" value="10" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">TAP Actual</label>
+          <input type="number" id="formTapActual" value="0" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Appointments Set</label>
+          <input type="number" id="formAppointmentsSet" value="0" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Appointments Completed</label>
+          <input type="number" id="formAppointmentsCompleted" value="0" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Quotes Created</label>
+          <input type="number" id="formQuotesCreated" value="0" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Quotes Won</label>
+          <input type="number" id="formQuotesWon" value="0" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Sales Goal ($)</label>
+          <input type="number" id="formSalesGoal" value="5000" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Sales Actual ($)</label>
+          <input type="number" id="formSalesActual" value="0" min="0"
+            class="w-full px-3 py-2 border rounded-lg"/>
+        </div>
+      </div>
+      
+      <div class="flex gap-3 mt-6">
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg">
+          Save Activity
+        </button>
+        <button type="button" onclick="closeDailyActivityForm()"
+          class="px-6 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  var dashboardData = null;
+  
+  function loadDashboard() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        dashboardData = data;
+        renderDashboard(data);
+      })
+      .withFailureHandler(function(error) {
+        alert('Failed to load dashboard: ' + error.message);
+      })
+      .getAEDashboard();
+  }
+  
+  function renderDashboard(data) {
+    // User info
+    document.getElementById('userName').textContent = data.user.name;
+    document.getElementById('userBranch').textContent = 'Branch: ' + data.user.branchID;
+    
+    // Today's metrics
+    const today = data.todayMetrics;
+    document.getElementById('tapActual').textContent = today.tapActual;
+    document.getElementById('tapGoal').textContent = today.tapGoal;
+    document.getElementById('tapProgress').style.width = 
+      ((today.tapActual / today.tapGoal) * 100) + '%';
+    document.getElementById('appointmentsSet').textContent = today.appointmentsSet;
+    document.getElementById('appointmentsCompleted').textContent = today.appointmentsCompleted;
+    document.getElementById('quotesCreated').textContent = today.quotesCreated;
+    document.getElementById('quotesWon').textContent = today.quotesWon;
+    document.getElementById('salesActual').textContent = today.salesActual.toLocaleString();
+    document.getElementById('salesGoal').textContent = today.salesGoal.toLocaleString();
+    
+    // Month metrics
+    const month = data.monthMetrics;
+    document.getElementById('monthTAP').textContent = month.totalTAP;
+    document.getElementById('monthWinRate').textContent = month.winRate;
+    document.getElementById('monthSales').textContent = month.totalSales.toLocaleString();
+    document.getElementById('monthAppointments').textContent = month.totalAppointments;
+    
+    // Pipeline
+    const pipeline = data.pipeline.stages;
+    document.getElementById('proposalCount').textContent = pipeline.proposal.length;
+    document.getElementById('proposalValue').textContent = 
+      calculateStageValue(pipeline.proposal).toLocaleString();
+    document.getElementById('negotiationCount').textContent = pipeline.negotiation.length;
+    document.getElementById('negotiationValue').textContent = 
+      calculateStageValue(pipeline.negotiation).toLocaleString();
+    document.getElementById('soldCount').textContent = pipeline.sold.length;
+    document.getElementById('soldValue').textContent = 
+      calculateStageValue(pipeline.sold).toLocaleString();
+    
+    // New leads
+    renderNewLeads(data.newLeads);
+    
+    // Tasks
+    renderTasks(data.upcomingTasks);
+    
+    // Recent activity
+    renderRecentActivity(data.recentActivity);
+  }
+  
+  function calculateStageValue(opportunities) {
+    return opportunities.reduce((sum, opp) => sum + (opp.value || 0), 0);
+  }
+  
+  function renderNewLeads(leads) {
+    document.getElementById('newLeadsCount').textContent = leads.length;
+    const container = document.getElementById('newLeadsList');
+    
+    if (leads.length === 0) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">No new leads</p>';
+      return;
+    }
+    
+    container.innerHTML = leads.slice(0, 3).map(lead => `
+      <div class="border-l-4 border-blue-500 bg-blue-50 p-3 rounded">
+        <p class="font-semibold text-gray-800">${lead.customer_name}</p>
+        <p class="text-sm text-gray-600">${lead.service_address}</p>
+        <a href="tel:${lead.phone}" class="text-xs text-blue-600 hover:underline">${lead.phone}</a>
+      </div>
+    `).join('');
+  }
+  
+  function renderTasks(tasks) {
+    const container = document.getElementById('tasksList');
+    
+    if (tasks.length === 0) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">No pending tasks</p>';
+      return;
+    }
+    
+    container.innerHTML = tasks.map(task => `
+      <div class="flex items-start p-3 bg-yellow-50 rounded">
+        <div class="flex-1">
+          <p class="font-semibold text-gray-800">${task.customer}</p>
+          <p class="text-sm text-gray-600">${task.task}</p>
+        </div>
+        <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+          ${task.daysOverdue}d overdue
+        </span>
+      </div>
+    `).join('');
+  }
+  
+  function renderRecentActivity(activities) {
+    const container = document.getElementById('recentActivity');
+    
+    if (activities.length === 0) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">No recent activity</p>';
+      return;
+    }
+    
+    container.innerHTML = activities.slice(0, 5).map(activity => `
+      <div class="text-sm">
+        <span class="font-semibold">${activity.customer}</span>
+        <span class="text-gray-600"> - ${activity.action}</span>
+        <span class="text-xs text-gray-400 block">${formatDate(activity.date)}</span>
+      </div>
+    `).join('');
+  }
+  
+  function formatDate(date) {
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  
+  function openDailyActivityForm() {
+    // Pre-fill with current values if they exist
+    if (dashboardData && dashboardData.todayMetrics) {
+      const today = dashboardData.todayMetrics;
+      document.getElementById('formTapGoal').value = today.tapGoal;
+      document.getElementById('formTapActual').value = today.tapActual;
+      document.getElementById('formAppointmentsSet').value = today.appointmentsSet;
+      document.getElementById('formAppointmentsCompleted').value = today.appointmentsCompleted;
+      document.getElementById('formQuotesCreated').value = today.quotesCreated;
+      document.getElementById('formQuotesWon').value = today.quotesWon;
+      document.getElementById('formSalesGoal').value = today.salesGoal;
+      document.getElementById('formSalesActual').value = today.salesActual;
+    }
+    
+    document.getElementById('dailyActivityModal').classList.remove('hidden');
+  }
+  
+  function closeDailyActivityForm() {
+    document.getElementById('dailyActivityModal').classList.add('hidden');
+  }
+  
+  document.getElementById('dailyActivityForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const activityData = {
+      tapGoal: parseInt(document.getElementById('formTapGoal').value),
+      tapActual: parseInt(document.getElementById('formTapActual').value),
+      appointmentsSet: parseInt(document.getElementById('formAppointmentsSet').value),
+      appointmentsCompleted: parseInt(document.getElementById('formAppointmentsCompleted').value),
+      quotesCreated: parseInt(document.getElementById('formQuotesCreated').value),
+      quotesWon: parseInt(document.getElementById('formQuotesWon').value),
+      salesGoal: parseFloat(document.getElementById('formSalesGoal').value),
+      salesActual: parseFloat(document.getElementById('formSalesActual').value)
+    };
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          closeDailyActivityForm();
+          loadDashboard(); // Refresh
+          alert('Activity saved successfully!');
+        } else {
+          alert('Save failed: ' + result.message);
+        }
+      })
+      .withFailureHandler(function(error) {
+        alert('Save failed: ' + error.message);
+      })
+      .saveDailySalesActivity(activityData);
+  });
+  
+  function viewAllLeads() {
+    // Navigate to dedicated leads page
+    window.location.href = 'leads.html';
+  }
+  
+  function viewPipeline() {
+    // Navigate to pipeline management page
+    window.location.href = 'pipeline.html';
+  }
+  
+  // Auto-refresh every 2 minutes
+  setInterval(loadDashboard, 120000);
+  
+  // Initial load
+  loadDashboard();
+  
+  // Register service worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(function(registration) {
+          console.log('ServiceWorker registration successful');
+        })
+        .catch(function(error) {
+          console.log('ServiceWorker registration failed:', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>
+

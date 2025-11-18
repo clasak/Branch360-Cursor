@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Branch360 • Territory Manager</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #190933, #3b1d60, #6e44ff);
+        color: #f6f5ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+      }
+      .landing-card {
+        width: min(720px, 100%);
+        background: rgba(13, 9, 30, 0.75);
+        border-radius: 28px;
+        padding: 48px;
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(16px);
+      }
+      h1 {
+        font-size: clamp(2.5rem, 5vw, 3.6rem);
+        margin: 0;
+        letter-spacing: -0.04em;
+      }
+      h2 {
+        margin: 12px 0 32px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .cta-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(120deg, #8f7cff, #7f5dff);
+        color: #fff;
+        border: none;
+        border-radius: 999px;
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 14px 28px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 150ms ease, box-shadow 150ms ease;
+      }
+      .cta-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 30px rgba(111, 89, 255, 0.3);
+      }
+      .status-grid {
+        margin-top: 40px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+      }
+      .status-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        padding: 18px;
+      }
+      .status-label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.72);
+        margin-bottom: 4px;
+      }
+      .status-value {
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+      @media (max-width: 640px) {
+        .landing-card {
+          padding: 32px 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="landing-card">
+      <p style="text-transform: uppercase; letter-spacing: 0.4em; color: rgba(255,255,255,0.6); margin: 0 0 12px; font-size: 0.82rem;">
+        Branch360
+      </p>
+      <h1>Unified Dashboard</h1>
+      <h2>Access all Branch360 tools in one place: Territory Management, Sales, Operations, and more.</h2>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+        <a class="cta-button" href="/dashboard">
+          <span>Open Unified Dashboard</span>
+          <span aria-hidden="true">&#8594;</span>
+        </a>
+        <a class="cta-button" href="/territories" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);">
+          <span>Territory Manager Only</span>
+        </a>
+      </div>
+      <section class="status-grid" aria-live="polite">
+        <article class="status-card">
+          <p class="status-label">Server</p>
+          <p class="status-value" id="status-server">Checking...</p>
+        </article>
+        <article class="status-card">
+          <p class="status-label">Environment</p>
+          <p class="status-value" id="status-env">--</p>
+        </article>
+        <article class="status-card">
+          <p class="status-label">Territories Loaded</p>
+          <p class="status-value" id="status-territories">--</p>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      async function hydrateStatus() {
+        const serverEl = document.getElementById('status-server');
+        const envEl = document.getElementById('status-env');
+        const terrEl = document.getElementById('status-territories');
+
+        try {
+          serverEl.textContent = 'Connecting...';
+          const response = await fetch('/api/territories');
+          if (!response.ok) {
+            throw new Error('Server response not OK');
+          }
+          const payload = await response.json();
+          serverEl.textContent = 'Online';
+          envEl.textContent = payload.environment || payload.stats?.currentEnvironment || 'Unknown';
+          terrEl.textContent = payload.stats?.totalZipCodes ?? 0;
+        } catch (error) {
+          console.error('Status check failed', error);
+          serverEl.textContent = 'Offline';
+          envEl.textContent = '--';
+          terrEl.textContent = '--';
+        }
+      }
+
+      hydrateStatus();
+    </script>
+  </body>
+</html>

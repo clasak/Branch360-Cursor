@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Branch360">
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+<nav class="bg-indigo-900 text-white p-4">
+  <h1 class="text-xl font-bold">Branch Manager Dashboard</h1>
+  <p class="text-sm opacity-75" id="managerName">Loading...</p>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+  
+  <!-- Today's Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">📈 Sales Today</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-sm text-gray-600">TAP</p>
+          <p class="text-3xl font-bold text-blue-600" id="todayTAP">0</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600">Appointments</p>
+          <p class="text-3xl font-bold text-green-600" id="todayAppts">0</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600">Quotes</p>
+          <p class="text-3xl font-bold text-purple-600" id="todayQuotes">0</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600">Revenue</p>
+          <p class="text-3xl font-bold text-emerald-600">$<span id="todayRevenue">0</span></p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">🔧 Operations Today</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-sm text-gray-600">Missed Stops</p>
+          <p class="text-3xl font-bold text-red-600" id="todayMissedStops">0</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600">Backlog %</p>
+          <p class="text-3xl font-bold text-yellow-600"><span id="todayBacklog">0</span>%</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Alerts -->
+  <div id="alertsSection" class="mb-6"></div>
+  
+  <!-- Team Performance -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 Sales Team Leaderboard</h3>
+      <div id="salesLeaderboard">Loading...</div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">👷 Operations Team</h3>
+      <div id="opsTeam">Loading...</div>
+    </div>
+  </div>
+  
+  <!-- Pipeline Overview -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">💼 Branch Pipeline</h3>
+    <div class="grid grid-cols-3 gap-4">
+      <div class="text-center p-4 bg-blue-50 rounded">
+        <p class="text-sm text-gray-600 mb-1">Proposal</p>
+        <p class="text-2xl font-bold text-blue-600">$<span id="pipelineProposal">0</span></p>
+      </div>
+      <div class="text-center p-4 bg-yellow-50 rounded">
+        <p class="text-sm text-gray-600 mb-1">Negotiation</p>
+        <p class="text-2xl font-bold text-yellow-600">$<span id="pipelineNegotiation">0</span></p>
+      </div>
+      <div class="text-center p-4 bg-green-50 rounded">
+        <p class="text-sm text-gray-600 mb-1">Sold</p>
+        <p class="text-2xl font-bold text-green-600">$<span id="pipelineSold">0</span></p>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<script>
+  function loadDashboard() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        document.getElementById('managerName').textContent = data.user.name;
+        
+        // Today's summary
+        document.getElementById('todayTAP').textContent = data.todaySummary.sales.tap;
+        document.getElementById('todayAppts').textContent = data.todaySummary.sales.appointments;
+        document.getElementById('todayQuotes').textContent = data.todaySummary.sales.quotes;
+        document.getElementById('todayRevenue').textContent = data.todaySummary.sales.revenue.toLocaleString();
+        document.getElementById('todayMissedStops').textContent = data.todaySummary.operations.missedStops;
+        document.getElementById('todayBacklog').textContent = data.todaySummary.operations.backlog;
+        
+        // Pipeline
+        document.getElementById('pipelineProposal').textContent = data.pipeline.proposal.toLocaleString();
+        document.getElementById('pipelineNegotiation').textContent = data.pipeline.negotiation.toLocaleString();
+        document.getElementById('pipelineSold').textContent = data.pipeline.sold.toLocaleString();
+        
+        // Teams
+        renderSalesLeaderboard(data.salesTeam);
+        renderOpsTeam(data.opsTeam);
+        renderAlerts(data.alerts);
+      })
+      .withFailureHandler(function(error) {
+        console.error('Failed to load dashboard:', error);
+        alert('Failed to load dashboard: ' + error.message);
+      })
+      .getBranchManagerDashboard();
+  }
+  
+  function renderSalesLeaderboard(team) {
+    const container = document.getElementById('salesLeaderboard');
+    if (team.length === 0) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">No sales team members found</p>';
+      return;
+    }
+    container.innerHTML = team.map((ae, index) => `
+      <div class="flex justify-between items-center p-3 ${index === 0 ? 'bg-yellow-50' : 'bg-gray-50'} rounded mb-2">
+        <div>
+          <span class="font-semibold">${index + 1}. ${ae.name}</span>
+          <p class="text-xs text-gray-600">TAP: ${ae.monthTAP} | Quotes: ${ae.monthQuotes}</p>
+        </div>
+        <div class="text-right">
+          <p class="font-bold text-green-600">$${ae.monthSales.toLocaleString()}</p>
+          <p class="text-xs text-gray-500">MTD</p>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function renderOpsTeam(team) {
+    const container = document.getElementById('opsTeam');
+    if (team.length === 0) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">No operations team members found</p>';
+      return;
+    }
+    container.innerHTML = team.map(tech => `
+      <div class="flex justify-between items-center p-3 bg-gray-50 rounded mb-2">
+        <p class="font-semibold">${tech.name}</p>
+        <div class="text-right text-sm">
+          <p>Leads: ${tech.leadsSubmitted}</p>
+          <p>Installs: ${tech.installsCompleted}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function renderAlerts(alerts) {
+    const container = document.getElementById('alertsSection');
+    if (alerts.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    
+    container.innerHTML = `
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">⚠️ Alerts (${alerts.length})</h3>
+        ${alerts.map(alert => `
+          <div class="border-l-4 ${alert.severity === 'high' ? 'border-red-500 bg-red-50' : 'border-yellow-500 bg-yellow-50'} p-3 rounded mb-2">
+            <p class="font-semibold text-gray-800">${alert.message}</p>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  
+  loadDashboard();
+  setInterval(loadDashboard, 300000); // Refresh every 5 minutes
+  
+  // Register service worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(function(registration) {
+          console.log('ServiceWorker registration successful');
+        })
+        .catch(function(error) {
+          console.log('ServiceWorker registration failed:', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>
+

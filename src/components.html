@@ -1,0 +1,460 @@
+<!-- Reusable UI Components for Branch360 -->
+
+<!-- Metric Card Component -->
+<template id="metric-card-template">
+  <div class="metric-card bg-white rounded-lg shadow p-6 hover:shadow-lg transition" role="region" aria-labelledby="metric-label">
+    <div class="text-sm text-gray-600 mb-1" data-label id="metric-label"></div>
+    <div class="text-3xl font-bold mb-1" data-value aria-live="polite"></div>
+    <div class="text-xs text-gray-500" data-subtitle></div>
+    <div class="w-full bg-gray-200 rounded-full h-2 mt-2" data-progress-bar style="display:none" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progress">
+      <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" data-progress></div>
+    </div>
+  </div>
+</template>
+
+<!-- Data Table Component -->
+<template id="data-table-template">
+  <div class="overflow-x-auto" role="region" aria-label="Data table">
+    <table class="min-w-full bg-white" role="table">
+      <thead class="bg-gray-100">
+        <tr data-headers role="row"></tr>
+      </thead>
+      <tbody data-rows role="rowgroup"></tbody>
+    </table>
+  </div>
+</template>
+
+<!-- Alert/Notification Component -->
+<template id="alert-template">
+  <div class="alert p-4 rounded-lg mb-3" data-alert role="alert" aria-live="assertive">
+    <div class="flex items-start">
+      <div class="flex-shrink-0" data-icon aria-hidden="true"></div>
+      <div class="ml-3 flex-1">
+        <h3 class="text-sm font-semibold" data-title></h3>
+        <p class="text-sm mt-1" data-message></p>
+      </div>
+      <button class="flex-shrink-0 ml-3 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded" data-dismiss aria-label="Dismiss alert" tabindex="0">
+        <span class="text-gray-400 hover:text-gray-600" aria-hidden="true">×</span>
+      </button>
+    </div>
+  </div>
+</template>
+
+<!-- Modal Component -->
+<template id="modal-template">
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" data-modal role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" data-modal-content role="document">
+      <div class="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
+        <h3 class="text-xl font-bold" data-modal-title id="modal-title"></h3>
+        <button data-modal-close class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 rounded p-1" aria-label="Close modal" tabindex="0">×</button>
+      </div>
+      <div class="p-6" data-modal-body></div>
+      <div class="flex justify-end gap-3 p-6 border-t" data-modal-footer></div>
+    </div>
+  </div>
+</template>
+
+<script>
+// Component Factory Functions
+
+function createMetricCard(config) {
+  const template = document.getElementById('metric-card-template');
+  const card = template.content.cloneNode(true);
+  
+  const labelEl = card.querySelector('[data-label]');
+  const valueEl = card.querySelector('[data-value]');
+  const subtitleEl = card.querySelector('[data-subtitle]');
+  const progressBar = card.querySelector('[data-progress-bar]');
+  const progress = card.querySelector('[data-progress]');
+  
+  labelEl.textContent = config.label;
+  valueEl.textContent = config.value;
+  valueEl.className += ' ' + (config.colorClass || 'text-blue-600');
+  
+  if (config.subtitle) {
+    subtitleEl.textContent = config.subtitle;
+  } else {
+    subtitleEl.style.display = 'none';
+  }
+  
+  if (config.progress !== undefined) {
+    progressBar.style.display = 'block';
+    const progressValue = Math.min(100, Math.max(0, config.progress));
+    progress.style.width = progressValue + '%';
+    progressBar.setAttribute('aria-valuenow', progressValue);
+    progressBar.setAttribute('aria-label', `${config.label} progress: ${progressValue}%`);
+  }
+  
+  return card;
+}
+
+function createDataTable(columns, rows) {
+  const template = document.getElementById('data-table-template');
+  const table = template.content.cloneNode(true);
+  
+  // Headers
+  const headerRow = table.querySelector('[data-headers]');
+  columns.forEach((col, index) => {
+    const th = document.createElement('th');
+    th.className = 'text-left px-4 py-2 text-sm font-semibold text-gray-700';
+    th.textContent = col.label;
+    th.setAttribute('role', 'columnheader');
+    th.setAttribute('scope', 'col');
+    if (col.sortable) {
+      th.setAttribute('tabindex', '0');
+      th.setAttribute('role', 'button');
+      th.setAttribute('aria-label', `Sort by ${col.label}`);
+      th.className += ' cursor-pointer hover:bg-gray-200 focus:outline-none focus:ring-2';
+    }
+    headerRow.appendChild(th);
+  });
+  
+  // Rows
+  const tbody = table.querySelector('[data-rows]');
+  if (rows.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.className = 'px-4 py-8 text-center text-gray-500';
+    td.setAttribute('colspan', columns.length);
+    td.textContent = 'No data available';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  } else {
+    rows.forEach((row, rowIndex) => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b hover:bg-gray-50 transition-colors';
+      tr.setAttribute('role', 'row');
+      
+      columns.forEach((col, colIndex) => {
+        const td = document.createElement('td');
+        td.className = 'px-4 py-2 text-sm';
+        td.setAttribute('role', 'cell');
+        
+        // Support for custom cell rendering
+        if (col.render && typeof col.render === 'function') {
+          td.innerHTML = col.render(row[col.key], row);
+        } else {
+          td.textContent = row[col.key] || '';
+        }
+        
+        tr.appendChild(td);
+      });
+      
+      // Add click handler if provided
+      if (row.onClick) {
+        tr.className += ' cursor-pointer';
+        tr.setAttribute('tabindex', '0');
+        tr.setAttribute('role', 'button');
+        tr.setAttribute('aria-label', `Row ${rowIndex + 1}`);
+        tr.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+            row.onClick(row);
+          }
+        });
+        tr.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            row.onClick(row);
+          }
+        });
+      }
+      
+      tbody.appendChild(tr);
+    });
+  }
+  
+  return table;
+}
+
+function showAlert(type, title, message, options = {}) {
+  const template = document.getElementById('alert-template');
+  const alert = template.content.cloneNode(true);
+  
+  const alertDiv = alert.querySelector('[data-alert]');
+  const icon = alert.querySelector('[data-icon]');
+  const titleEl = alert.querySelector('[data-title]');
+  const messageEl = alert.querySelector('[data-message]');
+  const dismissBtn = alert.querySelector('[data-dismiss]');
+  
+  // Style based on type
+  const typeConfig = {
+    success: {
+      classes: ['bg-green-50', 'border', 'border-green-200', 'text-green-800'],
+      icon: '✓',
+      iconClass: 'text-green-500 text-xl'
+    },
+    error: {
+      classes: ['bg-red-50', 'border', 'border-red-200', 'text-red-800'],
+      icon: '✕',
+      iconClass: 'text-red-500 text-xl'
+    },
+    warning: {
+      classes: ['bg-yellow-50', 'border', 'border-yellow-200', 'text-yellow-800'],
+      icon: '⚠',
+      iconClass: 'text-yellow-500 text-xl'
+    },
+    info: {
+      classes: ['bg-blue-50', 'border', 'border-blue-200', 'text-blue-800'],
+      icon: 'ⓘ',
+      iconClass: 'text-blue-500 text-xl'
+    }
+  };
+  
+  const config = typeConfig[type] || typeConfig.info;
+  config.classes.forEach(cls => alertDiv.classList.add(cls));
+  icon.textContent = config.icon;
+  icon.className += ' ' + config.iconClass;
+  
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  
+  // Set container if provided
+  const container = options.container || document.body;
+  const position = options.position || 'top';
+  
+  // Create alert container if it doesn't exist
+  let alertContainer = document.getElementById('alert-container');
+  if (!alertContainer) {
+    alertContainer = document.createElement('div');
+    alertContainer.id = 'alert-container';
+    alertContainer.className = 'fixed ' + (position === 'top' ? 'top-4' : 'bottom-4') + ' right-4 left-4 md:left-auto z-50 max-w-md';
+    alertContainer.setAttribute('role', 'region');
+    alertContainer.setAttribute('aria-label', 'Notifications');
+    container.appendChild(alertContainer);
+  }
+  
+  // Add dismiss handler
+  dismissBtn.addEventListener('click', function() {
+    alertDiv.style.transition = 'opacity 0.3s';
+    alertDiv.style.opacity = '0';
+    setTimeout(() => {
+      alertDiv.remove();
+      if (alertContainer && alertContainer.children.length === 0) {
+        alertContainer.remove();
+      }
+    }, 300);
+  });
+  
+  // Keyboard support for dismiss
+  dismissBtn.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      dismissBtn.click();
+    }
+  });
+  
+  alertContainer.appendChild(alert);
+  
+  // Auto-dismiss after specified time (default 5 seconds)
+  const autoDismiss = options.autoDismiss !== false;
+  const dismissTime = options.dismissTime || 5000;
+  
+  if (autoDismiss) {
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.style.transition = 'opacity 0.3s';
+        alertDiv.style.opacity = '0';
+        setTimeout(() => {
+          alertDiv.remove();
+          if (alertContainer && alertContainer.children.length === 0) {
+            alertContainer.remove();
+          }
+        }, 300);
+      }
+    }, dismissTime);
+  }
+  
+  return alertDiv;
+}
+
+function showModal(config) {
+  const template = document.getElementById('modal-template');
+  const modal = template.content.cloneNode(true);
+  
+  const modalDiv = modal.querySelector('[data-modal]');
+  const modalContent = modal.querySelector('[data-modal-content]');
+  const titleEl = modal.querySelector('[data-modal-title]');
+  const bodyEl = modal.querySelector('[data-modal-body]');
+  const footerEl = modal.querySelector('[data-modal-footer]');
+  const closeBtn = modal.querySelector('[data-modal-close]');
+  
+  titleEl.textContent = config.title;
+  bodyEl.innerHTML = config.body || '';
+  
+  // Footer buttons
+  if (config.buttons && config.buttons.length > 0) {
+    config.buttons.forEach((btn, index) => {
+      const button = document.createElement('button');
+      button.className = btn.className || 'px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+      button.textContent = btn.label;
+      button.setAttribute('tabindex', '0');
+      if (index === 0 && btn.primary !== false) {
+        button.className += ' focus:ring-2';
+      }
+      
+      button.addEventListener('click', (e) => {
+        if (btn.onClick) {
+          btn.onClick(e, modalDiv);
+        }
+        if (btn.close !== false) {
+          modalDiv.remove();
+          document.body.style.overflow = '';
+        }
+      });
+      
+      button.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          button.click();
+        }
+      });
+      
+      footerEl.appendChild(button);
+    });
+  } else {
+    footerEl.style.display = 'none';
+  }
+  
+  // Close handlers
+  const closeModal = () => {
+    modalDiv.style.transition = 'opacity 0.3s';
+    modalDiv.style.opacity = '0';
+    setTimeout(() => {
+      modalDiv.remove();
+      document.body.style.overflow = '';
+      if (config.onClose) {
+        config.onClose();
+      }
+    }, 300);
+  };
+  
+  closeBtn.addEventListener('click', closeModal);
+  
+  // Keyboard support
+  closeBtn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      closeModal();
+    }
+  });
+  
+  // Close on backdrop click
+  modalDiv.addEventListener('click', (e) => {
+    if (e.target === modalDiv && config.closeOnBackdrop !== false) {
+      closeModal();
+    }
+  });
+  
+  // ESC key to close
+  const escHandler = (e) => {
+    if (e.key === 'Escape' && document.body.contains(modalDiv)) {
+      closeModal();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+  
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+  
+  // Focus management
+  modalDiv.style.opacity = '0';
+  document.body.appendChild(modal);
+  
+  // Animate in
+  setTimeout(() => {
+    modalDiv.style.transition = 'opacity 0.3s';
+    modalDiv.style.opacity = '1';
+  }, 10);
+  
+  // Focus first focusable element
+  setTimeout(() => {
+    const firstFocusable = modalContent.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (firstFocusable) {
+      firstFocusable.focus();
+    } else {
+      closeBtn.focus();
+    }
+  }, 50);
+  
+  return modalDiv;
+}
+
+// Export functions for use in other files
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    createMetricCard,
+    createDataTable,
+    showAlert,
+    showModal
+  };
+}
+</script>
+
+<style>
+/* Responsive enhancements */
+@media (max-width: 640px) {
+  .metric-card {
+    padding: 1rem;
+  }
+  
+  .metric-card [data-value] {
+    font-size: 1.5rem;
+  }
+  
+  [data-modal-content] {
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  #alert-container {
+    left: 1rem;
+    right: 1rem;
+  }
+}
+
+/* Accessibility improvements */
+.metric-card:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+[data-modal] {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .metric-card {
+    border: 2px solid currentColor;
+  }
+  
+  [data-alert] {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .metric-card,
+  [data-progress],
+  [data-modal],
+  .alert {
+    transition: none;
+  }
+  
+  [data-modal] {
+    animation: none;
+  }
+}
+</style>
+
