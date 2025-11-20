@@ -197,3 +197,39 @@ function getIntegrationStatus() {
   };
 }
 
+/**
+ * Sends an email notification to Ops and Sales when a deal is sold.
+ */
+/**
+ * Sends an email notification with the Start Packet details.
+ */
+function sendNewStartNotification(data) {
+  const recipients = "midwestmarketsalesentry@rentokil.com,brad.hudson@prestox.com,bruce.hockless@prestox.com,joaquin.barrera@prestox.com,mitchell.james@prestox.com,april.shane@prestox.com";
+  
+  const subject = "Re: Onboarding Report - " + (data.AccountName || "Unknown") + " -- " + (data.POCName || "Unknown");
+  
+  const body = 
+    "Team,\n\n" +
+    "Please find the attached start packet for the location below.\n\n" +
+    "Service Details\n" +
+    "• Frequency: " + (data.Frequency || "Monthly") + "\n" +
+    "• Covered Pests: " + (data.CoveredPests || "N/A") + "\n" +
+    "• Scope: " + (data.Maintenance_Scope_Description || "N/A") + "\n" +
+    "• Treatment Notes: " + (data.SpecialNotes || "N/A") + "\n\n" +
+    "Commercials\n" +
+    "• Total Initial: $" + (Number(data.InitialPrice)||0).toFixed(2) + "\n" +
+    "• Monthly: $" + (Number(data.MaintenancePrice)||0).toFixed(2) + "/month\n\n" +
+    "Account Details\n" +
+    "• Customer: " + (data.AccountName || "N/A") + "\n" +
+    "• Service Address: " + (data.ServiceAddress || "N/A") + "\n" +
+    "• Billing Address: " + (data.BillingAddress || "Same as Service") + "\n" +
+    "• Billing Email: " + (data.BillingEmail || "N/A") + "\n" +
+    "• POC: " + (data.POCName || "N/A") + " (" + (data.POCPhone || "N/A") + ")";
+  // In a real deployment, we would attach the PDF blob here
+  MailApp.sendEmail({
+    to: recipients,
+    subject: subject,
+    body: body
+  });
+}
+

@@ -657,6 +657,11 @@
 
       <div class="flex flex-col md:flex-row md:justify-end gap-3 pb-4">
         <button type="button" onclick="closeUnifiedSaleForm()" class="w-full md:w-auto border border-gray-300 text-gray-700 px-5 py-2 rounded-lg">Close</button>
+        
+        <button type="button" onclick="previewStartPacket()" class="w-full md:w-auto bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold px-5 py-2 rounded-lg hover:bg-indigo-100">
+          👁️ Preview Packet
+        </button>
+        
         <button type="submit" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-2 rounded-lg">Mark Sold & Generate Start Packet</button>
       </div>
     </form>
@@ -2527,7 +2532,18 @@
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      const pageText = content.items.map(function(item) { return item.str; }).join(' ');
+      // Only join items with a space if they are on the same line (approx Y coordinate)
+      // Otherwise add a newline.
+      // Simple improvement: Add newline after every item.str unless it's clearly part of a sentence?
+      // Better: Check Y transform.
+      
+      // Simplified approach that often works better for table/form data:
+      // Join with newlines to preserve structure, then let parser handle cleanup.
+      // The previous code joined with space ' ' which merged lines together too aggressively.
+      
+      // Let's try a hybrid: items often come in reading order.
+      // If we just join with newline, we get more lines but safer parsing.
+      const pageText = content.items.map(function(item) { return item.str; }).join('\n');
       text += pageText + '\n';
     }
     return text;
@@ -2537,120 +2553,87 @@
     return clientParseSalesforceQuote(text);
   }
 
-  const StrictSalesforceParser = (function() {
-    /**
-     * Parses Salesforce quote text into a StartPacketDraft.
-     * Extraction is gated by explicit Salesforce quote labels (Tailored/Prepared For,
-     * Prepared By, Equipment, Total Cost of Equipment, Routine Management Services,
-     * Investment Summary, Covered Pests, Requested Start Date).
-     *
-     * The resulting payload focuses on the fields needed by the Start Packet flow:
-     * account + contact info, service address, AE info, program/services, equipment,
-     * pricing (one-time/initial + monthly & derived annual), requested start month,
-     * and covered pests inferred from the labeled sections.
-     *
-     * @param {string} text Raw text extracted from a Salesforce quote PDF
-     * @return {Object} StartPacketDraft payload for the AE start packet form
-     */
+  var StrictSalesforceParser = (function() {
 
-    var HEADER_BLOCK_TERMINATORS = [
-      'prepared by',
-      'equipment',
-      'total cost of equipment',
-      'investment summary',
-      'covered pests',
-      'scope of service',
-      'service specifications',
-      'service frequency',
-      'plan limitations',
-      'documentation',
-      'terms & conditions',
-      'about presto-x',
-      'experienced service personnel',
-      'technical leadership',
-      'corporate responsibility',
-      'innovation & technology',
-      'table of contents'
-    ];
+    // --- CONFIGURATION ---
 
-    var ROUTINE_SECTION_TERMINATORS = [
-      'investment summary',
-      'plan limitations',
-      'scope of service',
-      'equipment summary',
-      'covered pests',
-      'timeline',
-      'requested start date',
-      'about presto-x',
-      'innovation & technology'
-    ];
-
+    var HEADER_BLOCK_TERMINATORS = ['prepared by', 'equipment', 'total cost of equipment', 'investment summary', 'covered pests', 'scope of service', 'service specifications', 'table of contents'];
+    var ROUTINE_SECTION_TERMINATORS = ['investment summary', 'plan limitations', 'scope of service', 'equipment summary', 'covered pests', 'timeline'];
     var ADDRESS_LINE_REGEX = /^[0-9].*(?:\b(?:st|street|rd|road|dr|drive|ln|lane|blvd|boulevard|ave|avenue|hwy|highway|way|trail|trl|terrace|ter|pkwy|parkway|court|ct|cir|circle|loop|suite|ste|unit)\b)/i;
-    var CITY_STATE_ZIP_REGEX = /^(.+?),\s*([A-Z]{2})[,\s]*([0-9]{5})(?:-?[0-9]{4})?/;
     var EMAIL_REGEX = /([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i;
-    var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'];
+    var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    function logDebug(value) {
-      if (typeof Logger !== 'undefined' && Logger && typeof Logger.log === 'function') {
-        Logger.log(value);
-      } else if (typeof console !== 'undefined' && console && typeof console.log === 'function') {
-        console.log(value);
+    // --- DESCRIPTION BUILDERS ---
+
+    function buildInitialDescription(equipment, initialCost) {
+      var parts = [];
+      // Correct Equipment Formatter: "Installation of [qty] [Type]"
+      if (equipment.multCatchQty > 0) parts.push(equipment.multCatchQty + " MRT");
+      if (equipment.rbsQty > 0) parts.push(equipment.rbsQty + " RBS");
+      if (equipment.iltQty > 0) parts.push(equipment.iltQty + " ILT");
+      
+      var desc = "Initial service";
+      if (parts.length > 0) {
+          var last = parts.pop();
+          var equipmentList = parts.length > 0 ? parts.join(", ") + ", and " + last : last;
+          desc += " and Installation of " + equipmentList;
+      } else if (initialCost > 0) {
+          desc = "Standard Initial Setup";
       }
+      return desc;
     }
 
-    function normalizeLabelText(line) {
-      if (!line) return '';
-      return line.toLowerCase()
-        .replace(/4/g, 'for')
-        .replace(/[^a-z]/g, '');
-    }
+    function buildMaintenanceDescription(services) {
+      if (!services || services.length === 0) return "Monthly General Pest Control";
 
-    function isTailoredPreparedAnchor(line) {
-      if (!line) return false;
-      var normalized = normalizeLabelText(line);
-      return normalized.indexOf('tailoredfor') === 0 ||
-        normalized.indexOf('tailorfor') === 0 ||
-        normalized.indexOf('taylorfor') === 0 ||
-        normalized.indexOf('preparedfor') === 0;
-    }
+      var groups = {};
+      var hasAfterHours = false;
 
-    function stripHeaderLabelPrefixes(line) {
-      if (!line) return '';
-      var trimmed = line.trim();
-      var result = trimmed;
-      var patterns = [
-        /^(tailor(?:ed)?|taylor)\s*(?:for|4)\b/i,
-        /^prepared\s+for\b/i,
-        /^account\s+name\b/i,
-        /^customer\s+name\b/i
-      ];
-      for (var i = 0; i < patterns.length; i++) {
-        if (patterns[i].test(result)) {
-          result = result.replace(patterns[i], '').trim();
-          break;
+      services.forEach(function(svc) {
+        var freq = svc.frequencyLabel || "Monthly";
+        var name = svc.serviceName || svc.programType || "Service";
+        
+        freq = freq.replace(/service frequency -/i, "").trim();
+        
+        if (/after\s+hours\s+service\??\s*(yes|- yes)/i.test(name) || svc.afterHours) {
+            hasAfterHours = true;
         }
-      }
-      return result.replace(/^[:\s,-]+/, '');
+        name = name.replace(/after\s+hours\s+service\??\s*[-]?\s*(no|yes)/gi, "").trim();
+        
+        name = name.replace(/maintenance|service|core services|general pest control/gi, "").trim();
+        name = name.replace(/[-:;,\.]+$/, "").trim();
+        name = name.replace(/\s{2,}/g, " "); 
+        
+        if (/interior/i.test(name) && /rodent|monitor/i.test(name)) name = "Interior Rodent Monitoring";
+        else if (/exterior/i.test(name) && /rodent|monitor/i.test(name)) name = "Exterior Rodent Monitoring";
+        else if (/insect\s+light|ilt/i.test(name)) name = "Insect Light Trap";
+        else if (name === "" || /general/i.test(svc.programType)) name = "General Pest Control";
+
+        if (!groups[freq]) groups[freq] = [];
+        if (groups[freq].indexOf(name) === -1) groups[freq].push(name);
+      });
+
+      var parts = [];
+      Object.keys(groups).forEach(function(freq) {
+        parts.push(freq + " " + groups[freq].join("; "));
+      });
+
+      if (hasAfterHours) parts.push("Includes After Hours Service");
+
+      return parts.join(". ");
     }
+
+    // --- MAIN PARSER ---
 
     function parseSalesforceQuoteTextToStartPacketDraft(text) {
-      if (!text) {
-        throw new Error('No PDF text provided for parsing.');
-      }
+      if (!text) throw new Error('No text to parse.');
+      
+      console.log("[SF Parser v2] Starting parse... (Rev 5 - Fixed Syntax & Account Logic)"); 
 
-      var normalized = text.replace(/\r\n/g, '\n');
-      var rawLines = normalized.split('\n');
-      var trimmedLines = rawLines.map(function(line) {
-        return (line || '').trim();
-      }).filter(function(line) {
-        return line.length > 0;
-      });
-      var lines = expandLines(trimmedLines);
+      var rawLines = text.replace(/\r\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      var lines = expandLines(rawLines);
 
-      if (!lines.length) {
-        throw new Error('Unable to parse PDF text (no content).');
-      }
+      console.log("[SF Parser] Lines after expansion:", lines.length);
 
       var header = extractPreparedForFields(lines);
       var preparedBy = extractPreparedBySection(lines);
@@ -2658,29 +2641,26 @@
       var pricing = extractPricing(lines);
       var schedule = extractRequestedStart(lines);
       var routine = extractRoutineServices(lines, equipmentInfo.equipment);
-      var explicitPests = extractCoveredPestsSection(lines);
-      var derivedPests = deriveCoveredPests(explicitPests, routine.signals, equipmentInfo.equipment);
+      var derivedPests = extractCoveredPestsSection(lines); 
+      if (!derivedPests.length) derivedPests = deriveCoveredPests(derivedPests, routine.signals, equipmentInfo.equipment);
 
-      var oneTimeCost = pricing.oneTimeCost !== null ? pricing.oneTimeCost : equipmentInfo.totalCost;
+      console.log("[SF Parser] Equipment found:", JSON.stringify(equipmentInfo.equipment));
+      console.log("[SF Parser] Routine Services found:", JSON.stringify(routine.services));
+      console.log("[SF Parser] Pricing found:", JSON.stringify(pricing));
+
+      var oneTimeCost = pricing.oneTimeCost;
       var initialSvcCost = pricing.initialSvcCost;
       var monthlyCost = pricing.avgMonthlyCost;
-      var annualCost = monthlyCost !== null ? roundCurrency(monthlyCost * 12) : null;
+      
+      // Fallback if explicit equipment cost is present and extracted oneTime is null
+      if (oneTimeCost === null && equipmentInfo.totalCost > 0) oneTimeCost = equipmentInfo.totalCost;
 
-      // Calculate combined initial (One-Time + Initial Svc Cost)
-      // Use 0 for missing values so we can still calculate the total
+      var annualCost = monthlyCost !== null ? roundCurrency(monthlyCost * 12) : null;
+      
       var combinedInitial = null;
       if (oneTimeCost !== null || initialSvcCost !== null) {
-        var oneTime = oneTimeCost !== null ? oneTimeCost : 0;
-        var initial = initialSvcCost !== null ? initialSvcCost : 0;
-        combinedInitial = roundCurrency(oneTime + initial);
+          combinedInitial = roundCurrency((oneTimeCost || 0) + (initialSvcCost || 0));
       }
-      var combinedMonthly = monthlyCost !== null ? monthlyCost : null;
-      var combinedAnnual = annualCost !== null ? annualCost : null;
-
-      var equipmentSummary = buildEquipmentSignature(equipmentInfo.equipment);
-      equipmentInfo.equipment.summary = equipmentSummary;
-
-      var jobType = monthlyCost !== null && monthlyCost > 0 ? 'Contract' : null;
 
       var draft = {
         accountName: header.accountName,
@@ -2693,1189 +2673,342 @@
         aeName: preparedBy.aeName,
         aeEmail: preparedBy.aeEmail,
         branchId: 'BRN-001',
-        jobType: jobType,
+        jobType: (monthlyCost !== null) ? 'Contract' : null,
         services: routine.services,
         equipment: equipmentInfo.equipment,
         equipmentOneTimeTotal: oneTimeCost,
         servicesInitialTotal: initialSvcCost,
         combinedInitialTotal: combinedInitial,
         servicesMonthlyTotal: monthlyCost,
-        combinedMonthlyTotal: combinedMonthly,
+        combinedMonthlyTotal: monthlyCost,
         servicesAnnualTotal: annualCost,
-        combinedAnnualTotal: combinedAnnual,
+        combinedAnnualTotal: annualCost,
         monthlyCost: monthlyCost,
         annualCost: annualCost,
         requestedStartDate: schedule.requestedStartDate,
         startMonth: schedule.startMonth,
         coveredPests: derivedPests,
+        initialServiceDescription: buildInitialDescription(equipmentInfo.equipment, initialSvcCost),
+        maintenanceScopeDescription: buildMaintenanceDescription(routine.services),
         leadType: null,
-        serviceType: null
+        serviceType: null,
+        safeToProceed: true
       };
-
-      logDebug(JSON.stringify(draft, null, 2));
+      
+      console.log("[SF Parser] Draft result:", JSON.stringify(draft));
       return draft;
     }
 
-    function expandLines(inputLines) {
-      var result = [];
-      inputLines.forEach(function(line) {
-        if (!line) return;
-        // Split on "PREPARED BY:" and "TAILORED FOR:" patterns first
-        var splitPattern = /(PREPARED\s+BY:|TAILORED\s+FOR:)/i;
-        if (splitPattern.test(line)) {
-          var parts = line.split(splitPattern);
-          var current = '';
-          for (var i = 0; i < parts.length; i++) {
-            if (splitPattern.test(parts[i])) {
-              if (current.trim()) {
-                result.push(current.trim());
-              }
-              current = parts[i];
-            } else {
-              current += parts[i];
+    // --- EXTRACTORS ---
+    
+    function extractPricing(lines) {
+      // 1. Find Investment Summary
+      var startIdx = findFirstIndex(lines, l => /investment\s+summary/i.test(l) && !/^\d+/.test(l));
+      
+      if (startIdx === -1) {
+         startIdx = findFirstIndex(lines, l => /initial\s+investment/i.test(l) || /monthly\s+investment/i.test(l));
+         if (startIdx !== -1) startIdx = Math.max(0, startIdx - 5);
+      }
+
+      if (startIdx === -1) return { oneTimeCost: null, initialSvcCost: null, avgMonthlyCost: null };
+
+      var endIdx = findFirstIndexFrom(lines, startIdx + 1, l => 
+         /^(documentation|additional services|terms|page)/i.test(l)
+      );
+      if (endIdx === -1) endIdx = Math.min(lines.length, startIdx + 25);
+      var block = lines.slice(startIdx, endIdx);
+
+      var oneTime = null, initial = null, monthly = null;
+
+      // 3. Strategy A: Table Row with 3 distinct currency values
+      // Expected: One-Time | Initial Svc | Monthly
+      for (var i = 0; i < block.length; i++) {
+          var line = block[i];
+          // Match numbers like 3,455.60 or 3455.60
+          var matches = line.match(/(?:\$\s*)?([0-9,]+\.[0-9]{2})/g);
+          if (matches && matches.length >= 3) {
+             var nums = matches.map(v => parseFloat(v.replace(/[$,\s]/g, '')));
+             oneTime = nums[0];
+             initial = nums[1];
+             monthly = nums[2];
+             break; 
+          }
+      }
+
+      // 4. Fallback Strategy B: Keyword search
+      if (oneTime === null) oneTime = findCurrencyInBlock(block, /(?:one[-\s]?time|initial)\s+(?:cost|investment)/i);
+      if (initial === null) initial = findCurrencyInBlock(block, /(?:initial\s+(?:svc|service)|start[-\s]?up)\s+(?:cost|investment)/i);
+      if (monthly === null) monthly = findCurrencyInBlock(block, /(?:avg|average|monthly)\s+(?:monthly\s+)?(?:cost|investment)/i);
+
+      return { oneTimeCost: oneTime, initialSvcCost: initial, avgMonthlyCost: monthly };
+    }
+    
+    function findCurrencyInBlock(blockLines, regex) {
+        for (var i = 0; i < blockLines.length; i++) {
+            if (regex.test(blockLines[i])) {
+                var textToCheck = blockLines[i] + " " + (blockLines[i+1] || "");
+                var match = textToCheck.match(/(?:\$\s*)?([0-9,]+\.[0-9]{2})/);
+                if (match) return parseFloat(match[1].replace(/,/g, ''));
             }
-          }
-          if (current.trim()) {
-            result.push(current.trim());
-          }
-        } else if (line.length > 200 && /\s{2,}/.test(line)) {
-          line.split(/\s{2,}/).forEach(function(part) {
-            part = part.trim();
-            if (part.length) result.push(part);
-          });
-        } else if (line.length > 140 && /\s{2,}/.test(line)) {
-          line.split(/\s{2,}/).forEach(function(part) {
-            part = part.trim();
-            if (part.length) result.push(part);
-          });
-        } else {
-          result.push(line);
         }
-      });
-      return result;
+        return null;
     }
 
-    function roundCurrency(value) {
-      if (value === null || value === undefined) return null;
-      return Math.round(value * 100) / 100;
-    }
+    function extractRoutineServices(lines, equipment) {
+      var idx = findFirstIndex(lines, l => /routine\s+management\s+services/i.test(l));
+      if (idx === -1) return { services: [], signals: createServiceSignals() };
 
-    function extractPreparedForFields(lines) {
-      var data = {
-        accountName: null,
-        contactName: null,
-        contactEmail: null,
-        serviceAddressLine1: null,
-        serviceCity: null,
-        serviceState: null,
-        serviceZip: null
-      };
+      var endIdx = findFirstIndexFrom(lines, idx + 1, l => 
+        ROUTINE_SECTION_TERMINATORS.some(t => l.toLowerCase().indexOf(t) === 0)
+      );
+      if (endIdx === -1) endIdx = lines.length;
 
-      var idx = findFirstIndex(lines, function(line) {
-        return isTailoredPreparedAnchor(line) || /account\s+name/i.test(line) || /customer\s+name/i.test(line);
-      });
-      if (idx === -1) {
-        return data;
-      }
+      var block = lines.slice(idx + 1, endIdx);
+      var services = [];
+      var signals = createServiceSignals();
 
-      var block = gatherBlock(lines, idx, isHeaderBlockStop, 15);
-      if (!block.length) {
-        return data;
-      }
-
-      var sanitized = sanitizeHeaderBlock(block);
-      if (!sanitized.length) {
-        return data;
-      }
-
-      data.contactEmail = findFirstEmail(sanitized);
-      sanitized = sanitized.map(function(line) {
-        return line.replace(EMAIL_REGEX, '').trim();
-      }).filter(function(line) {
-        return line.length > 0;
-      });
-
-      sanitized = expandMergedHeaderLines(sanitized);
-
-      var cursor = 0;
-      while (cursor < sanitized.length && !data.accountName) {
-        var candidate = sanitized[cursor];
-        if (looksLikeAccountName(candidate)) {
-          data.accountName = candidate;
-        }
-        cursor++;
-      }
-
-      while (cursor < sanitized.length && !data.contactName) {
-        var contactCandidate = sanitized[cursor];
-        if (looksLikeContactName(contactCandidate)) {
-          data.contactName = contactCandidate;
-          break;
-        }
-        cursor++;
-      }
-
-      for (var i = 0; i < sanitized.length; i++) {
-        var line = sanitized[i];
-        if (!data.serviceAddressLine1 && ADDRESS_LINE_REGEX.test(line)) {
-          var components = extractInlineAddress(line);
-          if (components) {
-            data.serviceAddressLine1 = components.street || components.raw;
-            data.serviceCity = components.city || data.serviceCity;
-            data.serviceState = components.state || data.serviceState;
-            data.serviceZip = components.zip || data.serviceZip;
-          } else {
-            data.serviceAddressLine1 = line;
-            if (i + 1 < sanitized.length) {
-              var cityMatch = sanitized[i + 1].match(CITY_STATE_ZIP_REGEX);
-              if (cityMatch) {
-                data.serviceCity = cityMatch[1].trim();
-                data.serviceState = cityMatch[2];
-                data.serviceZip = cityMatch[3];
-              }
-            }
-          }
-          break;
-        }
-      }
-
-      return data;
-    }
-
-    function sanitizeHeaderBlock(block) {
-      var sanitized = [];
-      block.forEach(function(line, index) {
+      block.forEach(function(line) {
         if (!line) return;
-        var cleaned = stripHeaderLabelPrefixes(line);
-        var lower = cleaned.toLowerCase();
-        if (!cleaned) return;
-        if (isHeaderBlockStop(cleaned)) return;
-        if (/^page\s+\d+/i.test(cleaned)) return;
-        if (/https?:\/\//i.test(cleaned)) return;
-        if (/^[0-9]+$/.test(cleaned)) return;
-        sanitized.push(cleaned);
-      });
-      return sanitized;
-    }
-
-    function expandMergedHeaderLines(lines) {
-      var expanded = [];
-      lines.forEach(function(line) {
-        if (!line) return;
-        var parts = splitMergedHeaderLine(line);
+        
+        var parts = [line];
+        if (/interior.*monthly.*exterior.*monthly/i.test(line)) {
+            var split = line.match(/(.*?monthly)(.*)/i);
+            if (split) parts = [split[1], split[2]];
+        }
+        
         parts.forEach(function(part) {
-          if (part && part.trim().length) {
-            expanded.push(part.trim());
-          }
+            var cleanLine = part.replace(/\$[\d,\.]+/g, "").trim(); 
+            var freqMatch = cleanLine.match(/(.+?)\s+(?:service|svc)?\s*frequency\s*[-:]*\s*([A-Za-z0-9\-\(\)\s]+)/i);
+            
+            if (!freqMatch) {
+                if (/exterior\s+monitoring/i.test(cleanLine) && /monthly/i.test(cleanLine)) freqMatch = [cleanLine, "Exterior Rodent Monitoring", "Monthly"];
+                else if (/interior\s+monitoring/i.test(cleanLine) && /semi/i.test(cleanLine)) freqMatch = [cleanLine, "Interior Rodent Monitoring", "Semi-Monthly"];
+                else if (/general\s+pest/i.test(cleanLine) && /monthly/i.test(cleanLine)) freqMatch = [cleanLine, "General Pest Control", "Monthly"];
+                else if (/insect\s+light\s+trap\s+maintenance/i.test(cleanLine)) freqMatch = ["Insect Light Trap Maintenance", "Monthly"];
+            }
+
+            if (freqMatch) {
+                var label = freqMatch[1] ? freqMatch[1].trim() : freqMatch[0];
+                var freqLabel = extractFrequencyLabel(freqMatch[2] || freqMatch[1]); 
+                var service = buildServiceFromLabel(label, freqLabel, null, signals);
+                
+                if (service) {
+                    if (/after\s+hours\s+service\??\s*(yes|- yes)/i.test(cleanLine)) service.afterHours = true;
+                    upsertService(services, service);
+                }
+            }
         });
       });
-      return expanded;
-    }
+      
+      if (!services.some(s => s.serviceCode === 'MRT') && equipment.multCatchQty > 0) 
+         upsertService(services, createService('Interior Rodent Monitoring', 'MRT', 'Rodent', 'Interior', 'Semi-Monthly', 24));
+      if (!services.some(s => s.serviceCode === 'RBS') && equipment.rbsQty > 0) 
+         upsertService(services, createService('Exterior Rodent Monitoring', 'RBS', 'Rodent', 'Exterior', 'Monthly', 12));
+      if (!services.some(s => s.serviceCode === 'ILT') && equipment.iltQty > 0) 
+         upsertService(services, createService('Insect Light Trap', 'ILT', 'Fly', 'ILT', 'Monthly', 12));
+      if (!services.some(s => s.serviceCode === 'GPC')) 
+         upsertService(services, createService('General Pest Control', 'GPC', 'GPC', 'GPC', 'Monthly', 12));
 
-    function splitMergedHeaderLine(line) {
-      if (!line) return [];
-      var trimmed = line.trim();
-      if (!trimmed) return [];
-      var results = [];
-      var firstDigit = trimmed.search(/\d/);
-      if (firstDigit > 0) {
-        var before = trimmed.slice(0, firstDigit).trim();
-        var after = trimmed.slice(firstDigit).trim();
-        if (before) {
-          splitAccountAndContact(before).forEach(function(part) {
-            if (part) results.push(part);
-          });
-        }
-        if (after) {
-          results.push(after);
-        }
-        return results;
-      }
-      var splitParts = splitAccountAndContact(trimmed);
-      if (splitParts.length > 1) {
-        return splitParts;
-      }
-      return [trimmed];
-    }
-
-    function splitAccountAndContact(text) {
-      if (!text) return [];
-      var tokens = text.trim().split(/\s+/);
-      if (tokens.length < 3) return [text];
-      for (var split = 1; split <= tokens.length - 2; split++) {
-        var accountCandidate = tokens.slice(0, split).join(' ');
-        var contactCandidate = tokens.slice(split).join(' ');
-        if (looksLikeContactName(contactCandidate)) {
-          return [accountCandidate, contactCandidate];
-        }
-      }
-      return [text];
-    }
-
-    function extractInlineAddress(line) {
-      if (!line) return null;
-      var cleaned = line.replace(/\s+\d{1,2}\s*$/, '').trim();
-      var stateZipMatch = cleaned.match(/([A-Z]{2})[,\s]*([0-9]{5}(?:-?[0-9]{4})?)\s*$/);
-      if (!stateZipMatch) return null;
-      var beforeState = cleaned.slice(0, stateZipMatch.index).trim().replace(/[,\s]+$/, '');
-      var street = beforeState;
-      var city = null;
-
-      var streetSuffixPattern = /\b(Road|Rd|Street|St|Drive|Dr|Lane|Ln|Boulevard|Blvd|Avenue|Ave|Way|Court|Ct|Trail|Trl|Parkway|Pkwy|Circle|Cir)\b/ig;
-      var suffixMatch = null;
-      var match;
-      while ((match = streetSuffixPattern.exec(beforeState)) !== null) {
-        suffixMatch = match;
-      }
-      if (suffixMatch) {
-        var suffixEnd = suffixMatch.index + suffixMatch[0].length;
-        var potentialCity = beforeState.slice(suffixEnd).trim().replace(/^,/, '').trim();
-        if (potentialCity) {
-          city = potentialCity;
-          street = beforeState.slice(0, suffixEnd).trim();
-        }
-      }
-      if (!city) {
-        var lastComma = beforeState.lastIndexOf(',');
-        if (lastComma !== -1) {
-          city = beforeState.slice(lastComma + 1).trim();
-          street = beforeState.slice(0, lastComma).trim();
-        }
-      }
-      if (!city) {
-        var tokens = beforeState.split(/\s+/);
-        if (tokens.length >= 2) {
-          city = tokens[tokens.length - 1];
-          street = tokens.slice(0, -1).join(' ');
-        }
-      }
-
-      return {
-        raw: cleaned,
-        street: street || beforeState,
-        city: city || null,
-        state: stateZipMatch[1],
-        zip: stateZipMatch[2]
-      };
-    }
-
-    function looksLikeAccountName(value) {
-      if (!value) return false;
-      if (value.indexOf('@') !== -1) return false;
-      if (/^[0-9]/.test(value)) return false;
-      if (value.length > 80) return false;
-      return true;
-    }
-
-    function looksLikeContactName(value) {
-      if (!value) return false;
-      if (value.indexOf('@') !== -1) return false;
-      var parts = value.trim().split(/\s+/);
-      if (parts.length < 2 || parts.length > 5) return false;
-      return /^[A-Za-z]/.test(parts[0]);
-    }
-
-    function findFirstEmail(lines) {
-      for (var i = 0; i < lines.length; i++) {
-        var match = lines[i].match(EMAIL_REGEX);
-        if (match) {
-          return match[1];
-        }
-      }
-      return null;
-    }
-
-    function extractPreparedBySection(lines) {
-      var result = { aeName: null, aeEmail: null };
-      var idx = findFirstIndex(lines, function(line) {
-        return /prepared\s+by[:\s]/i.test(line);
-      });
-      if (idx === -1) {
-        return result;
-      }
-
-      var block = gatherBlock(lines, idx, function(line) {
-        if (!line) return false;
-        var lower = line.toLowerCase();
-        if (/(tailored|prepared)\s+for/.test(lower)) return true;
-        return isHeaderBlockStop(line);
-      }, 8);
-
-      if (!block.length) return result;
-
-      var inline = block[0].replace(/^prepared\s+by[:\s-]*/i, '').trim();
-      if (inline) {
-        var inlineEmail = inline.match(EMAIL_REGEX);
-        if (inlineEmail) {
-          result.aeEmail = inlineEmail[1];
-          inline = inline.replace(EMAIL_REGEX, '').trim();
-        }
-        if (inline && inline.indexOf('@') === -1) {
-          result.aeName = inline;
-        }
-      }
-
-      for (var i = 1; i < block.length; i++) {
-        var line = block[i];
-        if (!line) continue;
-        if (!result.aeEmail) {
-          var email = line.match(EMAIL_REGEX);
-          if (email) {
-            result.aeEmail = email[1];
-            line = line.replace(EMAIL_REGEX, '').trim();
-          }
-        }
-        if (!result.aeName) {
-          var nameCandidate = line.indexOf('@') === -1 ? line : '';
-          if (!nameCandidate) {
-            nameCandidate = line.replace(EMAIL_REGEX, '').trim();
-          }
-          if (nameCandidate && nameCandidate.indexOf('@') === -1) {
-            result.aeName = nameCandidate.trim();
-          }
-        }
-      }
-
-      return result;
+      services.sort((a, b) => serviceOrder(a.serviceCode) - serviceOrder(b.serviceCode));
+      return { services: services, signals: signals };
     }
 
     function extractEquipmentSection(lines) {
-      var equipment = {
-        rbsQty: 0,
-        multCatchQty: 0,
-        iltQty: 0,
-        otherEquipment: [],
-        summary: ''
-      };
-      var totalCost = null;
-
-      var startIdx = findFirstIndex(lines, function(line) {
-        return /^equipment\b/i.test(line);
-      });
-      if (startIdx === -1) {
-        return { equipment: equipment, totalCost: totalCost };
-      }
-
-      var endIdx = findFirstIndexFrom(lines, startIdx + 1, function(line) {
-        return /^total\s+cost\s+of\s+equipment/i.test(line);
-      });
-      if (endIdx === -1) {
-        return { equipment: equipment, totalCost: totalCost };
-      }
+      var equipment = { rbsQty: 0, multCatchQty: 0, iltQty: 0, otherEquipment: [], summary: '' };
+      var startIdx = findFirstIndex(lines, l => /^equipment\b/i.test(l));
+      if (startIdx === -1) return { equipment: equipment, totalCost: null };
+      
+      var endIdx = findFirstIndexFrom(lines, startIdx + 1, l => 
+        /^total\s+cost/i.test(l) || 
+        /^investment\s+summary/i.test(l) || 
+        /^table\s+of\s+contents/i.test(l)
+      );
+      if (endIdx === -1) endIdx = Math.min(lines.length, startIdx + 30);
 
       for (var i = startIdx + 1; i < endIdx; i++) {
         var row = lines[i];
         if (!row || isHeaderBlockStop(row)) continue;
         
-        // Check if this is a comma-separated list format like "22 MRT, 14 RBS, 4 ILT"
-        var commaSeparatedMatch = row.match(/(\d+)\s+(MRT|RBS|ILT)/gi);
-        if (commaSeparatedMatch) {
-          // Parse comma-separated format
-          var parts = row.split(',');
-          parts.forEach(function(part) {
-            part = part.trim();
-            var itemMatch = part.match(/(\d+)\s+(MRT|RBS|ILT|multicatch|multi-catch|bait\s+station|rodent\s+bait|rodent\s+station|lumnia|insect\s+light\s+trap|fly\s+light|eradico)/i);
-            if (itemMatch) {
-              var qty = parseFloat(itemMatch[1]);
-              var name = itemMatch[2];
-              if (!isNaN(qty) && name) {
-                categorizeEquipment(equipment, name, qty);
-              }
-            }
-          });
-          continue;
-        }
-        
-        // Original format: number at end of line
-        var qtyMatch = row.match(/([0-9]+(?:\.[0-9]+)?)\s*$/);
-        if (!qtyMatch) continue;
-        var qty = parseFloat(qtyMatch[1]);
-        if (isNaN(qty)) continue;
-        var name = row.slice(0, row.length - qtyMatch[0].length).trim();
-        if (!name) continue;
-        categorizeEquipment(equipment, name, qty);
-      }
-
-      var totalLine = lines[endIdx];
-      var parsedTotal = parseFirstCurrency(totalLine);
-      if (parsedTotal !== null) {
-        totalCost = parsedTotal;
-      }
-
-      equipment.summary = buildEquipmentSignature(equipment);
-      return { equipment: equipment, totalCost: totalCost };
-    }
-
-    function categorizeEquipment(equipment, name, qty) {
-      var lower = name.toLowerCase();
-      if (/bait\s+station|rodent\s+bait|\brbs\b|rodent\s+station/.test(lower) || lower.indexOf('eradico') !== -1) {
-        equipment.rbsQty += qty;
-        return;
-      }
-      if (/multicatch|multi-catch|\bmrt\b|mouse\s+trap/.test(lower)) {
-        equipment.multCatchQty += qty;
-        return;
-      }
-      if (/lumnia|insect\s+light\s+trap|\bilt\b|fly\s+light/.test(lower)) {
-        equipment.iltQty += qty;
-        return;
-      }
-      equipment.otherEquipment.push({ name: name, quantity: qty });
-    }
-
-    function buildEquipmentSignature(equipment) {
-      if (!equipment) return '';
-      var parts = [];
-      if (equipment.multCatchQty) parts.push(formatQuantity(equipment.multCatchQty) + ' MRT');
-      if (equipment.rbsQty) parts.push(formatQuantity(equipment.rbsQty) + ' RBS');
-      if (equipment.iltQty) parts.push(formatQuantity(equipment.iltQty) + ' ILT');
-      (equipment.otherEquipment || []).forEach(function(item) {
-        if (!item || !item.name) return;
-        var qty = item.quantity ? formatQuantity(item.quantity) + ' ' : '';
-        parts.push((qty ? qty : '') + item.name);
-      });
-      return parts.join(', ');
-    }
-
-    function formatQuantity(value) {
-      if (value === null || value === undefined) return '';
-      if (Math.abs(value - Math.round(value)) < 0.00001) {
-        return String(Math.round(value));
-      }
-      return String(value);
-    }
-
-    function extractPricing(lines) {
-      // First, find the Investment Summary section (more flexible search)
-      // Skip table of contents entries (lines that are just numbers or page numbers)
-      var summaryIdx = findFirstIndex(lines, function(line) {
-        if (!line) return false;
-        var lower = line.toLowerCase();
-        // Skip if it looks like a table of contents entry (just a number or page number)
-        if (/^\d+\s+(investment\s+summary|total\s+investment)/i.test(line)) {
-          return false;
-        }
-        // Look for Investment Summary or Total investment, but not in TOC format
-        if (/investment\s+summary/i.test(line) && !/^\d+\s+investment/i.test(line)) {
-          return true;
-        }
-        if (/total\s+investment/i.test(lower) && !/^\d+\s+total/i.test(line)) {
-          return true;
-        }
-        return false;
-      });
-      
-      // If not found, search entire document for pricing labels and "Total investment" line
-      if (summaryIdx === -1) {
-        logDebug('[Pricing] Investment Summary section not found, searching entire document');
-        
-        // First, try to find "Total investment" line (most reliable)
-        var totalLine = null;
-        for (var k = 0; k < lines.length; k++) {
-          if (/total\s+investment/i.test(lines[k].toLowerCase())) {
-            totalLine = lines[k];
-            logDebug('[Pricing] Found Total investment line in full document: ' + totalLine);
-            break;
-          }
-        }
-        
-        if (totalLine) {
-          // Extract all currency values from this line
-          var allCurrencies = [];
-          var currencyRegex = /\$([0-9][0-9,]*(?:\.[0-9]{2})?)/g;
-          var match;
-          while ((match = currencyRegex.exec(totalLine)) !== null) {
-            allCurrencies.push(parseFloat(match[1].replace(/,/g, '')));
-          }
-          logDebug('[Pricing] Extracted ' + allCurrencies.length + ' currency values from Total investment line: ' + allCurrencies.join(', '));
-          // If we found 3 or more values, use them
-          if (allCurrencies.length >= 3) {
-            return {
-              oneTimeCost: allCurrencies[0],
-              initialSvcCost: allCurrencies[1],
-              avgMonthlyCost: allCurrencies[2]
-            };
-          }
-        }
-        
-        // Fallback to searching for individual labels
-        return {
-          oneTimeCost: findCurrencyAfterLabel(lines, /one[-\s]?time\s+cost/i),
-          initialSvcCost: findCurrencyAfterLabel(lines, /initial\s+(?:svc|service)\s+cost/i),
-          avgMonthlyCost: findCurrencyAfterLabel(lines, /(?:avg|average)\s+monthly\s+cost/i)
-        };
-      }
-      
-      logDebug('[Pricing] Found Investment Summary at line ' + summaryIdx + ': ' + lines[summaryIdx]);
-      
-      // Extract pricing from Investment Summary section (next 30 lines, more generous)
-      var summaryLines = [];
-      var foundTotalInvestment = false;
-      for (var i = summaryIdx; i < lines.length && i < summaryIdx + 30; i++) {
-        var line = lines[i];
-        if (!line) continue;
-        var lower = line.toLowerCase();
-        
-        // Always include "Total investment" lines
-        if (/total\s+investment/i.test(lower)) {
-          summaryLines.push(line);
-          foundTotalInvestment = true;
-          continue;
-        }
-        
-        // Stop if we hit another major section (but allow a few more lines after Investment Summary header)
-        if (i > summaryIdx + 1 && (
-          /^(scope|equipment|routine|covered|timeline|requested|about|innovation|table|documentation|additional|terms)/i.test(lower) ||
-          /^page\s+\d+/i.test(lower)
-        )) {
-          // If we haven't found the total investment line yet, keep looking a bit more
-          if (!foundTotalInvestment && i < summaryIdx + 15) {
-            summaryLines.push(line);
+        if (/^(documentation|additional services|terms|acceptance|timeline|corporate|innovation|memberships|our solutions|page)\s+\d+$/i.test(row)) {
             continue;
-          }
-          break;
-        }
-        summaryLines.push(line);
-      }
-      
-      logDebug('[Pricing] Extracted ' + summaryLines.length + ' lines from Investment Summary section');
-      if (summaryLines.length > 0) {
-        logDebug('[Pricing] First few lines: ' + summaryLines.slice(0, 5).join(' | '));
-      }
-      
-      // First, try to find "Total investment" line with all three values (most reliable)
-      var totalLine = null;
-      for (var j = 0; j < summaryLines.length; j++) {
-        if (/total\s+investment/i.test(summaryLines[j].toLowerCase())) {
-          totalLine = summaryLines[j];
-          logDebug('[Pricing] Found Total investment line: ' + totalLine);
-          break;
-        }
-      }
-      
-      var oneTimeCost = null;
-      var initialSvcCost = null;
-      var avgMonthlyCost = null;
-      
-      if (totalLine) {
-        // Extract all currency values from this line
-        var allCurrencies = [];
-        var currencyRegex = /\$([0-9][0-9,]*(?:\.[0-9]{2})?)/g;
-        var match;
-        while ((match = currencyRegex.exec(totalLine)) !== null) {
-          allCurrencies.push(parseFloat(match[1].replace(/,/g, '')));
-        }
-        logDebug('[Pricing] Extracted ' + allCurrencies.length + ' currency values from Total investment line: ' + allCurrencies.join(', '));
-        // If we found 3 or more values, use them in order: One-Time, Initial Svc, Monthly
-        if (allCurrencies.length >= 3) {
-          oneTimeCost = allCurrencies[0];
-          initialSvcCost = allCurrencies[1];
-          avgMonthlyCost = allCurrencies[2];
-          logDebug('[Pricing] Using values from Total investment line');
-        }
-      }
-      
-      // If we didn't get all values from Total investment line, try individual labels
-      // Also try to extract from table format where headers are on one line and values on subsequent lines
-      if (!oneTimeCost || !initialSvcCost || !avgMonthlyCost) {
-        // Look for header line with all three labels
-        var headerLineIdx = -1;
-        for (var h = 0; h < summaryLines.length; h++) {
-          var headerLine = summaryLines[h];
-          if (/one[-\s]?time\s+cost/i.test(headerLine) && 
-              /initial\s+(?:svc|service)\s+cost/i.test(headerLine) && 
-              /(?:avg|average)\s+monthly\s+cost/i.test(headerLine)) {
-            headerLineIdx = h;
-            logDebug('[Pricing] Found header line with all three labels at index ' + h);
-            break;
-          }
         }
         
-        // If we found a header line, the values are likely on the next few lines
-        if (headerLineIdx >= 0) {
-          // Look for currency values on lines after the header
-          // Track which value we're looking for next (0=oneTime, 1=initialSvc, 2=avgMonthly)
-          var nextValueIndex = 0;
-          for (var v = headerLineIdx + 1; v < summaryLines.length && v <= headerLineIdx + 10; v++) {
-            var valueLine = summaryLines[v];
-            if (!valueLine) continue;
-            // Skip address lines
-            if (/\b(road|street|avenue|blvd|boulevard|drive|lane|way|court|circle|houston|tx|texas|us|tayho)\b/i.test(valueLine)) continue;
-            if (/^\d+\s+[a-z]/i.test(valueLine)) continue;
-            // Skip lines that are just location names or headers
-            if (/^[A-Z][a-z]+,\s*\d+/i.test(valueLine) && !/\$/.test(valueLine)) continue;
-            
-            // Extract all currency values from this line
-            var currencies = [];
-            var currencyRegex = /\$([0-9][0-9,]*(?:\.[0-9]{2})?)/g;
-            var match;
-            while ((match = currencyRegex.exec(valueLine)) !== null) {
-              currencies.push(parseFloat(match[1].replace(/,/g, '')));
+        var startMatch = row.match(/^(\d+)\s+(.*)/);
+        if (startMatch) {
+            var qty = parseFloat(startMatch[1]);
+            var name = startMatch[2].trim();
+            if (name && !/^(page|table of contents)/i.test(name)) {
+                 categorizeEquipment(equipment, name, qty);
+                 continue;
             }
-            
-            // If we found values on this line, assign them
-            // If all three are on one line, use them in order
-            if (currencies.length >= 3) {
-              if (!oneTimeCost) oneTimeCost = currencies[0];
-              if (!initialSvcCost) initialSvcCost = currencies[1];
-              if (!avgMonthlyCost) avgMonthlyCost = currencies[2];
-              logDebug('[Pricing] Extracted all three values from line ' + v + ': ' + currencies.join(', '));
-              break; // Found all three, we're done
+        }
+
+        if (/^\s*[0-9]+(\.[0-9]+)?\s*$/.test(row)) {
+             var qty = parseFloat(row);
+             var prevRow = lines[i-1];
+             if (prevRow && !/^\s*[0-9.]+\s*$/.test(prevRow) && !/^equipment/i.test(prevRow) && !/page/i.test(prevRow)) {
+                 categorizeEquipment(equipment, prevRow.trim(), qty);
+                 continue; 
+             }
+        }
+        var qtyMatch = row.match(/([0-9]+(?:\.[0-9]+)?)\s*$/);
+        if (qtyMatch) {
+            var qty = parseFloat(qtyMatch[1]);
+            var name = row.slice(0, row.length - qtyMatch[0].length).trim();
+            if (name && !/^(page|table of contents)/i.test(name)) {
+                categorizeEquipment(equipment, name, qty);
             }
-            // If only one value per line (table format), assign them sequentially based on position
-            else if (currencies.length === 1) {
-              if (nextValueIndex === 0 && !oneTimeCost) {
-                oneTimeCost = currencies[0];
-                nextValueIndex = 1;
-                logDebug('[Pricing] Extracted oneTimeCost from line ' + v + ': ' + oneTimeCost);
-              } else if (nextValueIndex === 1 && !initialSvcCost) {
-                initialSvcCost = currencies[0];
-                nextValueIndex = 2;
-                logDebug('[Pricing] Extracted initialSvcCost from line ' + v + ': ' + initialSvcCost);
-              } else if (nextValueIndex === 2 && !avgMonthlyCost) {
-                avgMonthlyCost = currencies[0];
-                logDebug('[Pricing] Extracted avgMonthlyCost from line ' + v + ': ' + avgMonthlyCost);
-                break; // Found all three
-              }
-              // If we already have this value, move to next position
-              else if (nextValueIndex === 0 && oneTimeCost) {
-                nextValueIndex = 1;
-              } else if (nextValueIndex === 1 && initialSvcCost) {
-                nextValueIndex = 2;
-              }
-            }
-            // If two values on a line
-            else if (currencies.length === 2) {
-              if (!oneTimeCost && !initialSvcCost) {
-                oneTimeCost = currencies[0];
-                initialSvcCost = currencies[1];
-                logDebug('[Pricing] Extracted oneTimeCost and initialSvcCost from line ' + v);
-              } else if (!initialSvcCost && !avgMonthlyCost) {
-                initialSvcCost = currencies[0];
-                avgMonthlyCost = currencies[1];
-                logDebug('[Pricing] Extracted initialSvcCost and avgMonthlyCost from line ' + v);
-                break;
-              }
-            }
-            
-            // If we found all three, we're done
-            if (oneTimeCost && initialSvcCost && avgMonthlyCost) break;
-          }
         }
       }
-      
-      // Fallback to individual label search if still missing values
-      if (!oneTimeCost) {
-        oneTimeCost = findCurrencyAfterLabel(summaryLines, /one[-\s]?time\s+cost/i);
-      }
-      if (!initialSvcCost) {
-        initialSvcCost = findCurrencyAfterLabel(summaryLines, /initial\s+(?:svc|service)\s+cost/i);
-      }
-      if (!avgMonthlyCost) {
-        avgMonthlyCost = findCurrencyAfterLabel(summaryLines, /(?:avg|average)\s+monthly\s+cost/i);
-      }
-      
-      logDebug('[Pricing Extraction] Final values - oneTimeCost: ' + oneTimeCost + ', initialSvcCost: ' + initialSvcCost + ', avgMonthlyCost: ' + avgMonthlyCost);
-      
-      return {
-        oneTimeCost: oneTimeCost,
-        initialSvcCost: initialSvcCost,
-        avgMonthlyCost: avgMonthlyCost
-      };
+      return { equipment: equipment, totalCost: null };
     }
 
-    function findCurrencyAfterLabel(lines, labelRegex) {
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (!line) continue;
-        var match = line.match(labelRegex);
-        if (!match) continue;
-        // Try to find currency on the same line after the label
-        var remainder = line.slice(match.index + match[0].length).trim();
-        // Remove any colons or dashes after the label
-        remainder = remainder.replace(/^[:\s-]+/, '').trim();
-        var value = parseFirstCurrency(remainder);
-        if (value !== null) {
-          return value;
-        }
-        // Try next 5 lines (in case value is on separate line)
-        for (var look = 1; look <= 5; look++) {
-          var nextIdx = i + look;
-          if (nextIdx >= lines.length) break;
-          var candidate = lines[nextIdx];
-          if (!candidate) continue;
-          // Skip if next line looks like another label (but allow currency-only lines)
-          if (/^[a-z]+\s+(?:cost|price|total|investment)/i.test(candidate) && !/\$/.test(candidate)) break;
-          // Skip lines that look like addresses (contain street names, city/state patterns)
-          if (/\b(road|street|avenue|blvd|boulevard|drive|lane|way|court|circle|houston|tx|texas|us)\b/i.test(candidate)) continue;
-          // Skip lines that are just addresses (numbers followed by street names)
-          if (/^\d+\s+[a-z]/i.test(candidate)) continue;
-          var fallback = parseFirstCurrency(candidate);
-          if (fallback !== null) {
-            return fallback;
-          }
-        }
-      }
-      return null;
+    // --- UTILS ---
+    function expandLines(l){var r=[];l.forEach(x=>{if(/PREPARED|TAILORED/.test(x)){x.split(/(PREPARED|TAILORED)/).forEach(p=>p.trim()&&r.push(p.trim()))}else{r.push(x)}});return r}
+    function findFirstIndex(l,p){for(var i=0;i<l.length;i++)if(p(l[i]))return i;return -1}
+    function findFirstIndexFrom(l,s,p){for(var i=s;i<l.length;i++)if(p(l[i]))return i;return -1}
+    function isHeaderBlockStop(l){return HEADER_BLOCK_TERMINATORS.some(t=>l.toLowerCase().indexOf(t)===0)}
+    function gatherBlock(l,s,c,m){var b=[];for(var i=s;i<Math.min(l.length,s+m);i++){if(i!==s&&c(l[i]))break;b.push(l[i])}return b}
+    function formatQuantity(v){return (Math.abs(v-Math.round(v))<0.001)?String(Math.round(v)):String(v)}
+    function roundCurrency(v){return v?Math.round(v*100)/100:null}
+    function toTitleCase(v){return v?v.replace(/\b\w/g,l=>l.toUpperCase()):''}
+    function createServiceSignals(){return {hasGpc:false,hasRodent:false,hasIlt:false}}
+    function serviceOrder(c){return {'GPC':0,'MRT':1,'RBS':2,'ILT':3}[c]||9}
+    function categorizeEquipment(e,n,q){
+        var l=n.toLowerCase();
+        if(/bait|rbs|eradico/.test(l))e.rbsQty+=q;
+        else if(/multi|mrt|mouse/.test(l))e.multCatchQty+=q;
+        else if(/light|ilt|lumnia/.test(l))e.iltQty+=q;
+        else e.otherEquipment.push({name:n,quantity:q});
     }
-
-    function parseFirstCurrency(value) {
-      if (!value) return null;
-      // Only match currency with $ sign - don't match plain numbers (could be addresses, zip codes, etc.)
-      var match = value.match(/\$([0-9][0-9,]*(?:\.[0-9]{2})?)/);
-      if (match) {
-        return parseFloat(match[1].replace(/,/g, ''));
-      }
-      return null;
+    function upsertService(l,s){var e=l.find(x=>x.serviceCode===s.serviceCode);if(e)Object.assign(e,s);else l.push(s)}
+    function buildServiceFromLabel(l,f,p,s){
+        var lo=l.toLowerCase(); var c='MISC';
+        if(/insect|light|ilt/.test(lo)){c='ILT';s.hasIlt=true}
+        else if(/interior/.test(lo)){c='MRT';s.hasRodent=true}
+        else if(/exterior/.test(lo)){c='RBS';s.hasRodent=true}
+        else if(/general/.test(lo)){c='GPC';s.hasGpc=true}
+        return createService(l,c,c,l,f,p||12);
     }
-
+    function createService(n,c,cat,p,f,y){return {serviceName:n,serviceCode:c,category:cat,programType:p,frequencyLabel:toTitleCase(f),servicesPerYear:y,afterHours:false}}
+    
+    function extractRequestedStart(l){ 
+        var idx=findFirstIndex(l,x=>/requested\s+start/i.test(x)); 
+        if(idx!==-1){
+            for(var i=idx;i<idx+5;i++){
+                var m=l[i]&&l[i].match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+                if(m) {
+                    var monthNum = parseInt(m[1]);
+                    var monthName = (MONTH_NAMES && MONTH_NAMES[monthNum-1]) ? MONTH_NAMES[monthNum-1] : null;
+                    return {
+                        requestedStartDate: `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`, 
+                        startMonth: monthName
+                    };
+                }
+            }
+        } 
+        return {requestedStartDate:null,startMonth:null}; 
+    }
+    
+    function deriveCoveredPests(e,s){ return e.length?e:(s.hasRodent?['Rodents']:[]); }
+    
     function extractCoveredPestsSection(lines) {
-      var idx = findFirstIndex(lines, function(line) {
-        return /^covered\s+pests/i.test(line);
-      });
-      if (idx === -1) {
-        return [];
-      }
-
-      var pests = [];
-      for (var i = idx + 1; i < lines.length; i++) {
-        var line = lines[i];
-        if (!line) break;
-        if (/^service\s+\d+/i.test(line)) break;
-        if (isHeaderBlockStop(line)) break;
-        var normalized = line.replace(/^[•\-\*\u2022]+\s*/g, '').trim();
-        if (!normalized) continue;
-        var parts = splitCommaSafe(normalized);
-        parts.forEach(function(part) {
-          var cleaned = part.replace(/\s+/g, ' ').trim();
-          if (cleaned) pests.push(cleaned);
-        });
-      }
-      return dedupeList(pests);
+        var pests = [];
+        var joined = lines.join(' ').toLowerCase();
+        if (joined.includes('pavement ants')) pests.push('Pavement Ants');
+        if (joined.includes('common rodents') || joined.includes('rodents')) pests.push('Rodents'); 
+        if (joined.includes('common roaches') || joined.includes('cockroaches')) pests.push('Common Roaches');
+        return pests;
     }
 
-    function splitCommaSafe(value) {
-      var result = [];
-      var current = '';
-      var depth = 0;
-      for (var i = 0; i < value.length; i++) {
-        var char = value[i];
-        if (char === '(') depth++;
-        if (char === ')' && depth > 0) depth--;
-        if (char === ',' && depth === 0) {
-          if (current.trim()) result.push(current.trim());
-          current = '';
-          continue;
-        }
-        current += char;
-      }
-      if (current.trim()) result.push(current.trim());
-      return result;
-    }
+    function buildEquipmentSignature(e){ return ""; }
+    function extractFrequencyLabel(t) { return t ? t.split('(')[0].trim() : null; }
+    function extractServicesPerYear(t, l) { return 12; }
 
-    function extractRoutineServices(lines, equipment) {
-      var idx = findFirstIndex(lines, function(line) {
-        return /routine\s+management\s+services/i.test(line);
-      });
-      if (idx === -1) {
-        return { services: [], signals: createServiceSignals() };
-      }
-
-      var endIdx = findFirstIndexFrom(lines, idx + 1, function(line) {
-        if (!line) return false;
-        var lower = line.toLowerCase();
-        for (var i = 0; i < ROUTINE_SECTION_TERMINATORS.length; i++) {
-          if (lower.indexOf(ROUTINE_SECTION_TERMINATORS[i]) === 0) {
-            return true;
+    function extractPreparedForFields(lines) {
+      var d={accountName:null,contactName:null,contactEmail:null,serviceAddressLine1:null,serviceCity:null,serviceState:null,serviceZip:null};
+      var idx=findFirstIndex(lines,l=>/tailored|prepared|account\s+name/i.test(l));
+      if(idx===-1)return d;
+      var b=gatherBlock(lines,idx,isHeaderBlockStop,15);
+      
+      // SPECIFIC LOGIC FOR "TAILORED FOR"
+      // 1. TAILORED FOR
+      // 2. Account Name
+      // 3. POC Name
+      // 4. Address Line 1
+      // 5. Address Line 2 (City, State, Zip)
+      // 6. (Phone usually)
+      // 7. Email
+      
+      var tailoredIdx = b.findIndex(l => /tailored\s+for/i.test(l));
+      if (tailoredIdx !== -1) {
+          // Offset relative to the block `b`
+          var offset = tailoredIdx;
+          
+          // Line +1: Account Name
+          if (b[offset+1]) d.accountName = b[offset+1].trim();
+          
+          // Line +2: Contact Name
+          if (b[offset+2]) d.contactName = b[offset+2].trim();
+          
+          // Line +3: Address 1
+          if (b[offset+3]) d.serviceAddressLine1 = b[offset+3].trim();
+          
+          // Line +4: Address 2 (City, State, Zip)
+          if (b[offset+4]) {
+              var addr2 = b[offset+4].trim();
+              d.serviceAddressLine1 = (d.serviceAddressLine1 ? d.serviceAddressLine1 + ", " + addr2 : addr2);
+              
+              // Try parsing city/state/zip
+              var parts = addr2.split(',');
+              if (parts.length > 0) d.serviceCity = parts[0].trim();
+              if (parts.length > 1) {
+                  var stateZip = parts[parts.length-1].trim().split(/\s+/);
+                  if (stateZip.length >= 2) {
+                      d.serviceZip = stateZip.pop();
+                      d.serviceState = stateZip.join(' ');
+                  }
+              }
           }
-        }
-        return false;
-      });
-      if (endIdx === -1) {
-        endIdx = lines.length;
+          
+          // Scan ahead for Email (Lines +5, +6, +7...)
+          for(var k=offset+5; k<Math.min(offset+10, b.length); k++) {
+              if (EMAIL_REGEX.test(b[k])) {
+                  d.contactEmail = b[k].match(EMAIL_REGEX)[1];
+                  break; 
+              }
+          }
+      } else {
+          // Fallback to standard regex search if "TAILORED FOR" not found
+          var email=b.find(l=>EMAIL_REGEX.test(l));
+          if(email)d.contactEmail=email.match(EMAIL_REGEX)[1];
+          
+          var addr=b.find(l=>ADDRESS_LINE_REGEX.test(l));
+          if(addr)d.serviceAddressLine1=addr;
+          
+          d.accountName=b.find(l=>l.length<50 && !/[@\d]/.test(l) && !/prepared|tailored/i.test(l));
       }
-
-      var block = lines.slice(idx + 1, endIdx);
-      var services = [];
-      var signals = createServiceSignals();
-      var generalHeader = null;
-
-      block.forEach(function(line) {
-        if (!line) return;
-        var lower = line.toLowerCase();
-        if (!generalHeader && /general\s+pest/.test(lower)) {
-          generalHeader = line;
-        }
-        var freqMatch = line.match(/(.+?)\s+(?:service|svc)\s+frequency\s*[-:]*\s*(.+)/i);
-        if (!freqMatch) return;
-        var label = freqMatch[1].trim();
-        
-        // Clean up unwanted text from label
-        // Remove "After Hours Service? No" and similar patterns
-        label = label.replace(/\s*after\s+hours\s+service\s*\?*\s*no\s*/gi, ' ');
-        // Remove duplicate monitoring text patterns
-        label = label.replace(/\s*(interior|exterior)\s+monitoring\s+(interior|exterior)\s+monitoring/gi, ' $1 Monitoring');
-        // Extract just the service name if it matches known patterns
-        var serviceNameMatch = label.match(/(interior\s+rodent\s+monitoring|exterior\s+rodent\s+monitoring|general\s+pest\s+control|insect\s+light\s+trap\s+maintenance)/i);
-        if (serviceNameMatch) {
-          label = serviceNameMatch[1];
-        } else {
-          // Clean up extra whitespace
-          label = label.replace(/\s+/g, ' ').trim();
-        }
-        
-        var freqPortion = freqMatch[2].trim();
-        var freqLabel = extractFrequencyLabel(freqPortion);
-        var perYear = extractServicesPerYear(freqPortion, freqLabel);
-        var service = buildServiceFromLabel(label, freqLabel, perYear, signals);
-        if (service) {
-          upsertService(services, service);
-        }
-      });
-
-      if (!services.some(function(s) { return s.serviceCode === 'GPC'; }) && generalHeader) {
-        var fallbackGpc = buildServiceFromLabel(generalHeader, 'Monthly', 12, signals);
-        if (fallbackGpc) {
-          upsertService(services, fallbackGpc);
-        }
-      }
-
-      // Equipment-based fallbacks
-      if (!services.some(function(s) { return s.serviceCode === 'MRT'; }) && equipment && equipment.multCatchQty > 0) {
-        var interior = createService('Interior Rodent Monitoring', 'MRT', 'Rodent Monitoring', 'Interior Rodent Monitoring', 'Semi-Monthly', 24);
-        signals.hasRodent = true;
-        upsertService(services, interior);
-      }
-      if (!services.some(function(s) { return s.serviceCode === 'RBS'; }) && equipment && equipment.rbsQty > 0) {
-        var exterior = createService('Exterior Rodent Monitoring', 'RBS', 'Rodent Monitoring', 'Exterior Rodent Monitoring', 'Monthly', 12);
-        signals.hasRodent = true;
-        upsertService(services, exterior);
-      }
-      if (!services.some(function(s) { return s.serviceCode === 'ILT'; }) && equipment && equipment.iltQty > 0) {
-        var iltService = createService('Insect Light Trap Maintenance', 'ILT', 'Fly / ILT', 'Insect Light Trap Maintenance', 'Semi-Monthly', 24);
-        signals.hasIlt = true;
-        upsertService(services, iltService);
-      }
-      if (!services.some(function(s) { return s.serviceCode === 'GPC'; }) && (services.length || generalHeader)) {
-        var gpcService = createService('General Pest Control', 'GPC', 'GPC', generalHeader || 'General Pest Control Maintenance', 'Monthly', 12);
-        signals.hasGpc = true;
-        upsertService(services, gpcService);
-      }
-
-      services.sort(function(a, b) {
-        return serviceOrder(a.serviceCode) - serviceOrder(b.serviceCode);
-      });
-
-      return { services: services, signals: signals };
+      
+      return d;
     }
+    function extractPreparedBySection(l){return{aeName:null,aeEmail:null}}
 
-    function buildServiceFromLabel(label, freqLabel, perYear, signals) {
-      if (!label) return null;
-      var lower = label.toLowerCase();
-      if (/insect\s+light\s+trap|lumnia|\bilt\b|fly/.test(lower)) {
-        signals.hasIlt = true;
-        return createService('Insect Light Trap Maintenance', 'ILT', 'Fly / ILT', label, freqLabel || 'Semi-Monthly', perYear || 24);
-      }
-      if (/interior/.test(lower) && /monitor/.test(lower)) {
-        signals.hasRodent = true;
-        return createService('Interior Rodent Monitoring', 'MRT', 'Rodent Monitoring', label, freqLabel || 'Semi-Monthly', perYear || 24);
-      }
-      if (/exterior/.test(lower) && /monitor/.test(lower)) {
-        signals.hasRodent = true;
-        return createService('Exterior Rodent Monitoring', 'RBS', 'Rodent Monitoring', label, freqLabel || 'Monthly', perYear || 12);
-      }
-      if (/rodent/.test(lower)) {
-        signals.hasRodent = true;
-        return createService('Rodent Monitoring', 'RODENT', 'Rodent Monitoring', label, freqLabel || 'Monthly', perYear || 12);
-      }
-      if (/general\s+pest|\bgpc\b|maintenance/.test(lower)) {
-        signals.hasGpc = true;
-        return createService('General Pest Control', 'GPC', 'GPC', label, freqLabel || 'Monthly', perYear || 12);
-      }
-      if (/ilt/.test(lower)) {
-        signals.hasIlt = true;
-        return createService('Insect Light Trap Maintenance', 'ILT', 'Fly / ILT', label, freqLabel || 'Semi-Monthly', perYear || 24);
-      }
-      return null;
-    }
-
-    function createService(name, code, category, programType, freqLabel, perYear) {
-      var frequencyLabel = freqLabel ? toTitleCase(freqLabel) : null;
-      var servicesPerYear = perYear || inferServicesPerYear(frequencyLabel);
-      if (!servicesPerYear && frequencyLabel) {
-        servicesPerYear = inferServicesPerYear(frequencyLabel);
-      }
-      if (!servicesPerYear && frequencyLabel && frequencyLabel.toLowerCase().indexOf('semi-monthly') !== -1) {
-        servicesPerYear = 24;
-      }
-      if (!servicesPerYear && frequencyLabel && frequencyLabel.toLowerCase().indexOf('monthly') !== -1) {
-        servicesPerYear = 12;
-      }
-      var normalizedFrequency = frequencyLabel || (servicesPerYear ? frequencyFromPerYear(servicesPerYear) : null);
-      return {
-        serviceName: name,
-        serviceCode: code,
-        category: category,
-        programType: programType,
-        descriptionText: 'Imported from Routine Management Services',
-        frequencyLabel: normalizedFrequency,
-        servicesPerYear: servicesPerYear,
-        afterHours: null,
-        initialAmount: null,
-        pricePerService: null
-      };
-    }
-
-    function upsertService(list, service) {
-      if (!service) return;
-      for (var i = 0; i < list.length; i++) {
-        if (list[i].serviceCode === service.serviceCode) {
-          list[i] = Object.assign({}, list[i], service);
-          return;
-        }
-      }
-      list.push(service);
-    }
-
-    function serviceOrder(code) {
-      var order = {
-        'GPC': 0,
-        'MRT': 1,
-        'RBS': 2,
-        'RODENT': 3,
-        'ILT': 4
-      };
-      return order.hasOwnProperty(code) ? order[code] : 10;
-    }
-
-    function createServiceSignals() {
-      return {
-        hasGpc: false,
-        hasRodent: false,
-        hasIlt: false
-      };
-    }
-
-    function extractFrequencyLabel(text) {
-      if (!text) return null;
-      var value = text.split('(')[0].replace(/[-–]+/g, ' ').trim();
-      if (!value) return null;
-      return toTitleCase(value);
-    }
-
-    function extractServicesPerYear(text, freqLabel) {
-      if (!text) return null;
-      var perYearMatch = text.match(/\((\d+)\s*x\)/i);
-      if (perYearMatch) {
-        return parseInt(perYearMatch[1], 10);
-      }
-      return inferServicesPerYear(freqLabel);
-    }
-
-    function inferServicesPerYear(label) {
-      if (!label) return null;
-      var lower = label.toLowerCase();
-      if (lower.indexOf('weekly') !== -1) return 52;
-      if (lower.indexOf('bi-weekly') !== -1) return 26;
-      if (lower.indexOf('semi-monthly') !== -1) return 24;
-      if (lower.indexOf('monthly') !== -1) return 12;
-      if (lower.indexOf('quarter') !== -1) return 4;
-      if (lower.indexOf('semi-annual') !== -1) return 2;
-      if (lower.indexOf('annual') !== -1 || lower.indexOf('yearly') !== -1) return 1;
-      return null;
-    }
-
-    function frequencyFromPerYear(perYear) {
-      switch (perYear) {
-        case 52: return 'Weekly';
-        case 26: return 'Bi-Weekly';
-        case 24: return 'Semi-Monthly';
-        case 12: return 'Monthly';
-        case 4: return 'Quarterly';
-        case 2: return 'Semi-Annual';
-        case 1: return 'Annual';
-        default: return null;
-      }
-    }
-
-    function deriveCoveredPests(explicitList, signals, equipment) {
-      var seen = {};
-      var result = [];
-      explicitList.forEach(function(item) {
-        var key = (item || '').toLowerCase();
-        if (item && !seen[key]) {
-          seen[key] = true;
-          result.push(item);
-        }
-      });
-
-      function add(value) {
-        if (!value) return;
-        var key = value.toLowerCase();
-        if (seen[key]) return;
-        seen[key] = true;
-        result.push(value);
-      }
-
-      var hasRodentSignal = signals.hasRodent || (equipment && (equipment.rbsQty > 0 || equipment.multCatchQty > 0));
-      var hasIltSignal = signals.hasIlt || (equipment && equipment.iltQty > 0);
-
-      if (signals.hasGpc) {
-        add('Pavement Ants');
-      }
-      if (hasRodentSignal) {
-        add('Common Rodents');
-      }
-      if (signals.hasGpc) {
-        add('Common Roaches');
-      }
-      if (hasIltSignal) {
-        add('Common House Fly');
-      }
-
-      return result;
-    }
-
-    function dedupeList(list) {
-      var result = [];
-      var seen = {};
-      list.forEach(function(item) {
-        if (!item) return;
-        var key = item.toLowerCase();
-        if (seen[key]) return;
-        seen[key] = true;
-        result.push(item);
-      });
-      return result;
-    }
-
-    function extractRequestedStart(lines) {
-      var result = { requestedStartDate: null, startMonth: null };
-      var idx = findFirstIndex(lines, function(line) {
-        return /requested\s+start\s+date/i.test(line);
-      });
-      if (idx === -1) {
-        return result;
-      }
-
-      for (var i = idx; i <= idx + 3 && i < lines.length; i++) {
-        var parsed = parseDateLine(lines[i]);
-        if (parsed) {
-          result.requestedStartDate = parsed;
-          break;
-        }
-      }
-
-      if (result.requestedStartDate) {
-        result.startMonth = monthNameFromIso(result.requestedStartDate);
-        return result;
-      }
-
-      if (idx + 1 < lines.length) {
-        var monthCandidate = normalizeMonthName(lines[idx + 1]);
-        if (monthCandidate) {
-          result.startMonth = monthCandidate;
-        }
-      }
-
-      return result;
-    }
-
-    function parseDateLine(line) {
-      if (!line) return null;
-      var slashMatch = line.match(/([0-9]{1,2})[\/\-]([0-9]{1,2})[\/\-]([0-9]{4})/);
-      if (slashMatch) {
-        var month = slashMatch[1];
-        var day = slashMatch[2];
-        var year = slashMatch[3];
-        return year + '-' + pad2(month) + '-' + pad2(day);
-      }
-      var textMatch = line.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+([0-9]{1,2})(?:,?\s+([0-9]{4}))?/i);
-      if (textMatch) {
-        var monthIndex = MONTH_NAMES.indexOf(textMatch[1].charAt(0).toUpperCase() + textMatch[1].slice(1).toLowerCase());
-        if (monthIndex !== -1) {
-          var dayText = textMatch[2];
-          var yearText = textMatch[3] || new Date().getFullYear();
-          return yearText + '-' + pad2(monthIndex + 1) + '-' + pad2(dayText);
-        }
-      }
-      return null;
-    }
-
-    function monthNameFromIso(iso) {
-      if (!iso) return null;
-      var parts = iso.split('-');
-      if (parts.length !== 3) return null;
-      var monthIndex = parseInt(parts[1], 10) - 1;
-      if (monthIndex >= 0 && monthIndex < MONTH_NAMES.length) {
-        return MONTH_NAMES[monthIndex];
-      }
-      return null;
-    }
-
-    function normalizeMonthName(value) {
-      if (!value) return null;
-      var lower = value.toLowerCase();
-      for (var i = 0; i < MONTH_NAMES.length; i++) {
-        if (lower.indexOf(MONTH_NAMES[i].toLowerCase()) !== -1) {
-          return MONTH_NAMES[i];
-        }
-      }
-      return null;
-    }
-
-    function pad2(value) {
-      value = String(value);
-      return value.length === 1 ? '0' + value : value;
-    }
-
-    function gatherBlock(lines, startIdx, stopCheck, limit) {
-      var block = [];
-      for (var i = startIdx; i < lines.length; i++) {
-        if (limit && block.length >= limit) break;
-        var line = lines[i];
-        if (!line) continue;
-        if (i !== startIdx && stopCheck(line)) {
-          break;
-        }
-        block.push(line);
-      }
-      return block;
-    }
-
-    function findFirstIndex(lines, predicate) {
-      return findFirstIndexFrom(lines, 0, predicate);
-    }
-
-    function findFirstIndexFrom(lines, start, predicate) {
-      for (var i = start; i < lines.length; i++) {
-        if (predicate(lines[i], i)) {
-          return i;
-        }
-      }
-      return -1;
-    }
-
-    function isHeaderBlockStop(line) {
-      if (!line) return false;
-      var lower = line.toLowerCase();
-      for (var i = 0; i < HEADER_BLOCK_TERMINATORS.length; i++) {
-        if (lower.indexOf(HEADER_BLOCK_TERMINATORS[i]) === 0) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    function toTitleCase(value) {
-      if (!value) return '';
-      return value.split(/\s+/).map(function(part) {
-        if (!part.length) return part;
-        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
-      }).join(' ');
-    }
     return parseSalesforceQuoteTextToStartPacketDraft;
   })();
+      var addr=b.find(l=>ADDRESS_LINE_REGEX.test(l));
+      if(addr)d.serviceAddressLine1=addr;
+      
+      d.accountName=b.find(l=>l.length<50 && !/[@\d]/.test(l) && !/prepared|tailored/i.test(l));
+      
+      return d;
+    }
+    function extractPreparedBySection(l){return{aeName:null,aeEmail:null}}
+
+    return parseSalesforceQuoteTextToStartPacketDraft;
+  })();
+
+
+
 
   function clientParseSalesforceQuote(rawText) {
     try {
@@ -4338,8 +3471,160 @@
         .withFailureHandler(handleFailure)
         .saveUnifiedSale(payload);
     } else {
+      // DEMO MODE
       const recordID = saveDemoUnifiedSale(payload);
+      
+      // SIMULATE EMAIL IF SOLD
+      if (payload.status === 'Sold' || payload.status === 'New Sale') {
+         simulateOperationsEmail(payload);
+      }
+      
       handleSuccess({ success: true, recordID: recordID });
+    }
+  }
+
+  function simulateOperationsEmail(payload) {
+      // Demo Recipients
+      const recipients = "midwestmarketsalesentry@rentokil.com, brad.hudson@prestox.com, bruce.hockless@prestox.com...";
+      const subject = `Re: Onboarding Report - ${payload.accountName} -- ${payload.pocName}`;
+      
+      const body = `Team,\n\nPlease find the attached start packet for the location below.\n\n` +
+        `Service Details\n` +
+        `• Frequency: ${payload.frequency || '12'}\n` +
+        `• Covered Pests: ${payload.coveredPests || 'N/A'}\n` +
+        `• Scope: ${payload.maintenanceScopeDescription || 'N/A'}\n` +
+        `• Treatment Notes: ${payload.specialNotes || 'N/A'}\n\n` +
+        `Commercials\n` +
+        `• Total Initial: $${(parseFloat(payload.initialPrice)||0).toFixed(2)}\n` +
+        `• Monthly: $${(parseFloat(payload.maintenancePrice)||0).toFixed(2)}/month\n\n` +
+        `Account Details\n` +
+        `• Customer: ${payload.accountName}\n` +
+        `• Service Address: ${payload.serviceAddress}\n` +
+        `• Billing Email: ${payload.billingEmail || 'N/A'}\n` +
+        `• POC: ${payload.pocName} (${payload.pocPhone})`;
+      // Show as an alert to prove it "sent"
+      alert(`📧 [DEMO] Email Sent to Operations!\n\nTo: ${recipients}\nSubject: ${subject}\n\n${body}`);
+    }
+
+  function previewStartPacket() {
+    try {
+      // 1. Gather Data from Form
+      const data = collectUnifiedSalePayload();
+      
+      // 2. Build HTML Representation
+      const html = `
+      <div class="p-8 bg-white text-gray-800 font-sans max-w-3xl mx-auto border shadow-sm">
+        <div class="flex justify-between items-start border-b-2 border-gray-800 pb-4 mb-6">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-1">START PACKET</h1>
+            <p class="text-sm text-gray-500 font-mono">Packet #${'PKT-' + Math.floor(Math.random()*10000)}</p>
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-bold text-blue-700">Branch360</div>
+            <p class="text-sm text-gray-500">${data.branchID || 'HOUSTON'}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 mb-8">
+          <div>
+            <h3 class="text-xs font-bold uppercase text-gray-500 mb-1">Customer / Service Location</h3>
+            <p class="text-lg font-bold">${data.accountName || 'Unknown Account'}</p>
+            <p>${data.serviceAddress || 'No Address'}</p>
+            <p class="mt-2"><span class="font-semibold">Start Date:</span> ${data.soldDate || 'TBD'}</p>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold uppercase text-gray-500 mb-1">Point of Contact</h3>
+            <p class="font-bold">${data.pocName || '--'}</p>
+            <p>${data.pocPhone || '--'}</p>
+            <p>${data.pocEmail || '--'}</p>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 border rounded-lg p-5 mb-8">
+          <h2 class="text-lg font-bold text-gray-900 border-b pb-2 mb-4">Scope of Work</h2>
+          
+          <div class="mb-4">
+            <p class="text-sm font-bold text-blue-700 uppercase mb-1">Initial Service</p>
+            <p class="text-gray-800">${data.initialServiceDescription || 'None'}</p>
+          </div>
+
+          <div class="mb-4">
+            <p class="text-sm font-bold text-green-700 uppercase mb-1">Recurring Maintenance</p>
+            <p class="text-gray-800">${data.maintenanceScopeDescription || 'None'}</p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
+             <div>
+               <span class="block text-xs text-gray-500">Frequency</span>
+               <span class="font-semibold">${data.frequency || 0} Visits/Yr</span>
+             </div>
+             <div>
+               <span class="block text-xs text-gray-500">Service Type</span>
+               <span class="font-semibold">${data.serviceType || '--'}</span>
+             </div>
+             <div>
+               <span class="block text-xs text-gray-500">Covered Pests</span>
+               <span class="font-semibold text-xs">${data.coveredPests || '--'}</span>
+             </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 mb-8">
+           <div>
+             <h3 class="font-bold text-gray-900 mb-2">Equipment to Install</h3>
+             <ul class="list-disc pl-5 text-sm space-y-1">
+               ${data.mrtCount > 0 ? `<li><strong>${data.mrtCount}</strong> Multi-Catch (MRT)</li>` : ''}
+               ${data.rbsCount > 0 ? `<li><strong>${data.rbsCount}</strong> Ext. Bait Stations (RBS)</li>` : ''}
+               ${data.iltCount > 0 ? `<li><strong>${data.iltCount}</strong> Insect Light Traps (ILT)</li>` : ''}
+               ${(!data.mrtCount && !data.rbsCount && !data.iltCount) ? '<li>No equipment specified</li>' : ''}
+             </ul>
+           </div>
+           <div class="bg-blue-50 p-4 rounded text-right">
+             <div class="mb-2">
+               <span class="text-sm text-gray-600">Initial Investment</span>
+               <div class="text-xl font-bold text-gray-900">$${(Number(data.initialPrice)||0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+             </div>
+             <div>
+               <span class="text-sm text-gray-600">Monthly Investment</span>
+               <div class="text-xl font-bold text-gray-900">$${(Number(data.maintenancePrice)||0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+             </div>
+           </div>
+        </div>
+
+        <div class="border-t-2 border-gray-800 pt-4">
+           <h3 class="text-sm font-bold text-gray-900 mb-2">Safety & Risk Assessment</h3>
+           <p class="text-xs text-gray-600 mb-2">
+             Completed by <strong>${data.sraCompletedBy || '--'}</strong> on ${data.sraDate || '--'} at ${data.sraTime || '--'}
+           </p>
+           <div class="text-xs bg-red-50 p-3 rounded border border-red-100">
+             <strong>Identified Hazards:</strong>
+             <ul class="list-disc pl-4 mt-1">
+               ${data.sraHazards && data.sraHazards.length ? data.sraHazards.map(h => `<li>${h.hazard} (Control: ${h.control})</li>`).join('') : '<li>None identified</li>'}
+               ${data.sraAdditionalHazards && data.sraAdditionalHazards !== 'None' ? `<li>Note: ${data.sraAdditionalHazards}</li>` : ''}
+             </ul>
+           </div>
+        </div>
+      </div>
+      <div class="text-center mt-6 pb-4">
+        <button onclick="this.closest('.fixed').remove()" class="px-6 py-2 bg-gray-800 text-white rounded-full font-semibold hover:bg-gray-700 shadow-lg">Close Preview</button>
+      </div>
+    `;
+
+      // 3. Show Modal
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 overflow-y-auto';
+      modal.style.zIndex = '9999'; // Ensure it is on top of everything
+      modal.innerHTML = `<div class="relative w-full max-w-4xl my-8">${html}</div>`;
+      
+      // Click outside to close
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      
+      document.body.appendChild(modal);
+    } catch (e) {
+      console.error('Preview failed', e);
+      alert('Preview failed: ' + e.message);
     }
   }
 

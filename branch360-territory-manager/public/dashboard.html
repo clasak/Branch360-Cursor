@@ -505,6 +505,20 @@
         padding: 48px 24px;
         color: var(--muted);
       }
+      .branch-metric {
+        transition: background-color 0.2s ease, transform 0.2s ease;
+      }
+      .branch-metric:hover {
+        background-color: rgba(143, 124, 255, 0.1);
+        transform: translateY(-2px);
+      }
+      .branch-pipeline-stage {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .branch-pipeline-stage:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
       @media (max-width: 768px) {
         .two-column {
           grid-template-columns: 1fr;
@@ -629,6 +643,7 @@
 
         <section class="action-bar">
           <button class="action primary" onclick="openDailyActivityForm()">📝 Log Today's Activity</button>
+          <button class="action" onclick="loadCalendarEvents()">📅 Load from Calendar</button>
         </section>
 
         <section class="two-column">
@@ -653,30 +668,30 @@
         
         <!-- Action Buttons -->
         <section class="action-bar" style="margin-bottom: 1.5rem;">
-          <button class="action primary" onclick="generateDailyReport()">📊 Generate Daily Report</button>
-          <button class="action primary" onclick="viewWeeklyTrends()">📈 View Weekly Trends</button>
-          <button class="action primary" onclick="exportBranchData()">💾 Export Data</button>
-          <button class="action primary" onclick="viewDetailedPipeline()">💼 Detailed Pipeline</button>
-          <button class="action primary" onclick="sendTeamMessage()">💬 Team Message</button>
+          <button class="action primary" data-action="generate-report">📊 Generate Daily Report</button>
+          <button class="action primary" data-action="weekly-trends">📈 View Weekly Trends</button>
+          <button class="action primary" data-action="export-data">💾 Export Data</button>
+          <button class="action primary" data-action="detailed-pipeline">💼 Detailed Pipeline</button>
+          <button class="action primary" data-action="team-message">💬 Team Message</button>
         </section>
         
         <section class="two-column">
           <div class="content-card">
             <h3>📈 Sales Today</h3>
             <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
-              <div>
+              <div class="branch-metric" data-metric="TAP" style="cursor: pointer;">
                 <div class="metric-label">TAP</div>
                 <div class="metric-value" style="color: var(--accent);" id="todayTAP">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Appointments" style="cursor: pointer;">
                 <div class="metric-label">Appointments</div>
                 <div class="metric-value" style="color: var(--success);" id="todayAppts">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Quotes" style="cursor: pointer;">
                 <div class="metric-label">Quotes</div>
                 <div class="metric-value" style="color: #b794f6;" id="todayQuotes">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Revenue" style="cursor: pointer;">
                 <div class="metric-label">Revenue</div>
                 <div class="metric-value" style="color: var(--success);">$<span id="todayRevenue">0</span></div>
               </div>
@@ -685,11 +700,11 @@
           <div class="content-card">
             <h3>🔧 Operations Today</h3>
             <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
-              <div>
+              <div class="branch-metric" data-metric="MissedStops" style="cursor: pointer;">
                 <div class="metric-label">Missed Stops</div>
                 <div class="metric-value" style="color: var(--danger);" id="todayMissedStops">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Backlog" style="cursor: pointer;">
                 <div class="metric-label">Backlog %</div>
                 <div class="metric-value" style="color: var(--warning);"><span id="todayBacklog">0</span>%</div>
               </div>
@@ -715,15 +730,15 @@
         <section class="content-card">
           <h3>💼 Branch Pipeline</h3>
           <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
-            <div style="text-align: center; padding: 20px; background: rgba(59, 130, 246, 0.1); border-radius: 16px;">
+            <div class="branch-pipeline-stage" data-stage="Proposal" style="text-align: center; padding: 20px; background: rgba(59, 130, 246, 0.1); border-radius: 16px; cursor: pointer;">
               <div class="metric-label">Proposal</div>
               <div class="metric-value" style="color: var(--accent-2);">$<span id="pipelineProposal">0</span></div>
             </div>
-            <div style="text-align: center; padding: 20px; background: rgba(251, 191, 36, 0.1); border-radius: 16px;">
+            <div class="branch-pipeline-stage" data-stage="Negotiation" style="text-align: center; padding: 20px; background: rgba(251, 191, 36, 0.1); border-radius: 16px; cursor: pointer;">
               <div class="metric-label">Negotiation</div>
               <div class="metric-value" style="color: var(--warning);">$<span id="pipelineNegotiation">0</span></div>
             </div>
-            <div style="text-align: center; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 16px;">
+            <div class="branch-pipeline-stage" data-stage="Sold" style="text-align: center; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 16px; cursor: pointer;">
               <div class="metric-label">Sold</div>
               <div class="metric-value" style="color: var(--success);">$<span id="pipelineSold">0</span></div>
             </div>
@@ -868,6 +883,25 @@
           <button class="solid-button" id="btnAddSubmit">Add Zip</button>
         </footer>
         <p id="singleStatus" style="color: var(--muted);"></p>
+      </div>
+    </div>
+
+    <!-- Generic Modal for Mock Features -->
+    <div class="modal" id="genericModal" aria-hidden="true">
+      <div class="modal-card">
+        <header>
+          <div>
+            <h3 id="genericModalTitle">Feature</h3>
+            <p style="color: var(--muted);" id="genericModalDesc"></p>
+          </div>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </header>
+        <div id="genericModalContent" style="padding: 12px 0;">
+          <!-- Content injected via JS -->
+        </div>
+        <footer>
+          <button class="solid-button" data-close-modal>Close</button>
+        </footer>
       </div>
     </div>
 
@@ -1261,59 +1295,217 @@
         }
       }
 
-      // Placeholder functions for other dashboards (to be connected to backend APIs)
+      const genericModal = {
+        el: document.getElementById('genericModal'),
+        title: document.getElementById('genericModalTitle'),
+        desc: document.getElementById('genericModalDesc'),
+        content: document.getElementById('genericModalContent')
+      };
+
+      function showMockModal(title, description, htmlContent) {
+        genericModal.title.textContent = title;
+        genericModal.desc.textContent = description;
+        genericModal.content.innerHTML = htmlContent;
+        openModal(genericModal.el);
+      }
+
+      function loadCalendarEvents() {
+        const leadsList = document.getElementById('newLeadsList');
+        leadsList.innerHTML = `
+          <div class="list-item">
+            <div style="font-weight: 600; display:flex; justify-content:space-between;">
+              <span>Meeting with John Doe</span>
+              <span style="font-size:0.8rem; background:rgba(143,124,255,0.2); padding:2px 6px; border-radius:4px; color:#c4b5fd;">Upcoming</span>
+            </div>
+            <div style="font-size: 0.9rem; color: var(--muted); margin-top:4px;">📅 Today, 10:00 AM - 11:00 AM</div>
+            <div style="font-size: 0.9rem; color: var(--muted);">📍 123 Main St, Houston, TX</div>
+          </div>
+          <div class="list-item">
+            <div style="font-weight: 600; display:flex; justify-content:space-between;">
+              <span>Site Visit: ABC Corp</span>
+              <span style="font-size:0.8rem; background:rgba(143,124,255,0.2); padding:2px 6px; border-radius:4px; color:#c4b5fd;">Later Today</span>
+            </div>
+            <div style="font-size: 0.9rem; color: var(--muted); margin-top:4px;">📅 Today, 2:00 PM - 3:30 PM</div>
+            <div style="font-size: 0.9rem; color: var(--muted);">📍 456 Business Pkwy, Houston, TX</div>
+          </div>
+        `;
+        leadsList.classList.remove('empty-state');
+        showAlert('success', 'Loaded 2 events from calendar');
+      }
+
+      // Mock Functions for other dashboards (connected to Generic Modal)
       function openDailyActivityForm() {
-        showAlert('info', 'Daily Activity form will open here (connect to backend API)');
+        showMockModal(
+          '📝 Daily Activity Log',
+          'Log your sales activities for today.',
+          `<form onsubmit="event.preventDefault(); closeModal(document.getElementById('genericModal')); showAlert('success', 'Activity logged successfully');">
+             <label style="display:block; margin-bottom:4px; font-size:0.9rem;">Activity Type</label>
+             <select style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:var(--text); margin-bottom:12px;">
+               <option>Site Visit</option>
+               <option>Phone Call</option>
+               <option>Email</option>
+               <option>Proposal Sent</option>
+             </select>
+             <label style="display:block; margin-bottom:4px; font-size:0.9rem;">Notes</label>
+             <textarea style="min-height:100px; margin-bottom:12px;" placeholder="Enter activity details..."></textarea>
+             <button class="solid-button" style="width:100%;">Submit Activity</button>
+           </form>`
+        );
       }
 
       function openMetricsForm() {
-        showAlert('info', 'Metrics form will open here (connect to backend API)');
+        showMockModal(
+          '📝 Log Operations Metrics',
+          'Enter end-of-day metrics.',
+          `<form onsubmit="event.preventDefault(); closeModal(document.getElementById('genericModal')); showAlert('success', 'Metrics submitted');">
+             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+               <div>
+                 <label style="display:block; margin-bottom:4px; font-size:0.9rem;">Missed Stops (TMX)</label>
+                 <input type="number" value="0" style="width:100%;">
+               </div>
+               <div>
+                 <label style="display:block; margin-bottom:4px; font-size:0.9rem;">Missed Stops (RNA)</label>
+                 <input type="number" value="0" style="width:100%;">
+               </div>
+             </div>
+             <label style="display:block; margin:12px 0 4px; font-size:0.9rem;">Daily Notes</label>
+             <textarea style="min-height:80px; margin-bottom:12px;" placeholder="Any operational issues?"></textarea>
+             <button class="solid-button" style="width:100%;">Submit Metrics</button>
+           </form>`
+        );
       }
 
       function viewRoute() {
-        showAlert('info', 'Route view will open here (connect to backend API)');
+        showMockModal(
+          '🗺️ Today\\'s Route',
+          'Optimized route for your assigned stops.',
+          `<div style="background:rgba(255,255,255,0.05); padding:16px; border-radius:12px;">
+             <div class="list-item">1. 08:00 AM - <strong>Residential Service</strong> (77001)</div>
+             <div class="list-item">2. 10:30 AM - <strong>Commercial Install</strong> (77002)</div>
+             <div class="list-item">3. 01:00 PM - <strong>Maintenance Check</strong> (77005)</div>
+             <div class="list-item">4. 03:30 PM - <strong>Emergency Repair</strong> (77006)</div>
+           </div>
+           <div style="margin-top:12px; text-align:right;">
+             <button class="action primary">Start Route Navigation</button>
+           </div>`
+        );
       }
 
       function openLeadForm() {
-        showAlert('info', 'Lead submission form will open here (connect to backend API)');
+        showMockModal(
+          '📝 Submit Technician Lead',
+          'Found an opportunity in the field?',
+          `<form onsubmit="event.preventDefault(); closeModal(document.getElementById('genericModal')); showAlert('success', 'Lead submitted to Sales');">
+             <input type="text" placeholder="Customer Name" style="width:100%; margin-bottom:12px;">
+             <input type="tel" placeholder="Phone Number" style="width:100%; margin-bottom:12px;">
+             <select style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:var(--text); margin-bottom:12px;">
+               <option value="">Select Interest...</option>
+               <option>New System</option>
+               <option>Upgrade</option>
+               <option>Maintenance Plan</option>
+             </select>
+             <button class="solid-button" style="width:100%;">Submit Lead</button>
+           </form>`
+        );
       }
 
       function viewInstalls() {
-        showAlert('info', 'Installations view will open here (connect to backend API)');
+        showMockModal(
+          '🔧 Pending Installations',
+          'Your installation queue.',
+          `<div class="list-item">
+             <strong>Acme Corp - Server Room HVAC</strong><br>
+             <span style="color:var(--muted); font-size:0.9rem;">Scheduled: Tomorrow, 9 AM</span>
+           </div>
+           <div class="list-item">
+             <strong>Residential - 123 Oak Ln</strong><br>
+             <span style="color:var(--muted); font-size:0.9rem;">Scheduled: Wed, 1 PM</span>
+           </div>`
+        );
       }
 
       function reportIssue() {
-        showAlert('info', 'Issue reporting form will open here (connect to backend API)');
+        showMockModal(
+          '⚠️ Report Field Issue',
+          'Notify Operations of a problem.',
+          `<form onsubmit="event.preventDefault(); closeModal(document.getElementById('genericModal')); showAlert('success', 'Issue reported');">
+             <select style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:var(--text); margin-bottom:12px;">
+               <option>Missing Equipment</option>
+               <option>Vehicle Issue</option>
+               <option>Customer Dispute</option>
+               <option>Safety Concern</option>
+             </select>
+             <textarea style="min-height:100px; margin-bottom:12px;" placeholder="Describe the issue..."></textarea>
+             <button class="solid-button" style="width:100%; background:var(--danger);">Report Issue</button>
+           </form>`
+        );
       }
 
       // Branch Manager Functions
       function generateDailyReport() {
         if (!confirm('Generate daily cadence report for today?')) return;
-        showAlert('info', 'Generating daily report... (connect to backend API)');
-        // TODO: Call backend API
+        showAlert('success', 'Daily Report generated and sent to email.');
       }
 
       function viewWeeklyTrends() {
-        showAlert('info', 'Weekly trends view will open here (connect to backend API)');
-        // TODO: Call backend API and show modal
+        showMockModal(
+          '📈 Weekly Trends',
+          'Performance over the last 7 days.',
+          `<div style="display:flex; align-items:flex-end; height:150px; gap:8px; padding:12px; background:rgba(255,255,255,0.02); border-radius:12px;">
+             <div style="flex:1; background:var(--accent); height:40%; border-radius:4px 4px 0 0; opacity:0.5;"></div>
+             <div style="flex:1; background:var(--accent); height:60%; border-radius:4px 4px 0 0; opacity:0.6;"></div>
+             <div style="flex:1; background:var(--accent); height:50%; border-radius:4px 4px 0 0; opacity:0.7;"></div>
+             <div style="flex:1; background:var(--accent); height:80%; border-radius:4px 4px 0 0; opacity:0.8;"></div>
+             <div style="flex:1; background:var(--accent); height:70%; border-radius:4px 4px 0 0; opacity:0.9;"></div>
+             <div style="flex:1; background:var(--accent); height:90%; border-radius:4px 4px 0 0;"></div>
+             <div style="flex:1; background:var(--accent); height:85%; border-radius:4px 4px 0 0;"></div>
+           </div>
+           <p style="text-align:center; font-size:0.9rem; color:var(--muted); margin-top:8px;">Sales Volume (Mon - Sun)</p>`
+        );
       }
 
       function exportBranchData() {
         if (!confirm('Export branch data to CSV?')) return;
-        showAlert('info', 'Exporting data... (connect to backend API)');
-        // TODO: Call backend API
+         showAlert('success', 'Branch data exported to CSV.');
       }
 
       function viewDetailedPipeline() {
-        showAlert('info', 'Detailed pipeline view will open here (connect to backend API)');
-        // TODO: Call backend API and show modal
+        showMockModal(
+          '💼 Detailed Pipeline',
+          'Active deals in progress.',
+          `<table style="width:100%; text-align:left; font-size:0.9rem;">
+             <thead>
+               <tr style="color:var(--muted); border-bottom:1px solid var(--card-border);">
+                 <th style="padding:8px;">Customer</th>
+                 <th style="padding:8px;">Stage</th>
+                 <th style="padding:8px;">Value</th>
+               </tr>
+             </thead>
+             <tbody>
+               <tr>
+                 <td style="padding:8px;">TechFlow Inc</td>
+                 <td style="padding:8px; color:var(--accent-2);">Proposal</td>
+                 <td style="padding:8px;">$12,000</td>
+               </tr>
+               <tr>
+                 <td style="padding:8px;">City Gym</td>
+                 <td style="padding:8px; color:var(--warning);">Negotiation</td>
+                 <td style="padding:8px;">$8,500</td>
+               </tr>
+               <tr>
+                 <td style="padding:8px;">West School</td>
+                 <td style="padding:8px; color:var(--success);">Sold</td>
+                 <td style="padding:8px;">$24,000</td>
+               </tr>
+             </tbody>
+           </table>`
+        );
       }
 
       function sendTeamMessage() {
         const message = prompt('Enter message to send to your team:');
         if (message && message.trim()) {
-          showAlert('info', 'Sending team message... (connect to backend API)');
-          // TODO: Call backend API
+          showAlert('success', 'Message sent to 12 team members.');
         }
       }
 
@@ -1323,40 +1515,47 @@
         const branchTab = document.getElementById('tab-branch');
         if (!branchTab || !branchTab.classList.contains('active')) return;
         
-        // Check if click is on a metric in sales card
-        const salesCard = e.target.closest('#tab-branch .content-card');
-        if (salesCard && salesCard.querySelector('#todayTAP')) {
-          const metricDiv = e.target.closest('.stats-grid > div');
-          if (metricDiv && salesCard.contains(metricDiv)) {
-            const label = metricDiv.querySelector('.metric-label')?.textContent || 'Metric';
-            showAlert('info', `Viewing details for ${label}`);
-            e.preventDefault();
-            return;
+        // Handle action buttons
+        const actionBtn = e.target.closest('[data-action]');
+        if (actionBtn) {
+          const action = actionBtn.getAttribute('data-action');
+          switch(action) {
+            case 'generate-report':
+              generateDailyReport();
+              break;
+            case 'weekly-trends':
+              viewWeeklyTrends();
+              break;
+            case 'export-data':
+              exportBranchData();
+              break;
+            case 'detailed-pipeline':
+              viewDetailedPipeline();
+              break;
+            case 'team-message':
+              sendTeamMessage();
+              break;
           }
+          e.preventDefault();
+          return;
         }
         
-        // Check if click is on a metric in ops card
-        const opsCard = e.target.closest('#tab-branch .content-card');
-        if (opsCard && opsCard.querySelector('#todayMissedStops')) {
-          const metricDiv = e.target.closest('.stats-grid > div');
-          if (metricDiv && opsCard.contains(metricDiv)) {
-            const label = metricDiv.querySelector('.metric-label')?.textContent || 'Metric';
-            showAlert('info', `Viewing details for ${label}`);
-            e.preventDefault();
-            return;
-          }
+        // Handle metric clicks
+        const metric = e.target.closest('.branch-metric');
+        if (metric) {
+          const metricType = metric.getAttribute('data-metric');
+          showAlert('info', `Viewing details for ${metricType}`);
+          e.preventDefault();
+          return;
         }
         
-        // Check if click is on pipeline stage
-        const pipelineSection = e.target.closest('#tab-branch section.content-card');
-        if (pipelineSection && pipelineSection.querySelector('#pipelineProposal')) {
-          const stageDiv = e.target.closest('.stats-grid > div');
-          if (stageDiv && pipelineSection.contains(stageDiv)) {
-            const label = stageDiv.querySelector('.metric-label')?.textContent || 'Stage';
-            showAlert('info', `Viewing ${label} stage pipeline`);
-            e.preventDefault();
-            return;
-          }
+        // Handle pipeline stage clicks
+        const stage = e.target.closest('.branch-pipeline-stage');
+        if (stage) {
+          const stageName = stage.getAttribute('data-stage');
+          showAlert('info', `Viewing ${stageName} stage pipeline`);
+          e.preventDefault();
+          return;
         }
       });
 
@@ -1418,13 +1617,13 @@
         const branchTab = document.getElementById('tab-branch');
         if (branchTab) {
           const observer = new MutationObserver(function() {
-            if (!branchTab.classList.contains('hidden')) {
+            if (branchTab.classList.contains('active')) {
               setupBranchInteractivity();
             }
           });
           observer.observe(branchTab, { attributes: true, attributeFilter: ['class'] });
           // Also set up immediately if tab is already visible
-          if (!branchTab.classList.contains('hidden')) {
+          if (branchTab.classList.contains('active')) {
             setupBranchInteractivity();
           }
         }

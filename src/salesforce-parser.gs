@@ -142,6 +142,10 @@ function parseSalesforceQuoteTextToStartPacketDraft(text) {
 
   var jobType = monthlyCost !== null && monthlyCost > 0 ? 'Contract' : null;
 
+  // Generate auto-descriptions
+  var autoInitialDesc = buildInitialDescription(equipmentInfo.equipment, initialSvcCost);
+  var autoMaintenanceDesc = buildMaintenanceDescription(routine.services);
+
   var draft = {
     accountName: header.accountName,
     contactName: header.contactName,
@@ -169,7 +173,9 @@ function parseSalesforceQuoteTextToStartPacketDraft(text) {
     startMonth: schedule.startMonth,
     coveredPests: derivedPests,
     leadType: null,
-    serviceType: null
+    serviceType: null,
+    initialServiceDescription: autoInitialDesc,
+    maintenanceScopeDescription: autoMaintenanceDesc
   };
 
   logDebug(JSON.stringify(draft, null, 2));
@@ -479,7 +485,22 @@ function extractEquipmentSection(lines) {
   for (var i = startIdx + 1; i < endIdx; i++) {
     var row = lines[i];
     if (!row || isHeaderBlockStop(row)) continue;
+    
+    // Check 1: Number at END of line (Standard)
     var qtyMatch = row.match(/([0-9]+(?:\.[0-9]+)?)\s*$/);
+    
+    // Check 2: Number at START of line (Fallback)
+    if (!qtyMatch) {
+      var startMatch = row.match(/^\s*([0-9]+)\s+(.*)/);
+      if (startMatch) {
+        var qty = parseFloat(startMatch[1]);
+        var name = startMatch[2].trim();
+        categorizeEquipment(equipment, name, qty);
+        continue;
+      }
+    }
+    
+    // Continue with standard logic if Check 1 worked
     if (!qtyMatch) continue;
     var qty = parseFloat(qtyMatch[1]);
     if (isNaN(qty)) continue;
@@ -1279,5 +1300,24 @@ function toTitleCase(value) {
     if (!part.length) return part;
     return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
   }).join(' ');
+}
+
+function buildInitialDescription(equipment, initialCost) {
+  var parts = [];
+  if (equipment.multCatchQty > 0) parts.push("Install " + equipment.multCatchQty + " MRTs");
+  if (equipment.rbsQty > 0) parts.push("Install " + equipment.rbsQty + " RBSs");
+  if (equipment.iltQty > 0) parts.push("Install " + equipment.iltQty + " ILTs");
+  if (initialCost > 0) parts.push("Perform Initial Service");
+  return parts.length > 0 ? parts.join(", ") : "Standard Initial Setup";
+}
+
+function buildMaintenanceDescription(services) {
+  if (!services || services.length === 0) return "General Pest Control Maintenance";
+  return services.map(function(svc) {
+    var freq = svc.frequencyLabel || "Monthly";
+    var name = svc.serviceName || svc.programType || "Service";
+    name = name.replace("CORE SERVICES", "").replace("MAINTENANCE", "").trim();
+    return freq + " " + name;
+  }).join("; ");
 }
 
