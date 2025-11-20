@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Branch360 - Offline Queue System</title>
+  <script>
+    /**
+     * Branch360 - Offline Queue for Tech Lead Submissions
+     * D. OFFLINE SUPPORT: Queue lead submissions when offline, auto-upload when back online
+     * PWA enhancement for technicians in the field
+     */
+
+    // Offline queue manager
+    const OfflineQueue = {
+      STORAGE_KEY: 'branch360_offline_queue',
+      SYNC_STATUS_KEY: 'branch360_sync_status',
+      
+      /**
+       * Initialize offline queue system
+       */
+      init: function() {
+        console.log('📦 Initializing offline queue system...');
+        
+        // Listen for online/offline events
+        window.addEventListener('online', this.onOnline.bind(this));
+        window.addEventListener('offline', this.onOffline.bind(this));
+        
+        // Check if we're online and have pending items on load
+        if (navigator.onLine) {
+          this.syncQueue();
+        }
+        
+        // Update UI
+        this.updateConnectionStatus();
+        
+        console.log('✅ Offline queue system initialized');
+      },
+      
+      /**
+       * Check if online
+       */
+      isOnline: function() {
+        return navigator.onLine;
+      },
+      
+      /**
+       * Get queue from localStorage
+       */
+      getQueue: function() {
+        try {
+          const queueJson = localStorage.getItem(this.STORAGE_KEY);
+          return queueJson ? JSON.parse(queueJson) : [];
+        } catch (e) {
+          console.error('❌ Error reading queue:', e);
+          return [];
+        }
+      },
+      
+      /**
+       * Save queue to localStorage
+       */
+      saveQueue: function(queue) {
+        try {
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(queue));
+          return true;
+        } catch (e) {
+          console.error('❌ Error saving queue:', e);
+          return false;
+        }
+      },
+      
+      /**
+       * Add item to queue
+       */
+      addToQueue: function(item) {
+        const queue = this.getQueue();
+        
+        // Add metadata
+        item._queueId = this.generateQueueId();
+        item._queuedAt = new Date().toISOString();
+        item._attempts = 0;
+        item._status = 'pending';
+        
+        queue.push(item);
+        
+        const saved = this.saveQueue(queue);
+        
+        if (saved) {
+          console.log('✅ Added to offline queue:', item._queueId);
+          this.updateQueueCount();
+          return item._queueId;
+        } else {
+          console.error('❌ Failed to add to queue');
+          return null;
+        }
+      },
+      
+      /**
+       * Remove item from queue
+       */
+      removeFromQueue: function(queueId) {
+        const queue = this.getQueue();
+        const filtered = queue.filter(item => item._queueId !== queueId);
+        this.saveQueue(filtered);
+        this.updateQueueCount();
+      },
+      
+      /**
+       * Mark item as syncing
+       */
+      markSyncing: function(queueId) {
+        const queue = this.getQueue();
+        const item = queue.find(i => i._queueId === queueId);
+        if (item) {
+          item._status = 'syncing';
+          item._attempts = (item._attempts || 0) + 1;
+          this.saveQueue(queue);
+        }
+      },
+      
+      /**
+       * Mark item as failed
+       */
+      markFailed: function(queueId, error) {
+        const queue = this.getQueue();
+        const item = queue.find(i => i._queueId === queueId);
+        if (item) {
+          item._status = 'failed';
+          item._error = error;
+          item._lastAttempt = new Date().toISOString();
+          this.saveQueue(queue);
+        }
+      },
+      
+      /**
+       * Sync queue with server
+       */
+      syncQueue: async function() {
+        if (!this.isOnline()) {
+          console.log('⚠️ Offline - skipping sync');
+          return;
+        }
+        
+        const queue = this.getQueue();
+        
+        if (queue.length === 0) {
+          console.log('✅ Queue empty - nothing to sync');
+          return;
+        }
+        
+        console.log('🔄 Syncing ' + queue.length + ' queued items...');
+        
+        this.setSyncStatus('syncing');
+        
+        let synced = 0;
+        let failed = 0;
+        
+        for (const item of queue) {
+          // Skip if already syncing or failed too many times
+          if (item._status === 'syncing' || item._attempts >= 3) {
+            continue;
+          }
+          
+          try {
+            this.markSyncing(item._queueId);
+            
+            // Sync based on item type
+            let success = false;
+            
+            switch (item._type) {
+              case 'lead':
+                success = await this.syncLead(item);
+                break;
+              case 'service_issue':
+                success = await this.syncServiceIssue(item);
+                break;
+              case 'complete_install':
+                success = await this.syncCompleteInstall(item);
+                break;
+              default:
+                console.error('❌ Unknown item type:', item._type);
+            }
+            
+            if (success) {
+              this.removeFromQueue(item._queueId);
+              synced++;
+              console.log('✅ Synced:', item._queueId);
+            } else {
+              this.markFailed(item._queueId, 'Sync failed');
+              failed++;
+            }
+            
+          } catch (error) {
+            console.error('❌ Error syncing item:', error);
+            this.markFailed(item._queueId, error.message);
+            failed++;
+          }
+        }
+        
+        console.log('✅ Sync complete. Synced: ' + synced + ', Failed: ' + failed);
+        
+        this.setSyncStatus('idle');
+        this.updateQueueCount();
+        
+        // Show notification
+        if (synced > 0) {
+          this.showNotification('✅ Synced ' + synced + ' items', 'success');
+        }
+        
+        if (failed > 0) {
+          this.showNotification('⚠️ ' + failed + ' items failed to sync', 'warning');
+        }
+      },
+      
+      /**
+       * Sync lead to server
+       */
+      syncLead: async function(item) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result && result.success) {
+                resolve(true);
+              } else {
+                reject(new Error(result ? result.message : 'Unknown error'));
+              }
+            })
+            .withFailureHandler(function(error) {
+              reject(error);
+            })
+            .submitLead(item.data);
+        });
+      },
+      
+      /**
+       * Sync service issue to server
+       */
+      syncServiceIssue: async function(item) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result && result.success) {
+                resolve(true);
+              } else {
+                reject(new Error(result ? result.message : 'Unknown error'));
+              }
+            })
+            .withFailureHandler(function(error) {
+              reject(error);
+            })
+            .reportServiceIssue(item.data);
+        });
+      },
+      
+      /**
+       * Sync complete install to server
+       */
+      syncCompleteInstall: async function(item) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result && result.success) {
+                resolve(true);
+              } else {
+                reject(new Error(result ? result.message : 'Unknown error'));
+              }
+            })
+            .withFailureHandler(function(error) {
+              reject(error);
+            })
+            .completeInstallation(item.packetID, item.data);
+        });
+      },
+      
+      /**
+       * Handle coming back online
+       */
+      onOnline: function() {
+        console.log('✅ Connection restored');
+        this.updateConnectionStatus();
+        this.showNotification('✅ Connection restored. Syncing...', 'success');
+        
+        // Wait 2 seconds for connection to stabilize
+        setTimeout(() => {
+          this.syncQueue();
+        }, 2000);
+      },
+      
+      /**
+       * Handle going offline
+       */
+      onOffline: function() {
+        console.log('⚠️ Connection lost');
+        this.updateConnectionStatus();
+        this.showNotification('⚠️ Offline mode. Submissions will be queued.', 'warning');
+      },
+      
+      /**
+       * Update connection status UI
+       */
+      updateConnectionStatus: function() {
+        const statusEl = document.getElementById('connectionStatus');
+        if (!statusEl) return;
+        
+        if (this.isOnline()) {
+          statusEl.innerHTML = '<span class="text-green-500">🟢 Online</span>';
+        } else {
+          statusEl.innerHTML = '<span class="text-red-500">🔴 Offline</span>';
+        }
+      },
+      
+      /**
+       * Update queue count UI
+       */
+      updateQueueCount: function() {
+        const queue = this.getQueue();
+        const countEl = document.getElementById('queueCount');
+        
+        if (countEl) {
+          if (queue.length > 0) {
+            countEl.textContent = queue.length;
+            countEl.classList.remove('hidden');
+          } else {
+            countEl.classList.add('hidden');
+          }
+        }
+        
+        // Update queue list if visible
+        this.updateQueueList();
+      },
+      
+      /**
+       * Update queue list UI
+       */
+      updateQueueList: function() {
+        const listEl = document.getElementById('queueList');
+        if (!listEl) return;
+        
+        const queue = this.getQueue();
+        
+        if (queue.length === 0) {
+          listEl.innerHTML = '<p class="text-gray-500">No pending items</p>';
+          return;
+        }
+        
+        let html = '<ul class="space-y-2">';
+        
+        queue.forEach(item => {
+          const statusIcon = {
+            'pending': '⏳',
+            'syncing': '🔄',
+            'failed': '❌'
+          }[item._status] || '❓';
+          
+          const statusColor = {
+            'pending': 'text-yellow-600',
+            'syncing': 'text-blue-600',
+            'failed': 'text-red-600'
+          }[item._status] || 'text-gray-600';
+          
+          html += '<li class="p-3 bg-gray-50 rounded border">';
+          html += '<div class="flex justify-between items-center">';
+          html += '<div>';
+          html += '<span class="' + statusColor + ' font-medium">' + statusIcon + ' ' + item._type + '</span>';
+          html += '<p class="text-sm text-gray-600">Queued: ' + new Date(item._queuedAt).toLocaleString() + '</p>';
+          if (item._error) {
+            html += '<p class="text-sm text-red-600">Error: ' + item._error + '</p>';
+          }
+          html += '</div>';
+          html += '<button onclick="OfflineQueue.retryItem(\'' + item._queueId + '\')" class="text-blue-600 hover:text-blue-700">Retry</button>';
+          html += '</div>';
+          html += '</li>';
+        });
+        
+        html += '</ul>';
+        
+        listEl.innerHTML = html;
+      },
+      
+      /**
+       * Retry syncing specific item
+       */
+      retryItem: function(queueId) {
+        const queue = this.getQueue();
+        const item = queue.find(i => i._queueId === queueId);
+        
+        if (item) {
+          item._status = 'pending';
+          item._attempts = 0;
+          item._error = null;
+          this.saveQueue(queue);
+          this.syncQueue();
+        }
+      },
+      
+      /**
+       * Clear failed items
+       */
+      clearFailedItems: function() {
+        if (!confirm('Clear all failed items from queue?')) return;
+        
+        const queue = this.getQueue();
+        const filtered = queue.filter(item => item._status !== 'failed');
+        this.saveQueue(filtered);
+        this.updateQueueCount();
+        this.showNotification('✅ Cleared failed items', 'success');
+      },
+      
+      /**
+       * Generate unique queue ID
+       */
+      generateQueueId: function() {
+        return 'Q-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      },
+      
+      /**
+       * Set sync status
+       */
+      setSyncStatus: function(status) {
+        localStorage.setItem(this.SYNC_STATUS_KEY, status);
+        
+        const syncButton = document.getElementById('syncButton');
+        if (syncButton) {
+          if (status === 'syncing') {
+            syncButton.disabled = true;
+            syncButton.textContent = '🔄 Syncing...';
+          } else {
+            syncButton.disabled = false;
+            syncButton.textContent = '🔄 Sync Now';
+          }
+        }
+      },
+      
+      /**
+       * Show notification toast
+       */
+      showNotification: function(message, type) {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 px-4 py-3 rounded shadow-lg z-50 ' +
+          (type === 'success' ? 'bg-green-500' : 
+           type === 'warning' ? 'bg-yellow-500' : 
+           type === 'error' ? 'bg-red-500' : 'bg-blue-500') +
+          ' text-white';
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+          toast.remove();
+        }, 3000);
+      }
+    };
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', function() {
+      OfflineQueue.init();
+    });
+
+    /**
+     * Enhanced submit lead function with offline support
+     * Replace existing submitLead calls with this
+     */
+    function submitLeadWithOfflineSupport(leadData) {
+      if (OfflineQueue.isOnline()) {
+        // Online - submit directly
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.success) {
+              OfflineQueue.showNotification('✅ Lead submitted successfully', 'success');
+              // Reset form or redirect
+            } else {
+              OfflineQueue.showNotification('❌ Failed: ' + (result ? result.message : 'Unknown error'), 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            // Network error - add to queue
+            console.log('⚠️ Submission failed, adding to queue');
+            OfflineQueue.addToQueue({
+              _type: 'lead',
+              data: leadData
+            });
+            OfflineQueue.showNotification('⚠️ Added to queue. Will sync when online.', 'warning');
+          })
+          .submitLead(leadData);
+      } else {
+        // Offline - add to queue immediately
+        OfflineQueue.addToQueue({
+          _type: 'lead',
+          data: leadData
+        });
+        OfflineQueue.showNotification('⚠️ Offline. Lead added to queue.', 'warning');
+      }
+    }
+
+    /**
+     * Enhanced service issue submission with offline support
+     */
+    function submitServiceIssueWithOfflineSupport(issueData) {
+      if (OfflineQueue.isOnline()) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.success) {
+              OfflineQueue.showNotification('✅ Issue reported successfully', 'success');
+            } else {
+              OfflineQueue.showNotification('❌ Failed: ' + (result ? result.message : 'Unknown error'), 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.log('⚠️ Submission failed, adding to queue');
+            OfflineQueue.addToQueue({
+              _type: 'service_issue',
+              data: issueData
+            });
+            OfflineQueue.showNotification('⚠️ Added to queue. Will sync when online.', 'warning');
+          })
+          .reportServiceIssue(issueData);
+      } else {
+        OfflineQueue.addToQueue({
+          _type: 'service_issue',
+          data: issueData
+        });
+        OfflineQueue.showNotification('⚠️ Offline. Issue added to queue.', 'warning');
+      }
+    }
+
+    /**
+     * Enhanced complete installation with offline support
+     */
+    function completeInstallWithOfflineSupport(packetID, completionData) {
+      if (OfflineQueue.isOnline()) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.success) {
+              OfflineQueue.showNotification('✅ Installation marked complete', 'success');
+            } else {
+              OfflineQueue.showNotification('❌ Failed: ' + (result ? result.message : 'Unknown error'), 'error');
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.log('⚠️ Submission failed, adding to queue');
+            OfflineQueue.addToQueue({
+              _type: 'complete_install',
+              packetID: packetID,
+              data: completionData
+            });
+            OfflineQueue.showNotification('⚠️ Added to queue. Will sync when online.', 'warning');
+          })
+          .completeInstallation(packetID, completionData);
+      } else {
+        OfflineQueue.addToQueue({
+          _type: 'complete_install',
+          packetID: packetID,
+          data: completionData
+        });
+        OfflineQueue.showNotification('⚠️ Offline. Completion added to queue.', 'warning');
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Offline Queue UI Component -->
+  <!-- Include this in tech-dashboard.html -->
+  
+  <div class="fixed bottom-4 left-4 z-50">
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="mb-2 text-sm font-medium"></div>
+    
+    <!-- Queue Badge -->
+    <button onclick="document.getElementById('queueModal').classList.remove('hidden')" 
+            class="relative bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700">
+      📦 Queue
+      <span id="queueCount" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center">0</span>
+    </button>
+  </div>
+
+  <!-- Queue Modal -->
+  <div id="queueModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+      <!-- Header -->
+      <div class="p-4 border-b flex justify-between items-center">
+        <h2 class="text-xl font-bold">📦 Offline Queue</h2>
+        <button onclick="document.getElementById('queueModal').classList.add('hidden')" 
+                class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+      </div>
+      
+      <!-- Queue List -->
+      <div class="p-4 overflow-y-auto max-h-96">
+        <div id="queueList">
+          <p class="text-gray-500">Loading...</p>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="p-4 border-t flex gap-2">
+        <button id="syncButton" onclick="OfflineQueue.syncQueue()" 
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          🔄 Sync Now
+        </button>
+        <button onclick="OfflineQueue.clearFailedItems()" 
+                class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+          🗑️ Clear Failed
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

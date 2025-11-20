@@ -63,6 +63,17 @@ function saveUnifiedSale(saleData) {
     updateRowByID(SHEETS.UNIFIED_SALES, 'RecordID', recordID, { SRAHazardRef: rowPayload.SRAHazardRef });
   }
 
+  // Send email notification if status is Sold
+  if (saleData.status === 'Sold' || saleData.status === 'New Sale') {
+    try {
+      // Ensure we are passing the full payload to the email function
+      sendNewStartNotification(rowPayload);
+      logAudit('EMAIL_SENT', 'Notifications', recordID, 'New Start Notification sent');
+    } catch (e) {
+      Logger.log('Failed to send notification email: ' + e.message);
+    }
+  }
+
   logServerActivity('AE_CREATE_UNIFIED_SALE', recordID, {
     branch: branchID,
     value: rowPayload.InitialPrice + rowPayload.MaintenancePrice

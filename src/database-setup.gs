@@ -56,6 +56,9 @@ function setupDatabase() {
   // Initialize script properties
   initializeProperties();
   
+  // Install enhancement triggers
+  installEnhancementTriggers();
+  
   // Seed sample data for testing
   seedSampleData();
   
@@ -120,15 +123,73 @@ function setupTriggers() {
 }
 
 /**
+ * Install all enhancement triggers (new system improvements)
+ */
+function installEnhancementTriggers() {
+  Logger.log('🔧 Installing enhancement triggers...');
+  
+  try {
+    // 1. Bi-directional sync triggers
+    installSyncTriggers();
+    Logger.log('✅ Sync triggers installed');
+  } catch (e) {
+    Logger.log('⚠️ Sync triggers failed: ' + e.message);
+  }
+  
+  try {
+    // 2. Cache pre-warming (daily at 2 AM)
+    installCachePrewarmTrigger();
+    Logger.log('✅ Cache pre-warm trigger installed');
+  } catch (e) {
+    Logger.log('⚠️ Cache trigger failed: ' + e.message);
+  }
+  
+  try {
+    // 3. Archive system (monthly on 1st at 3 AM)
+    installArchiveTrigger();
+    Logger.log('✅ Archive trigger installed');
+  } catch (e) {
+    Logger.log('⚠️ Archive trigger failed: ' + e.message);
+  }
+  
+  try {
+    // 4. Nurture campaign (Mondays at 9 AM)
+    installNurtureCampaignTrigger();
+    Logger.log('✅ Nurture campaign trigger installed');
+  } catch (e) {
+    Logger.log('⚠️ Nurture trigger failed: ' + e.message);
+  }
+  
+  try {
+    // 5. Appointment reminders (daily at 8 AM)
+    installAppointmentReminderTrigger();
+    Logger.log('✅ Appointment reminder trigger installed');
+  } catch (e) {
+    Logger.log('⚠️ Appointment trigger failed: ' + e.message);
+  }
+  
+  try {
+    // 6. Calendar sync (every 6 hours)
+    installCalendarSyncTrigger();
+    Logger.log('✅ Calendar sync trigger installed');
+  } catch (e) {
+    Logger.log('⚠️ Calendar sync trigger failed: ' + e.message);
+  }
+  
+  Logger.log('✓ Enhancement triggers installation complete');
+}
+
+/**
  * Initialize script properties
  */
 function initializeProperties() {
   const props = PropertiesService.getScriptProperties();
   
   props.setProperty('DB_INITIALIZED', 'true');
-  props.setProperty('DB_VERSION', '1.0.0');
+  props.setProperty('DB_VERSION', '2.0.0'); // Updated for enhancements
   props.setProperty('SETUP_DATE', new Date().toISOString());
   props.setProperty('MAPBOX_TOKEN', API_TOKENS.MAPBOX);
+  props.setProperty('ENHANCEMENTS_ENABLED', 'true');
   
   Logger.log('✓ Properties initialized');
 }

@@ -134,7 +134,8 @@ const DB_SCHEMA = {
     "InitialPrice", "MaintenancePrice", "ServiceType", "LeadType", "JobType",
     "Frequency", "ServiceName", "ServiceMonths", "CoveredPests", "SpecialNotes",
     "LogBookNeeded", "PNOLRequired", "SRACompletedBy", "SRADate", "SRATime",
-    "SRAAdditionalHazards", "SRAHazardRef", "Status", "CreatedOn", "UpdatedOn"
+    "SRAAdditionalHazards", "SRAHazardRef", "Status", "Initial_Service_Description",
+    "Maintenance_Scope_Description", "CreatedOn", "UpdatedOn"
   ],
 
   [SHEETS.SERVICE_MONTHS]: [

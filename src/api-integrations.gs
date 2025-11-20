@@ -197,3 +197,36 @@ function getIntegrationStatus() {
   };
 }
 
+/**
+ * Sends an email notification to Ops and Sales when a deal is sold.
+ */
+function sendNewStartNotification(saleData) {
+  // Update these emails for production
+  var recipients = "ops.manager@prestox.com,sales.manager@prestox.com"; 
+  var subject = "🚀 New Start: " + (saleData.AccountName || "Unknown Account");
+  var body = `
+    <div style="font-family: sans-serif; color: #333;">
+      <h2 style="color: #2563EB;">New Unified Sale Entered</h2>
+      <p><strong>Account:</strong> ${saleData.AccountName || '--'}</p>
+      <p><strong>Address:</strong> ${saleData.ServiceAddress || '--'}</p>
+      <hr>
+      <h3>💰 Financials</h3>
+      <ul>
+        <li><strong>Initial:</strong> $${(Number(saleData.InitialPrice) || 0).toFixed(2)}</li>
+        <li><strong>Monthly:</strong> $${(Number(saleData.MaintenancePrice) || 0).toFixed(2)}</li>
+      </ul>
+      <h3>🛠️ Operations Scope</h3>
+      <p><strong>Initial Scope:</strong> ${saleData.Initial_Service_Description || 'N/A'}</p>
+      <p><strong>Maintenance Scope:</strong> ${saleData.Maintenance_Scope_Description || 'N/A'}</p>
+      <p><strong>Special Notes:</strong> ${saleData.SpecialNotes || 'None'}</p>
+      <hr>
+      <p><em>This is an automated message from Branch360.</em></p>
+    </div>
+  `;
+  MailApp.sendEmail({
+    to: recipients,
+    subject: subject,
+    htmlBody: body
+  });
+}
+

@@ -505,6 +505,20 @@
         padding: 48px 24px;
         color: var(--muted);
       }
+      .branch-metric {
+        transition: background-color 0.2s ease, transform 0.2s ease;
+      }
+      .branch-metric:hover {
+        background-color: rgba(143, 124, 255, 0.1);
+        transform: translateY(-2px);
+      }
+      .branch-pipeline-stage {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .branch-pipeline-stage:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
       @media (max-width: 768px) {
         .two-column {
           grid-template-columns: 1fr;
@@ -653,30 +667,30 @@
         
         <!-- Action Buttons -->
         <section class="action-bar" style="margin-bottom: 1.5rem;">
-          <button class="action primary" onclick="generateDailyReport()">📊 Generate Daily Report</button>
-          <button class="action primary" onclick="viewWeeklyTrends()">📈 View Weekly Trends</button>
-          <button class="action primary" onclick="exportBranchData()">💾 Export Data</button>
-          <button class="action primary" onclick="viewDetailedPipeline()">💼 Detailed Pipeline</button>
-          <button class="action primary" onclick="sendTeamMessage()">💬 Team Message</button>
+          <button class="action primary" data-action="generate-report">📊 Generate Daily Report</button>
+          <button class="action primary" data-action="weekly-trends">📈 View Weekly Trends</button>
+          <button class="action primary" data-action="export-data">💾 Export Data</button>
+          <button class="action primary" data-action="detailed-pipeline">💼 Detailed Pipeline</button>
+          <button class="action primary" data-action="team-message">💬 Team Message</button>
         </section>
         
         <section class="two-column">
           <div class="content-card">
             <h3>📈 Sales Today</h3>
             <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
-              <div>
+              <div class="branch-metric" data-metric="TAP" style="cursor: pointer;">
                 <div class="metric-label">TAP</div>
                 <div class="metric-value" style="color: var(--accent);" id="todayTAP">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Appointments" style="cursor: pointer;">
                 <div class="metric-label">Appointments</div>
                 <div class="metric-value" style="color: var(--success);" id="todayAppts">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Quotes" style="cursor: pointer;">
                 <div class="metric-label">Quotes</div>
                 <div class="metric-value" style="color: #b794f6;" id="todayQuotes">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Revenue" style="cursor: pointer;">
                 <div class="metric-label">Revenue</div>
                 <div class="metric-value" style="color: var(--success);">$<span id="todayRevenue">0</span></div>
               </div>
@@ -685,11 +699,11 @@
           <div class="content-card">
             <h3>🔧 Operations Today</h3>
             <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
-              <div>
+              <div class="branch-metric" data-metric="MissedStops" style="cursor: pointer;">
                 <div class="metric-label">Missed Stops</div>
                 <div class="metric-value" style="color: var(--danger);" id="todayMissedStops">0</div>
               </div>
-              <div>
+              <div class="branch-metric" data-metric="Backlog" style="cursor: pointer;">
                 <div class="metric-label">Backlog %</div>
                 <div class="metric-value" style="color: var(--warning);"><span id="todayBacklog">0</span>%</div>
               </div>
@@ -715,15 +729,15 @@
         <section class="content-card">
           <h3>💼 Branch Pipeline</h3>
           <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
-            <div style="text-align: center; padding: 20px; background: rgba(59, 130, 246, 0.1); border-radius: 16px;">
+            <div class="branch-pipeline-stage" data-stage="Proposal" style="text-align: center; padding: 20px; background: rgba(59, 130, 246, 0.1); border-radius: 16px; cursor: pointer;">
               <div class="metric-label">Proposal</div>
               <div class="metric-value" style="color: var(--accent-2);">$<span id="pipelineProposal">0</span></div>
             </div>
-            <div style="text-align: center; padding: 20px; background: rgba(251, 191, 36, 0.1); border-radius: 16px;">
+            <div class="branch-pipeline-stage" data-stage="Negotiation" style="text-align: center; padding: 20px; background: rgba(251, 191, 36, 0.1); border-radius: 16px; cursor: pointer;">
               <div class="metric-label">Negotiation</div>
               <div class="metric-value" style="color: var(--warning);">$<span id="pipelineNegotiation">0</span></div>
             </div>
-            <div style="text-align: center; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 16px;">
+            <div class="branch-pipeline-stage" data-stage="Sold" style="text-align: center; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 16px; cursor: pointer;">
               <div class="metric-label">Sold</div>
               <div class="metric-value" style="color: var(--success);">$<span id="pipelineSold">0</span></div>
             </div>
@@ -1323,40 +1337,47 @@
         const branchTab = document.getElementById('tab-branch');
         if (!branchTab || !branchTab.classList.contains('active')) return;
         
-        // Check if click is on a metric in sales card
-        const salesCard = e.target.closest('#tab-branch .content-card');
-        if (salesCard && salesCard.querySelector('#todayTAP')) {
-          const metricDiv = e.target.closest('.stats-grid > div');
-          if (metricDiv && salesCard.contains(metricDiv)) {
-            const label = metricDiv.querySelector('.metric-label')?.textContent || 'Metric';
-            showAlert('info', `Viewing details for ${label}`);
-            e.preventDefault();
-            return;
+        // Handle action buttons
+        const actionBtn = e.target.closest('[data-action]');
+        if (actionBtn) {
+          const action = actionBtn.getAttribute('data-action');
+          switch(action) {
+            case 'generate-report':
+              generateDailyReport();
+              break;
+            case 'weekly-trends':
+              viewWeeklyTrends();
+              break;
+            case 'export-data':
+              exportBranchData();
+              break;
+            case 'detailed-pipeline':
+              viewDetailedPipeline();
+              break;
+            case 'team-message':
+              sendTeamMessage();
+              break;
           }
+          e.preventDefault();
+          return;
         }
         
-        // Check if click is on a metric in ops card
-        const opsCard = e.target.closest('#tab-branch .content-card');
-        if (opsCard && opsCard.querySelector('#todayMissedStops')) {
-          const metricDiv = e.target.closest('.stats-grid > div');
-          if (metricDiv && opsCard.contains(metricDiv)) {
-            const label = metricDiv.querySelector('.metric-label')?.textContent || 'Metric';
-            showAlert('info', `Viewing details for ${label}`);
-            e.preventDefault();
-            return;
-          }
+        // Handle metric clicks
+        const metric = e.target.closest('.branch-metric');
+        if (metric) {
+          const metricType = metric.getAttribute('data-metric');
+          showAlert('info', `Viewing details for ${metricType}`);
+          e.preventDefault();
+          return;
         }
         
-        // Check if click is on pipeline stage
-        const pipelineSection = e.target.closest('#tab-branch section.content-card');
-        if (pipelineSection && pipelineSection.querySelector('#pipelineProposal')) {
-          const stageDiv = e.target.closest('.stats-grid > div');
-          if (stageDiv && pipelineSection.contains(stageDiv)) {
-            const label = stageDiv.querySelector('.metric-label')?.textContent || 'Stage';
-            showAlert('info', `Viewing ${label} stage pipeline`);
-            e.preventDefault();
-            return;
-          }
+        // Handle pipeline stage clicks
+        const stage = e.target.closest('.branch-pipeline-stage');
+        if (stage) {
+          const stageName = stage.getAttribute('data-stage');
+          showAlert('info', `Viewing ${stageName} stage pipeline`);
+          e.preventDefault();
+          return;
         }
       });
 
@@ -1418,13 +1439,13 @@
         const branchTab = document.getElementById('tab-branch');
         if (branchTab) {
           const observer = new MutationObserver(function() {
-            if (!branchTab.classList.contains('hidden')) {
+            if (branchTab.classList.contains('active')) {
               setupBranchInteractivity();
             }
           });
           observer.observe(branchTab, { attributes: true, attributeFilter: ['class'] });
           // Also set up immediately if tab is already visible
-          if (!branchTab.classList.contains('hidden')) {
+          if (branchTab.classList.contains('active')) {
             setupBranchInteractivity();
           }
         }
