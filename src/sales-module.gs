@@ -324,6 +324,16 @@ function saveDailySalesActivity(activityData) {
       logAudit('CREATE_SALES_ACTIVITY', SHEETS.SALES_ACTIVITY, activityID, 
         'Created daily activity');
       
+      // Fill out daily activity form if template is configured
+      try {
+        const formResult = fillDailyActivityForm(activityID);
+        if (formResult.success) {
+          Logger.log('✅ Daily activity form submitted: ' + formResult.formUrl);
+        }
+      } catch (e) {
+        Logger.log('⚠️ Could not fill daily activity form: ' + e.message);
+      }
+      
       return { success: true, activityID: activityID, updated: false };
     }
     
@@ -376,6 +386,16 @@ function createOpportunity(opportunityData) {
     logAudit('CREATE_OPPORTUNITY', SHEETS.TRACKER, entryID, 
       'Created opportunity for ' + opportunityData.customerName);
     
+    // Fill out tracker document if template is configured
+    try {
+      const docResult = fillTrackerDocument(entryID, true);
+      if (docResult.success) {
+        Logger.log('✅ Tracker document created: ' + docResult.docUrl);
+      }
+    } catch (e) {
+      Logger.log('⚠️ Could not fill tracker document: ' + e.message);
+    }
+    
     return { success: true, entryID: entryID };
     
   } catch (e) {
@@ -408,6 +428,16 @@ function updateOpportunityStage(entryID, newStage, notes) {
     
     if (success) {
       logAudit('UPDATE_STAGE', SHEETS.TRACKER, entryID, 'Stage changed to: ' + newStage);
+      
+      // Update tracker document if template is configured
+      try {
+        const docResult = fillTrackerDocument(entryID, false);
+        if (docResult.success) {
+          Logger.log('✅ Tracker document updated: ' + docResult.docUrl);
+        }
+      } catch (e) {
+        Logger.log('⚠️ Could not update tracker document: ' + e.message);
+      }
       
       // If sold, create start packet
       if (newStage === 'Sold') {
@@ -459,9 +489,28 @@ function createStartPacket(trackerEntryID) {
       entry.Notes || '',
       'Submitted',
       entry.PestPac_ID || '',
+      '', // Billing_Email
+      '', // Billing_Address
+      false, // Billing_Address_Different
+      0, // MRT_Count
+      0, // RBS_Count
+      0, // ILT_Count
+      '', // Initial_Service_Description
+      '', // Maintenance_Scope_Description
+      '', // Service_Areas
       new Date(),
       new Date()
     ]);
+    
+    // Fill out start packet document if template is configured
+    try {
+      const docResult = fillStartPacketDocument(packetID);
+      if (docResult.success) {
+        Logger.log('✅ Start packet document created: ' + docResult.docUrl);
+      }
+    } catch (e) {
+      Logger.log('⚠️ Could not fill start packet document: ' + e.message);
+    }
     
     logAudit('CREATE_START_PACKET', SHEETS.START_PACKETS, packetID, 
       'Auto-created from sold opportunity: ' + trackerEntryID);

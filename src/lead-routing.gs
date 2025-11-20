@@ -248,6 +248,16 @@ function submitLead(leadData) {
     // Log action
     logAudit('SUBMIT_LEAD', SHEETS.LEADS, leadID, 'Tech: ' + currentUser.name + ', Assigned to: ' + (assignedAE ? assignedAE.name : 'UNASSIGNED'));
     
+    // Fill out lead form if template is configured
+    try {
+      const formResult = fillLeadForm(leadID);
+      if (formResult.success) {
+        Logger.log('✅ Lead form submitted: ' + formResult.formUrl);
+      }
+    } catch (e) {
+      Logger.log('⚠️ Could not fill lead form: ' + e.message);
+    }
+    
     return {
       success: true,
       leadID: leadID,

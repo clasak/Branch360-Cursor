@@ -12,7 +12,7 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-  <script src="activity-client.js"></script>
+  <script src="activity-client.html"></script>
 </head>
 <body class="bg-gray-100">
 
@@ -75,7 +75,7 @@
 </div>
 
 <!-- Directions Modal -->
-<div id="directionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+<div id="directionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id==='directionsModal')closeDirectionsModal()">
   <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-4 border-b">
       <h3 class="text-lg font-bold text-gray-800" id="directionsAddress">Directions</h3>
@@ -167,11 +167,11 @@
     }
     
     container.innerHTML = installs.map(install => `
-      <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded mb-3">
+      <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded mb-3" data-packet-id="${install.packetID || ''}">
         <div class="flex justify-between items-start mb-2">
           <div>
-            <h3 class="font-bold text-gray-800">${install.accountName}</h3>
-            <p class="text-sm text-gray-600">${install.serviceAddress}</p>
+            <h3 class="font-bold text-gray-800">${install.accountName || 'Unknown Account'}</h3>
+            <p class="text-sm text-gray-600">${install.serviceAddress || 'No address'}</p>
           </div>
           ${install.scheduledDate ? `
             <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -179,15 +179,15 @@
             </span>
           ` : ''}
         </div>
-        <p class="text-sm mb-2"><strong>Service:</strong> ${install.serviceType}</p>
-        <p class="text-sm mb-2"><strong>Contact:</strong> ${install.pocInfo}</p>
+        <p class="text-sm mb-2"><strong>Service:</strong> ${install.serviceType || 'N/A'}</p>
+        <p class="text-sm mb-2"><strong>Contact:</strong> ${install.pocInfo || 'N/A'}</p>
         ${install.notes ? `<p class="text-sm text-gray-700 bg-yellow-50 p-2 rounded">${install.notes}</p>` : ''}
         <div class="mt-3 flex gap-2">
-          <button onclick="completeInstall('${install.packetID}')" 
+          <button onclick="completeInstall('${install.packetID || ''}')" 
             class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded">
             Mark Complete
           </button>
-          <button onclick="openMapboxDirections('${install.serviceAddress}')" 
+          <button onclick="openMapboxDirections('${(install.serviceAddress || '').replace(/'/g, "\\'")}')" 
             class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded">
             Directions
           </button>
@@ -224,9 +224,42 @@
       // Store lead ID in sessionStorage to pre-fill form
       if (window.sessionStorage) {
         window.sessionStorage.setItem('editLeadID', leadID);
+        // Also store customer name for reference
+        if (customer) {
+          window.sessionStorage.setItem('editLeadCustomer', customer);
+        }
       }
     }
-    window.location.href = 'tech-lead-form.html' + (leadID ? '?edit=' + leadID : '');
+    
+    // Check if we're in an iframe (unified dashboard)
+    if (window.parent && window.parent !== window) {
+      // Try to navigate parent frame
+      try {
+        const currentUrl = window.parent.location.href;
+        const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+        window.parent.location.href = baseUrl + '/tech-lead-form.html' + (leadID ? '?edit=' + leadID : '');
+        return;
+      } catch (e) {
+        // Cross-origin or other issue - use hash navigation or direct navigation
+        if (window.parent.postMessage) {
+          window.parent.postMessage({ 
+            type: 'NAVIGATE_TO_TECH_LEAD_FORM', 
+            leadID: leadID,
+            customer: customer 
+          }, '*');
+          return;
+        }
+      }
+    }
+    
+    // Not in iframe, navigate directly
+    try {
+      const currentUrl = window.location.href;
+      const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+      window.location.href = baseUrl + '/tech-lead-form.html' + (leadID ? '?edit=' + leadID : '');
+    } catch (e) {
+      window.location.href = 'tech-lead-form.html' + (leadID ? '?edit=' + leadID : '');
+    }
   }
   
   function getStatusColor(status) {
@@ -247,22 +280,44 @@
   }
   
   function completeInstall(packetID) {
+    if (!packetID) {
+      alert('Error: Missing installation ID');
+      return;
+    }
+    
     const notes = prompt('Installation notes (optional):');
     if (notes === null) return; // User cancelled
+    
+    // Show immediate feedback
+    const button = event.target;
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Processing...';
+    }
+    
     var activityToken = window.ActivityClient ? ActivityClient.start('TECH_COMPLETE_INSTALL', packetID, { role: 'Technician' }) : null;
     const runner = getAppsScriptRunner();
+    
     if (runner && runner.completeInstallation) {
       runner
         .withSuccessHandler(function(result) {
           if (activityToken && window.ActivityClient) {
-            ActivityClient.finish(activityToken, { success: result.success });
+            ActivityClient.finish(activityToken, { success: result && result.success });
             activityToken = null;
           }
-          if (result.success) {
-            alert('Installation marked complete!');
-            loadDashboard(); // Reload to remove from list
+          if (result && result.success) {
+            // Reload dashboard to refresh the list
+            loadDashboard();
+            // Show success message
+            setTimeout(function() {
+              alert('✓ Installation marked complete successfully!');
+            }, 100);
           } else {
-            alert('Failed: ' + result.message);
+            if (button) {
+              button.disabled = false;
+              button.textContent = 'Mark Complete';
+            }
+            alert('Failed to mark complete: ' + (result && result.message ? result.message : 'Unknown error'));
           }
         })
         .withFailureHandler(function(error) {
@@ -270,23 +325,47 @@
             ActivityClient.finish(activityToken, { error: true, message: error.message });
             activityToken = null;
           }
-          alert('Error: ' + error.message);
+          if (button) {
+            button.disabled = false;
+            button.textContent = 'Mark Complete';
+          }
+          alert('Error marking installation complete: ' + error.message);
         })
         .completeInstallation(packetID, { 
           completionDate: new Date(), 
           notes: notes || '' 
         });
     } else {
+      // Demo mode - update immediately
       if (activityToken && window.ActivityClient) {
         ActivityClient.finish(activityToken, { success: true, demo: true });
+        activityToken = null;
       }
-      // Remove from demo state
+      
+      // Get current dashboard data
+      const container = document.getElementById('installsList');
+      if (container) {
+        // Find and remove the install from the UI immediately
+        const installElements = container.querySelectorAll('[data-packet-id="' + packetID + '"]');
+        installElements.forEach(function(el) {
+          el.style.transition = 'opacity 0.3s';
+          el.style.opacity = '0';
+          setTimeout(function() {
+            el.remove();
+          }, 300);
+        });
+      }
+      
+      // Reload dashboard to sync state
       const demoData = getDemoTechData();
-      demoData.pendingInstalls = demoData.pendingInstalls.filter(function(install) {
+      demoData.pendingInstalls = (demoData.pendingInstalls || []).filter(function(install) {
         return install.packetID !== packetID;
       });
       renderTechDashboard(demoData);
-      alert('Installation marked complete (demo mode).');
+      
+      setTimeout(function() {
+        alert('✓ Installation marked complete!');
+      }, 100);
     }
   }
   
@@ -340,6 +419,15 @@
     // Show modal first
     const modal = document.getElementById('directionsModal');
     modal.classList.remove('hidden');
+    
+    // Setup ESC key handler
+    const escHandler = function(e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeDirectionsModal();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
     
     // Check if iOS for Apple Maps button
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;

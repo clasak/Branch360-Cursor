@@ -112,6 +112,7 @@ function generateUniqueID(prefix) {
 
 /**
  * Gets the current authenticated user
+ * Auto-creates admin user for cody.lytle@prestox.com if they don't exist
  * @return {Object} User object or null
  */
 function getCurrentUser() {
@@ -123,6 +124,7 @@ function getCurrentUser() {
   const data = usersSheet.getDataRange().getValues();
   const headers = data[0];
   
+  // Search for user
   for (var i = 1; i < data.length; i++) {
     if (data[i][headers.indexOf('Email')] === email) {
       return {
@@ -133,6 +135,42 @@ function getCurrentUser() {
         branchID: data[i][headers.indexOf('BranchID')],
         active: data[i][headers.indexOf('Active')]
       };
+    }
+  }
+  
+  // Auto-create admin user for Cody Lytle if not found
+  if (email === 'cody.lytle@prestox.com') {
+    try {
+      const userID = generateUniqueID('USR');
+      const userRecord = {
+        UserID: userID,
+        Name: 'Cody Lytle',
+        Email: 'cody.lytle@prestox.com',
+        Role: 'Administrator',
+        BranchID: 'BRN-001',
+        TerritoryZips: '',
+        Active: true,
+        PhoneNumber: '',
+        EmailNotifications: true,
+        CreatedOn: new Date(),
+        UpdatedOn: new Date()
+      };
+      
+      insertRow(SHEETS.USERS, userRecord);
+      logAudit('AUTO_CREATE_USER', SHEETS.USERS, userID, 'Auto-created admin user for Cody Lytle');
+      
+      // Return the newly created user
+      return {
+        userID: userID,
+        name: 'Cody Lytle',
+        email: email,
+        role: 'Administrator',
+        branchID: 'BRN-001',
+        active: true
+      };
+    } catch (e) {
+      Logger.log('Failed to auto-create user: ' + e.message);
+      // Continue to return null if creation fails
     }
   }
   
@@ -352,4 +390,66 @@ function calculateDailySummaries() {
   Logger.log('Running daily summary calculation...');
   // This will be populated by other agents
   Logger.log('Daily summaries complete');
+}
+
+/**
+ * Serve HTML files based on URL parameter
+ * Access dashboards via: ?view=admin, ?view=ae, ?view=branch, etc.
+ */
+function doGet(e) {
+  const view = e.parameter.view || 'dashboard';
+  let template;
+  
+  try {
+    // Route to appropriate dashboard
+    switch(view) {
+      case 'admin':
+        // Check if user has admin access
+        const user = getCurrentUser();
+        if (!user) {
+          template = HtmlService.createTemplate('<h1>Access Denied</h1><p>User not found. Please ensure you are logged in and your account exists in the system.</p>');
+          return template.evaluate().setTitle('Branch360 - Access Denied');
+        }
+        // Check role more flexibly - handle case variations and whitespace
+        const userRole = (user.role || user.Role || '').toString().trim();
+        const isAdmin = userRole === 'Administrator' || userRole.toLowerCase() === 'administrator';
+        if (!isAdmin) {
+          template = HtmlService.createTemplate('<h1>Access Denied</h1><p>Administrator access required. Your current role is: ' + userRole + '</p>');
+          return template.evaluate().setTitle('Branch360 - Access Denied');
+        }
+        template = HtmlService.createTemplateFromFile('admin-dashboard');
+        break;
+      case 'ae':
+        template = HtmlService.createTemplateFromFile('ae-dashboard');
+        break;
+      case 'branch':
+        template = HtmlService.createTemplateFromFile('branch-manager-dashboard');
+        break;
+      case 'ops':
+        template = HtmlService.createTemplateFromFile('ops-manager-dashboard');
+        break;
+      case 'tech':
+        template = HtmlService.createTemplateFromFile('tech-dashboard');
+        break;
+      default:
+        template = HtmlService.createTemplateFromFile('dashboard');
+    }
+    
+    return template.evaluate()
+      .setTitle('Branch360 CRM')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      
+  } catch (error) {
+    Logger.log('Error serving view ' + view + ': ' + error.message);
+    return HtmlService.createHtmlOutput('<h1>Error</h1><p>Failed to load dashboard: ' + error.message + '</p>')
+      .setTitle('Branch360 - Error');
+  }
+}
+
+/**
+ * Include helper functions for HTML templates
+ * This allows HTML files to include other HTML files
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }

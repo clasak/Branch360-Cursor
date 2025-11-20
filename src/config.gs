@@ -116,6 +116,9 @@ const DB_SCHEMA = {
     "Frequency", "Operations_Manager", "Assigned_Specialist", "Date_Install_Scheduled",
     "Status_Install_Complete", "Materials_Ordered", "Log_Book_Needed",
     "POC_Name_Phone", "Confirmed_Start_Date", "Special_Notes", "Status", "PestPac_ID",
+    "Billing_Email", "Billing_Address", "Billing_Address_Different", 
+    "MRT_Count", "RBS_Count", "ILT_Count", "Initial_Service_Description",
+    "Maintenance_Scope_Description", "Service_Areas",
     "CreatedOn", "UpdatedOn"
   ],
   
@@ -227,3 +230,136 @@ const STATUSES = {
 const API_TOKENS = {
   MAPBOX: 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA'
 };
+
+// DOCUMENT TEMPLATES & FORMS
+// Configure Google Docs/Forms that should be auto-filled
+// Set these IDs/URLs in Script Properties or update here
+const DOCUMENT_TEMPLATES = {
+  // Tracker/Opportunity Documents
+  TRACKER_DOC: {
+    type: 'doc', // 'doc' for Google Docs, 'form' for Google Forms
+    id: '', // Google Doc ID (from URL: docs.google.com/document/d/[ID]/edit)
+    enabled: false, // Set to true when template is configured
+    placeholders: {
+      '{{EntryID}}': 'EntryID',
+      '{{Customer_Name}}': 'Customer_Name',
+      '{{Service_Address}}': 'Service_Address',
+      '{{POC_Name}}': 'POC_Name',
+      '{{POC_Phone}}': 'POC_Phone',
+      '{{POC_Email}}': 'POC_Email',
+      '{{Stage}}': 'Stage',
+      '{{Initial_Fee}}': 'Initial_Fee',
+      '{{Monthly_Fee}}': 'Monthly_Fee',
+      '{{Annual_Value}}': 'Annual_Value',
+      '{{Service_Description}}': 'Service_Description',
+      '{{Date_Proposal}}': 'Date_Proposal',
+      '{{Date_Sold}}': 'Date_Sold',
+      '{{Notes}}': 'Notes'
+    }
+  },
+  
+  // Start Packet Documents
+  START_PACKET_DOC: {
+    type: 'doc',
+    id: '', // Google Doc ID for start packet template
+    enabled: false,
+    placeholders: {
+      '{{PacketID}}': 'PacketID',
+      '{{Account_Name}}': 'Account_Name',
+      '{{Service_Address}}': 'Service_Address',
+      '{{Sales_Rep}}': 'Sales_Rep',
+      '{{Initial_Job_Price}}': 'Initial_Job_Price',
+      '{{Maintenance_Price}}': 'Maintenance_Price',
+      '{{Service_Type}}': 'Service_Type',
+      '{{Frequency}}': 'Frequency',
+      '{{POC_Name_Phone}}': 'POC_Name_Phone',
+      '{{Special_Notes}}': 'Special_Notes',
+      '{{Sold_Date}}': 'Sold_Date',
+      '{{Service_Areas}}': 'Service_Areas',
+      '{{Initial_Service_Description}}': 'Initial_Service_Description',
+      '{{Maintenance_Scope_Description}}': 'Maintenance_Scope_Description'
+    }
+  },
+  
+  // Daily Activity Forms (for AEs)
+  DAILY_ACTIVITY_FORM: {
+    type: 'form',
+    id: '', // Google Form ID (from URL: docs.google.com/forms/d/[ID]/edit)
+    enabled: false,
+    fields: {
+      'Date': 'Date',
+      'AE_UserID': 'AE_UserID',
+      'Proposals_Delivered': 'Proposals_Delivered',
+      'LOBs_On_Proposals': 'LOBs_On_Proposals',
+      'LOBs_Sold': 'LOBs_Sold',
+      'Dollars_Sold': 'Dollars_Sold',
+      'Dollars_Proposed': 'Dollars_Proposed',
+      'NextDay_CONF_Count': 'NextDay_CONF_Count',
+      'Events_Completed': 'Events_Completed',
+      'Events_Summary': 'Events_Summary'
+    }
+  },
+  
+  // Operations Metrics Forms (for Ops Managers)
+  OPS_METRICS_FORM: {
+    type: 'form',
+    id: '',
+    enabled: false,
+    fields: {
+      'Date': 'Date',
+      'UserID': 'UserID',
+      'BranchID': 'BranchID',
+      'MissedStops_TMX': 'MissedStops_TMX',
+      'MissedStops_RNA': 'MissedStops_RNA',
+      'Backlog_Percent': 'Backlog_Percent',
+      'OT_Percent': 'OT_Percent',
+      'Forecasted_Hours': 'Forecasted_Hours',
+      'Request_Review_Goal': 'Request_Review_Goal',
+      'Request_Review_Actual': 'Request_Review_Actual',
+      'Coaching_Rides': 'Coaching_Rides',
+      'TAP_From_Coaching': 'TAP_From_Coaching'
+    }
+  },
+  
+  // Lead Submission Forms (for Technicians)
+  LEAD_FORM: {
+    type: 'form',
+    id: '',
+    enabled: false,
+    fields: {
+      'Date': 'Date',
+      'Customer_Name': 'Customer_Name',
+      'Service_Address': 'Service_Address',
+      'ZipCode': 'ZipCode',
+      'Phone': 'Phone',
+      'Email': 'Email',
+      'Service_Type': 'Service_Type',
+      'Notes': 'Notes'
+    }
+  }
+};
+
+/**
+ * Get document template configuration
+ * Can be overridden via Script Properties for dynamic configuration
+ */
+function getDocumentTemplate(templateKey) {
+  const template = DOCUMENT_TEMPLATES[templateKey];
+  if (!template) return null;
+  
+  // Check Script Properties for override
+  const props = PropertiesService.getScriptProperties();
+  const propKey = 'DOC_TEMPLATE_' + templateKey;
+  const propValue = props.getProperty(propKey);
+  
+  if (propValue) {
+    try {
+      const override = JSON.parse(propValue);
+      return Object.assign({}, template, override);
+    } catch (e) {
+      Logger.log('Error parsing template override: ' + e.message);
+    }
+  }
+  
+  return template;
+}

@@ -332,3 +332,529 @@ function generateDailyCadenceReport(branchID) {
   return { success: true, summaryID: summaryID };
 }
 
+/**
+ * Generate daily report (called from dashboard)
+ */
+function generateBranchDailyReport() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  return generateDailyCadenceReport(branchID);
+}
+
+/**
+ * Export branch data to CSV
+ */
+function exportBranchManagerData() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const today = new Date();
+  const dateStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  
+  // Get all relevant data
+  const salesData = getSheetData(SHEETS.SALES_ACTIVITY).filter(function(row) {
+    return row.BranchID === branchID;
+  });
+  
+  const trackerData = getSheetData(SHEETS.TRACKER).filter(function(row) {
+    return row.BranchID === branchID;
+  });
+  
+  const opsData = getSheetData(SHEETS.OPERATIONS_METRICS).filter(function(row) {
+    return row.BranchID === branchID;
+  });
+  
+  // Create CSV content
+  var csvContent = 'Branch Export - ' + branchID + ' - ' + dateStr + '\n\n';
+  csvContent += 'Sales Activity\n';
+  csvContent += 'Date,AE,Revenue,TAP,Appointments,Quotes\n';
+  
+  salesData.forEach(function(row) {
+    csvContent += [
+      row.Date || '',
+      row.AE_UserID || '',
+      row.Daily_Sales_Actual || 0,
+      row.TAP_Actual || 0,
+      row.Appointments_Completed || 0,
+      row.Quotes_Created || 0
+    ].join(',') + '\n';
+  });
+  
+  csvContent += '\nPipeline\n';
+  csvContent += 'Customer,Stage,Value,AE,Date\n';
+  
+  trackerData.forEach(function(row) {
+    csvContent += [
+      row.Customer_Name || '',
+      row.Stage || '',
+      row.Annual_Value || 0,
+      row.AE_UserID || '',
+      row.Date || ''
+    ].join(',') + '\n';
+  });
+  
+  // Create a temporary file in Drive
+  const fileName = 'Branch360_Export_' + branchID + '_' + dateStr + '.csv';
+  const folder = DriveApp.getRootFolder();
+  const file = folder.createFile(fileName, csvContent, MimeType.CSV);
+  
+  // Make file accessible
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  
+  return {
+    success: true,
+    url: file.getUrl(),
+    fileName: fileName
+  };
+}
+
+/**
+ * Get detailed pipeline with all entries
+ */
+function getDetailedBranchPipeline() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const trackerData = getSheetData(SHEETS.TRACKER, { BranchID: branchID });
+  const users = getSheetData(SHEETS.USERS);
+  
+  const entries = trackerData
+    .filter(function(entry) {
+      const status = String(entry.Status || '').toLowerCase();
+      return status !== 'dead';
+    })
+    .map(function(entry) {
+      const ae = users.find(function(u) { return u.UserID === entry.AE_UserID; });
+      return {
+        entryID: entry.EntryID,
+        customerName: entry.Customer_Name || '',
+        stage: entry.Stage || '',
+        value: Number(entry.Annual_Value) || 0,
+        aeName: ae ? ae.Name : 'Unknown',
+        date: entry.Date ? Utilities.formatDate(new Date(entry.Date), Session.getScriptTimeZone(), 'yyyy-MM-dd') : ''
+      };
+    });
+  
+  return { entries: entries };
+}
+
+/**
+ * Get pipeline entries for a specific stage
+ */
+function getPipelineStageDetails(stage) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const trackerData = getSheetData(SHEETS.TRACKER, { BranchID: branchID });
+  const users = getSheetData(SHEETS.USERS);
+  
+  const entries = trackerData
+    .filter(function(entry) {
+      const entryStage = String(entry.Stage || '').toLowerCase();
+      const status = String(entry.Status || '').toLowerCase();
+      return entryStage === stage.toLowerCase() && status !== 'dead';
+    })
+    .map(function(entry) {
+      const ae = users.find(function(u) { return u.UserID === entry.AE_UserID; });
+      return {
+        entryID: entry.EntryID,
+        customerName: entry.Customer_Name || '',
+        value: Number(entry.Annual_Value) || 0,
+        aeName: ae ? ae.Name : 'Unknown',
+        date: entry.Date ? Utilities.formatDate(new Date(entry.Date), Session.getScriptTimeZone(), 'yyyy-MM-dd') : ''
+      };
+    });
+  
+  return { entries: entries };
+}
+
+/**
+ * Get detailed sales breakdown
+ */
+function getBranchSalesDetails() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const today = new Date();
+  const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  
+  const salesData = getSheetData(SHEETS.SALES_ACTIVITY);
+  const todaySales = salesData.filter(function(row) {
+    const rowDate = Utilities.formatDate(new Date(row.Date), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    return rowDate === todayStr && row.BranchID === branchID;
+  });
+  
+  var totalTAP = 0;
+  var totalAppointments = 0;
+  var totalQuotes = 0;
+  var totalRevenue = 0;
+  const breakdown = {};
+  
+  todaySales.forEach(function(activity) {
+    const aeID = activity.AE_UserID;
+    if (!breakdown[aeID]) {
+      breakdown[aeID] = {
+        name: aeID,
+        revenue: 0,
+        tap: 0,
+        appointments: 0,
+        quotes: 0
+      };
+    }
+    
+    breakdown[aeID].revenue += Number(activity.Daily_Sales_Actual) || 0;
+    breakdown[aeID].tap += Number(activity.TAP_Actual) || 0;
+    breakdown[aeID].appointments += Number(activity.Appointments_Completed) || 0;
+    breakdown[aeID].quotes += Number(activity.Quotes_Created) || 0;
+    
+    totalTAP += Number(activity.TAP_Actual) || 0;
+    totalAppointments += Number(activity.Appointments_Completed) || 0;
+    totalQuotes += Number(activity.Quotes_Created) || 0;
+    totalRevenue += Number(activity.Daily_Sales_Actual) || 0;
+  });
+  
+  // Get AE names
+  const users = getSheetData(SHEETS.USERS);
+  const breakdownArray = Object.keys(breakdown).map(function(aeID) {
+    const ae = users.find(function(u) { return u.UserID === aeID; });
+    return {
+      name: ae ? ae.Name : aeID,
+      revenue: breakdown[aeID].revenue,
+      tap: breakdown[aeID].tap,
+      appointments: breakdown[aeID].appointments,
+      quotes: breakdown[aeID].quotes
+    };
+  });
+  
+  return {
+    totalTAP: totalTAP,
+    appointments: totalAppointments,
+    quotes: totalQuotes,
+    revenue: totalRevenue,
+    breakdown: breakdownArray
+  };
+}
+
+/**
+ * Get detailed operations breakdown
+ */
+function getBranchOpsDetails() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const today = new Date();
+  const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  
+  const opsData = getSheetData(SHEETS.OPERATIONS_METRICS);
+  const todayOps = opsData.filter(function(row) {
+    const rowDate = Utilities.formatDate(new Date(row.Date), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    return rowDate === todayStr && row.BranchID === branchID;
+  });
+  
+  var totalMissedStops = 0;
+  var totalBacklog = 0;
+  
+  todayOps.forEach(function(metric) {
+    totalMissedStops += (Number(metric.MissedStops_TMX) || 0) + (Number(metric.MissedStops_RNA) || 0);
+    totalBacklog += Number(metric.Backlog_Percent) || 0;
+  });
+  
+  return {
+    missedStops: totalMissedStops,
+    backlog: todayOps.length > 0 ? (totalBacklog / todayOps.length).toFixed(1) : 0
+  };
+}
+
+/**
+ * Get metric details with targets and trends
+ */
+function getMetricDetails(metricType) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const today = new Date();
+  const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  
+  var current = 0;
+  var target = 'N/A';
+  var status = 'N/A';
+  var trend = 'N/A';
+  
+  if (metricType === 'TAP' || metricType === 'Appointments' || metricType === 'Quotes' || metricType === 'Revenue') {
+    const salesData = getSheetData(SHEETS.SALES_ACTIVITY);
+    const todaySales = salesData.filter(function(row) {
+      const rowDate = Utilities.formatDate(new Date(row.Date), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      return rowDate === todayStr && row.BranchID === branchID;
+    });
+    
+    todaySales.forEach(function(activity) {
+      if (metricType === 'TAP') current += Number(activity.TAP_Actual) || 0;
+      else if (metricType === 'Appointments') current += Number(activity.Appointments_Completed) || 0;
+      else if (metricType === 'Quotes') current += Number(activity.Quotes_Created) || 0;
+      else if (metricType === 'Revenue') current += Number(activity.Daily_Sales_Actual) || 0;
+    });
+    
+    target = 'Daily Goal';
+    status = current > 0 ? 'On Track' : 'Needs Attention';
+  } else if (metricType === 'MissedStops' || metricType === 'Backlog') {
+    const opsData = getSheetData(SHEETS.OPERATIONS_METRICS);
+    const todayOps = opsData.filter(function(row) {
+      const rowDate = Utilities.formatDate(new Date(row.Date), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      return rowDate === todayStr && row.BranchID === branchID;
+    });
+    
+    if (metricType === 'MissedStops') {
+      todayOps.forEach(function(metric) {
+        current += (Number(metric.MissedStops_TMX) || 0) + (Number(metric.MissedStops_RNA) || 0);
+      });
+      target = '0';
+      status = current === 0 ? 'On Target' : 'Needs Attention';
+    } else {
+      var totalBacklog = 0;
+      todayOps.forEach(function(metric) {
+        totalBacklog += Number(metric.Backlog_Percent) || 0;
+      });
+      current = todayOps.length > 0 ? (totalBacklog / todayOps.length) : 0;
+      target = '< 10%';
+      status = current < 10 ? 'On Target' : (current < 15 ? 'Watch' : 'Over Target');
+    }
+  }
+  
+  return {
+    current: current,
+    target: target,
+    status: status,
+    trend: trend
+  };
+}
+
+/**
+ * Get detailed AE performance
+ */
+function getAEPerformanceDetails(userID) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const users = getSheetData(SHEETS.USERS, { BranchID: branchID });
+  const ae = users.find(function(u) { 
+    return u.UserID === userID || u.Email === userID;
+  });
+  
+  if (!ae) throw new Error('AE not found');
+  
+  const monthRange = getDateRange('month');
+  const salesData = getSheetData(SHEETS.SALES_ACTIVITY);
+  const aeActivities = salesData.filter(function(activity) {
+    const activityDate = new Date(activity.Date);
+    return activity.AE_UserID === ae.UserID && 
+           activityDate >= monthRange.startDate && 
+           activityDate <= monthRange.endDate;
+  });
+  
+  var monthSales = 0;
+  var monthTAP = 0;
+  var monthQuotes = 0;
+  var quotesWon = 0;
+  
+  aeActivities.forEach(function(activity) {
+    monthSales += Number(activity.Daily_Sales_Actual) || 0;
+    monthTAP += Number(activity.TAP_Actual) || 0;
+    monthQuotes += Number(activity.Quotes_Created) || 0;
+  });
+  
+  // Get quotes won
+  const quotes = getSheetData(SHEETS.QUOTES);
+  const aeQuotes = quotes.filter(function(quote) {
+    return quote.AE_UserID === ae.UserID && quote.Status === 'Won';
+  });
+  quotesWon = aeQuotes.length;
+  
+  const winRate = monthQuotes > 0 ? ((quotesWon / monthQuotes) * 100).toFixed(1) : 0;
+  
+  return {
+    name: ae.Name,
+    email: ae.Email,
+    monthSales: monthSales,
+    monthTAP: monthTAP,
+    monthQuotes: monthQuotes,
+    quotesWon: quotesWon,
+    winRate: winRate
+  };
+}
+
+/**
+ * Get detailed technician performance
+ */
+function getTechPerformanceDetails(userID) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const users = getSheetData(SHEETS.USERS, { BranchID: branchID });
+  const tech = users.find(function(u) { 
+    return u.UserID === userID || u.Email === userID;
+  });
+  
+  if (!tech) throw new Error('Technician not found');
+  
+  const leads = getSheetData(SHEETS.LEADS, { Tech_UserID: tech.UserID });
+  const packets = getSheetData(SHEETS.START_PACKETS);
+  const completedInstalls = packets.filter(function(packet) {
+    return packet.Assigned_Specialist === tech.UserID && packet.Status_Install_Complete;
+  }).length;
+  
+  return {
+    name: tech.Name,
+    email: tech.Email,
+    leadsSubmitted: leads.length,
+    installsCompleted: completedInstalls
+  };
+}
+
+/**
+ * Get alert details
+ */
+function getAlertDetails(alertType, alertID) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  
+  if (alertType === 'overdue_proposal') {
+    const trackerData = getSheetData(SHEETS.TRACKER, { BranchID: branchID });
+    const entry = trackerData.find(function(e) { 
+      return e.EntryID === alertID;
+    });
+    
+    if (!entry) throw new Error('Alert not found');
+    
+    const now = new Date();
+    const daysSince = entry.Date_Proposal ? (now - new Date(entry.Date_Proposal)) / (1000 * 60 * 60 * 24) : 0;
+    
+    return {
+      type: alertType,
+      message: 'Proposal overdue: ' + entry.Customer_Name + ' (' + Math.floor(daysSince) + ' days)',
+      severity: 'high',
+      details: 'Customer: ' + entry.Customer_Name + ', Value: $' + (entry.Annual_Value || 0) + ', Days Overdue: ' + Math.floor(daysSince)
+    };
+  } else if (alertType === 'unassigned_install') {
+    const packets = getSheetData(SHEETS.START_PACKETS);
+    const packet = packets.find(function(p) { return p.PacketID === alertID || p.EntryID === alertID; });
+    
+    if (!packet) throw new Error('Alert not found');
+    
+    return {
+      type: alertType,
+      message: 'Installation needs assignment: ' + packet.Account_Name,
+      severity: 'medium',
+      details: 'Account: ' + packet.Account_Name + ', Address: ' + (packet.Service_Address || 'N/A')
+    };
+  } else if (alertType === 'high_severity_issue') {
+    const issues = getSheetData(SHEETS.SERVICE_ISSUES);
+    const issue = issues.find(function(i) { return i.IssueID === alertID; });
+    
+    if (!issue) throw new Error('Alert not found');
+    
+    return {
+      type: alertType,
+      message: 'High-priority issue: ' + issue.Customer_Name,
+      severity: 'high',
+      details: 'Customer: ' + issue.Customer_Name + ', Type: ' + (issue.Issue_Type || 'N/A') + ', Description: ' + (issue.Description || 'N/A')
+    };
+  }
+  
+  throw new Error('Unknown alert type');
+}
+
+/**
+ * Resolve branch alert
+ */
+function resolveBranchAlert(alertType, alertID, notes) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  
+  if (alertType === 'overdue_proposal') {
+    // Update tracker entry with notes
+    const trackerData = getSheetData(SHEETS.TRACKER, { BranchID: branchID });
+    const entry = trackerData.find(function(e) { 
+      return e.EntryID === alertID;
+    });
+    
+    if (!entry) throw new Error('Alert not found');
+    
+    updateRowByID(SHEETS.TRACKER, 'EntryID', alertID, {
+      Notes: (entry.Notes || '') + '\n[Branch Manager] ' + new Date().toISOString() + ': ' + notes
+    });
+    
+    logAudit('RESOLVE_ALERT', SHEETS.TRACKER, alertID, 'Branch Manager resolved overdue proposal');
+    
+  } else if (alertType === 'unassigned_install') {
+    // Log resolution
+    logAudit('RESOLVE_ALERT', SHEETS.START_PACKETS, alertID, 'Branch Manager noted: ' + notes);
+    
+  } else if (alertType === 'high_severity_issue') {
+    // Update issue status
+    const issues = getSheetData(SHEETS.SERVICE_ISSUES);
+    const issue = issues.find(function(i) { return i.IssueID === alertID; });
+    
+    if (!issue) throw new Error('Alert not found');
+    
+    updateRowByID(SHEETS.SERVICE_ISSUES, 'IssueID', alertID, {
+      Status: 'Resolved',
+      Resolution_Notes: (issue.Resolution_Notes || '') + '\n[Branch Manager] ' + new Date().toISOString() + ': ' + notes
+    });
+    
+    logAudit('RESOLVE_ALERT', SHEETS.SERVICE_ISSUES, alertID, 'Branch Manager resolved high-severity issue');
+  }
+  
+  return { success: true };
+}
+
+/**
+ * Send message to branch team
+ */
+function sendBranchTeamMessage(message) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) throw new Error('User not authenticated');
+  
+  const branchID = currentUser.BranchID || currentUser.branchID;
+  const users = getSheetData(SHEETS.USERS, { BranchID: branchID });
+  
+  // Create notification for each team member
+  const notificationSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.NOTIFICATIONS);
+  if (!notificationSheet) {
+    throw new Error('Notifications sheet not found');
+  }
+  
+  users.forEach(function(user) {
+    if (user.Active !== false) {
+      const notificationID = generateUniqueID('NOT');
+      notificationSheet.appendRow([
+        notificationID,
+        user.UserID,
+        'Team Message from ' + currentUser.Name,
+        message,
+        'info',
+        false, // Not read
+        new Date(),
+        new Date()
+      ]);
+    }
+  });
+  
+  logAudit('TEAM_MESSAGE', SHEETS.NOTIFICATIONS, branchID, 'Branch Manager sent team message');
+  
+  return { success: true, recipients: users.length };
+}
+

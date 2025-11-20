@@ -74,7 +74,7 @@ function createIndexTemplate() {
       <h1>Branch360 Local Preview</h1>
       <p>Select a dashboard to preview:</p>
       <ul>${listItems}</ul>
-      <p>Default: <a href="/tech-dashboard.html">Tech Dashboard</a></p>
+      <p>Default: <a href="/dashboard.html">Unified Dashboard</a></p>
     </body>
   </html>`;
 }
@@ -162,7 +162,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`Branch360 preview server running at http://${HOST}:${PORT}`);
-  console.log('Default tech dashboard: http://' + HOST + ':' + PORT + '/tech-dashboard.html');
+  console.log('Default dashboard: http://' + HOST + ':' + PORT + '/dashboard.html');
 });
 
 server.on('error', (err) => {

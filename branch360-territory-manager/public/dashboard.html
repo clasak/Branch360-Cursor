@@ -651,6 +651,15 @@
       <div class="tab-content" id="tab-branch">
         <h2 class="section-title">🏢 Branch Manager Dashboard</h2>
         
+        <!-- Action Buttons -->
+        <section class="action-bar" style="margin-bottom: 1.5rem;">
+          <button class="action primary" onclick="generateDailyReport()">📊 Generate Daily Report</button>
+          <button class="action primary" onclick="viewWeeklyTrends()">📈 View Weekly Trends</button>
+          <button class="action primary" onclick="exportBranchData()">💾 Export Data</button>
+          <button class="action primary" onclick="viewDetailedPipeline()">💼 Detailed Pipeline</button>
+          <button class="action primary" onclick="sendTeamMessage()">💬 Team Message</button>
+        </section>
+        
         <section class="two-column">
           <div class="content-card">
             <h3>📈 Sales Today</h3>
@@ -874,7 +883,14 @@
           
           // Update content
           document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-          document.getElementById(`tab-${tabName}`).classList.add('active');
+          const targetTab = document.getElementById(`tab-${tabName}`);
+          if (targetTab) {
+            targetTab.classList.add('active');
+            // Set up branch manager interactivity when tab is shown
+            if (tabName === 'branch') {
+              setTimeout(setupBranchInteractivity, 100);
+            }
+          }
         });
       });
 
@@ -1269,6 +1285,150 @@
       function reportIssue() {
         showAlert('info', 'Issue reporting form will open here (connect to backend API)');
       }
+
+      // Branch Manager Functions
+      function generateDailyReport() {
+        if (!confirm('Generate daily cadence report for today?')) return;
+        showAlert('info', 'Generating daily report... (connect to backend API)');
+        // TODO: Call backend API
+      }
+
+      function viewWeeklyTrends() {
+        showAlert('info', 'Weekly trends view will open here (connect to backend API)');
+        // TODO: Call backend API and show modal
+      }
+
+      function exportBranchData() {
+        if (!confirm('Export branch data to CSV?')) return;
+        showAlert('info', 'Exporting data... (connect to backend API)');
+        // TODO: Call backend API
+      }
+
+      function viewDetailedPipeline() {
+        showAlert('info', 'Detailed pipeline view will open here (connect to backend API)');
+        // TODO: Call backend API and show modal
+      }
+
+      function sendTeamMessage() {
+        const message = prompt('Enter message to send to your team:');
+        if (message && message.trim()) {
+          showAlert('info', 'Sending team message... (connect to backend API)');
+          // TODO: Call backend API
+        }
+      }
+
+      // Branch Manager Interactivity - Use event delegation for reliability
+      document.addEventListener('click', function(e) {
+        // Only handle clicks within the branch manager tab
+        const branchTab = document.getElementById('tab-branch');
+        if (!branchTab || !branchTab.classList.contains('active')) return;
+        
+        // Check if click is on a metric in sales card
+        const salesCard = e.target.closest('#tab-branch .content-card');
+        if (salesCard && salesCard.querySelector('#todayTAP')) {
+          const metricDiv = e.target.closest('.stats-grid > div');
+          if (metricDiv && salesCard.contains(metricDiv)) {
+            const label = metricDiv.querySelector('.metric-label')?.textContent || 'Metric';
+            showAlert('info', `Viewing details for ${label}`);
+            e.preventDefault();
+            return;
+          }
+        }
+        
+        // Check if click is on a metric in ops card
+        const opsCard = e.target.closest('#tab-branch .content-card');
+        if (opsCard && opsCard.querySelector('#todayMissedStops')) {
+          const metricDiv = e.target.closest('.stats-grid > div');
+          if (metricDiv && opsCard.contains(metricDiv)) {
+            const label = metricDiv.querySelector('.metric-label')?.textContent || 'Metric';
+            showAlert('info', `Viewing details for ${label}`);
+            e.preventDefault();
+            return;
+          }
+        }
+        
+        // Check if click is on pipeline stage
+        const pipelineSection = e.target.closest('#tab-branch section.content-card');
+        if (pipelineSection && pipelineSection.querySelector('#pipelineProposal')) {
+          const stageDiv = e.target.closest('.stats-grid > div');
+          if (stageDiv && pipelineSection.contains(stageDiv)) {
+            const label = stageDiv.querySelector('.metric-label')?.textContent || 'Stage';
+            showAlert('info', `Viewing ${label} stage pipeline`);
+            e.preventDefault();
+            return;
+          }
+        }
+      });
+
+      // Make metrics visually clickable when branch tab is shown
+      function setupBranchInteractivity() {
+        // Make sales metrics clickable
+        const salesMetrics = document.querySelectorAll('#tab-branch #todayTAP, #tab-branch #todayAppts, #tab-branch #todayQuotes, #tab-branch #todayRevenue');
+        salesMetrics.forEach(metric => {
+          const container = metric.closest('.stats-grid > div');
+          if (container) {
+            container.style.cursor = 'pointer';
+            container.style.transition = 'background-color 0.2s';
+            container.addEventListener('mouseenter', function() {
+              this.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+            });
+            container.addEventListener('mouseleave', function() {
+              this.style.backgroundColor = '';
+            });
+          }
+        });
+
+        // Make ops metrics clickable
+        const opsMetrics = document.querySelectorAll('#tab-branch #todayMissedStops, #tab-branch #todayBacklog');
+        opsMetrics.forEach(metric => {
+          const container = metric.closest('.stats-grid > div');
+          if (container) {
+            container.style.cursor = 'pointer';
+            container.style.transition = 'background-color 0.2s';
+            container.addEventListener('mouseenter', function() {
+              this.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+            });
+            container.addEventListener('mouseleave', function() {
+              this.style.backgroundColor = '';
+            });
+          }
+        });
+
+        // Make pipeline stages clickable
+        const pipelineStages = document.querySelectorAll('#tab-branch #pipelineProposal, #tab-branch #pipelineNegotiation, #tab-branch #pipelineSold');
+        pipelineStages.forEach(stage => {
+          const container = stage.closest('.stats-grid > div');
+          if (container) {
+            container.style.cursor = 'pointer';
+            container.style.transition = 'transform 0.2s, box-shadow 0.2s';
+            container.addEventListener('mouseenter', function() {
+              this.style.transform = 'scale(1.05)';
+              this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            });
+            container.addEventListener('mouseleave', function() {
+              this.style.transform = '';
+              this.style.boxShadow = '';
+            });
+          }
+        });
+      }
+
+      // Set up interactivity when branch tab is shown
+      document.addEventListener('DOMContentLoaded', function() {
+        const branchTab = document.getElementById('tab-branch');
+        if (branchTab) {
+          const observer = new MutationObserver(function() {
+            if (!branchTab.classList.contains('hidden')) {
+              setupBranchInteractivity();
+            }
+          });
+          observer.observe(branchTab, { attributes: true, attributeFilter: ['class'] });
+          // Also set up immediately if tab is already visible
+          if (!branchTab.classList.contains('hidden')) {
+            setupBranchInteractivity();
+          }
+        }
+      });
 
       // Initialize
       refreshTerritoryDashboard();

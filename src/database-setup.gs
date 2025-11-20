@@ -270,6 +270,64 @@ function addMyUser() {
 }
 
 /**
+ * Add Cody Lytle as Administrator
+ * Run this function to add Cody with full admin access
+ */
+function addCodyAsAdmin() {
+  const userData = {
+    name: "Cody Lytle",
+    email: "cody.lytle@prestox.com",
+    role: "Administrator",
+    branchID: "BRN-001",
+    territoryZips: "",
+    phoneNumber: "",
+    emailNotifications: true
+  };
+  
+  const result = addUser(userData);
+  
+  if (result.success) {
+    Logger.log('✅ Cody added as Administrator');
+    Logger.log('UserID: ' + result.userID);
+    Logger.log('Name: ' + userData.name);
+    Logger.log('Email: ' + userData.email);
+    Logger.log('Role: ' + userData.role);
+    
+    // Show alert if UI is available
+    try {
+      SpreadsheetApp.getUi().alert(
+        '✅ Admin User Added',
+        'Cody Lytle has been added as Administrator!\n\n' +
+        'UserID: ' + result.userID + '\n' +
+        'Email: ' + userData.email + '\n' +
+        'Role: ' + userData.role + '\n\n' +
+        'You can now access the Admin Dashboard.',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } catch (e) {
+      // UI not available, just log
+      Logger.log('UI alert not available, result logged');
+    }
+  } else {
+    Logger.log('❌ Failed to add Cody: ' + result.message);
+    
+    // Show error alert if UI is available
+    try {
+      SpreadsheetApp.getUi().alert(
+        '❌ Error',
+        'Failed to add user:\n' + result.message + '\n\n' +
+        'This might mean the user already exists. Check the Users sheet.',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } catch (e) {
+      Logger.log('Error: ' + result.message);
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Add a new user to the Users sheet
  * @param {Object} userData - User information object
  * @return {Object} Result with userID or error message

@@ -519,6 +519,16 @@ function saveDailyOpsMetrics(metricsData) {
         new Date()
       ]);
       
+      // Fill out operations metrics form if template is configured
+      try {
+        const formResult = fillOpsMetricsForm(metricID);
+        if (formResult.success) {
+          Logger.log('✅ Operations metrics form submitted: ' + formResult.formUrl);
+        }
+      } catch (e) {
+        Logger.log('⚠️ Could not fill ops metrics form: ' + e.message);
+      }
+      
       return { success: true, metricID: metricID, updated: false };
     }
     
@@ -626,6 +636,15 @@ function saveStartPacket(packetData) {
     Special_Notes: packetData.notes || buildStartPacketScope(packetData),
     Status: status,
     PestPac_ID: packetData.pestPacId || '',
+    Billing_Email: packetData.billingEmail || '',
+    Billing_Address: packetData.billingAddress || '',
+    Billing_Address_Different: packetData.billingAddressDifferent || false,
+    MRT_Count: Number(packetData.mrtCount) || 0,
+    RBS_Count: Number(packetData.rbsCount) || 0,
+    ILT_Count: Number(packetData.iltCount) || 0,
+    Initial_Service_Description: packetData.initialServiceDescription || '',
+    Maintenance_Scope_Description: packetData.maintenanceScopeDescription || '',
+    Service_Areas: packetData.serviceAreas || '',
     UpdatedOn: new Date()
   };
   const existing = findRowByID(SHEETS.START_PACKETS, 'PacketID', packetID);
@@ -667,7 +686,16 @@ function generateStartPacketFromUnifiedSale(draft) {
     pocInfo: buildPocInfoString(draft),
     notes: notes,
     soldDate: draft.soldDate || new Date().toISOString(),
-    trackerEntryID: trackerEntryID
+    trackerEntryID: trackerEntryID,
+    billingEmail: draft.billingEmail || '',
+    billingAddress: draft.billingAddress || '',
+    billingAddressDifferent: draft.billingAddressDifferent || false,
+    mrtCount: draft.mrtCount || 0,
+    rbsCount: draft.rbsCount || 0,
+    iltCount: draft.iltCount || 0,
+    initialServiceDescription: draft.initialServiceDescription || '',
+    maintenanceScopeDescription: draft.maintenanceScopeDescription || '',
+    serviceAreas: draft.serviceAreas || ''
   };
   const result = saveStartPacket(packetPayload);
   if (draft.sraHazards && draft.sraHazards.length) {

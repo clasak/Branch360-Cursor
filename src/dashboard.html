@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Branch360 Unified Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
-  <script src="activity-client.js"></script>
-  <script src="options-data.js"></script>
+  <script src="activity-client.html"></script>
+  <script src="options-data.html"></script>
   <style>
     :root {
       --brand-primary: #2563eb;
@@ -394,18 +394,22 @@
           <span class="text-lg">📄</span>
           <span>Import Salesforce Quote</span>
         </button>
+        <button class="submenu-button w-full text-left px-3 py-2 rounded-lg flex items-center gap-2" id="submenuRouteProspects" data-roles="ae,branch,admin">
+          <span class="text-lg">🗺️</span>
+          <span>Route & Prospects</span>
+        </button>
       </div>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="tech" data-roles="tech,ops,branch,admin">Technician</button>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="ops" data-roles="ops,branch,admin">Operations</button>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="branch" data-roles="branch,admin">Branch Manager</button>
+      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="admin" data-roles="admin" style="background: rgba(124, 58, 237, 0.3); border-color: rgba(124, 58, 237, 0.5);">
+        🔐 Admin Dashboard
+      </button>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="market" data-roles="market,branch,admin">Market Director</button>
-      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="executive" data-roles="branch,market,admin">Executive ROI Center</button>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="time" data-roles="ops,branch,market,admin">Time Saved</button>
-      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="route" data-roles="ops,branch,market,admin">Route & Prospects</button>
-      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="pilot" data-roles="branch,market,admin">90-Day Pilot Report</button>
+      <button type="button" class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="pilot" data-roles="branch,market,admin">90-Day Pilot Report</button>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="handoff" data-roles="ops,branch,admin">Sales → Ops Handoff</button>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="settings" data-roles="branch,admin">Settings</button>
-      <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="territory" data-roles="ops,branch,admin">Territory Manager</button>
     </aside>
     <main class="flex-1 p-6 space-y-4">
       <header class="flex flex-wrap items-center justify-between bg-white p-4 rounded-xl shadow-sm">
@@ -463,27 +467,102 @@
       </section>
 
       <section id="view-branch" class="view hidden space-y-4">
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-3 mb-4">
+          <button id="btn-generate-report" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">📊 Generate Daily Report</button>
+          <button id="btn-weekly-trends" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">📈 View Weekly Trends</button>
+          <button id="btn-export-data" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💾 Export Data</button>
+          <button id="btn-detailed-pipeline" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💼 Detailed Pipeline</button>
+          <button id="btn-team-message" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💬 Team Message</button>
+        </div>
+        
+        <!-- Today's Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-lg font-bold text-gray-800">📈 Sales Today</h2>
+              <button id="btn-sales-details" class="text-sm text-blue-600 hover:underline cursor-pointer">View Details →</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="cursor-pointer hover:bg-gray-50 p-2 rounded transition metric-clickable" data-metric="TAP" title="Click for details">
+                <p class="text-sm text-gray-600">TAP</p>
+                <p class="text-3xl font-bold text-blue-600" id="branchTodayTAP">0</p>
+              </div>
+              <div class="cursor-pointer hover:bg-gray-50 p-2 rounded transition metric-clickable" data-metric="Appointments" title="Click for details">
+                <p class="text-sm text-gray-600">Appointments</p>
+                <p class="text-3xl font-bold text-green-600" id="branchTodayAppts">0</p>
+              </div>
+              <div class="cursor-pointer hover:bg-gray-50 p-2 rounded transition metric-clickable" data-metric="Quotes" title="Click for details">
+                <p class="text-sm text-gray-600">Quotes</p>
+                <p class="text-3xl font-bold text-purple-600" id="branchTodayQuotes">0</p>
+              </div>
+              <div class="cursor-pointer hover:bg-gray-50 p-2 rounded transition metric-clickable" data-metric="Revenue" title="Click for details">
+                <p class="text-sm text-gray-600">Revenue</p>
+                <p class="text-3xl font-bold text-emerald-600">$<span id="branchTodayRevenue">0</span></p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-lg font-bold text-gray-800">🔧 Operations Today</h2>
+              <button id="btn-ops-details" class="text-sm text-blue-600 hover:underline cursor-pointer">View Details →</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="cursor-pointer hover:bg-gray-50 p-2 rounded transition metric-clickable" data-metric="MissedStops" title="Click for details">
+                <p class="text-sm text-gray-600">Missed Stops</p>
+                <p class="text-3xl font-bold text-red-600" id="branchTodayMissedStops">0</p>
+              </div>
+              <div class="cursor-pointer hover:bg-gray-50 p-2 rounded transition metric-clickable" data-metric="Backlog" title="Click for details">
+                <p class="text-sm text-gray-600">Backlog %</p>
+                <p class="text-3xl font-bold text-yellow-600"><span id="branchTodayBacklog">0</span>%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Alerts -->
+        <div id="branchAlertsSection" class="mb-6"></div>
+        
+        <!-- Team Performance -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 Sales Team Leaderboard</h3>
+            <div id="branchSalesLeaderboard">Loading...</div>
+          </div>
+          
+          <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">👷 Operations Team</h3>
+            <div id="branchOpsTeam">Loading...</div>
+          </div>
+        </div>
+        
+        <!-- Pipeline Overview -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-800">💼 Branch Pipeline</h3>
+            <button id="btn-pipeline-all" class="text-sm text-blue-600 hover:underline cursor-pointer">View All →</button>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="text-center p-4 bg-blue-50 rounded cursor-pointer hover:bg-blue-100 transition pipeline-stage" data-stage="Proposal">
+              <p class="text-sm text-gray-600 mb-1">Proposal</p>
+              <p class="text-2xl font-bold text-blue-600">$<span id="branchPipelineProposal">0</span></p>
+            </div>
+            <div class="text-center p-4 bg-yellow-50 rounded cursor-pointer hover:bg-yellow-100 transition pipeline-stage" data-stage="Negotiation">
+              <p class="text-sm text-gray-600 mb-1">Negotiation</p>
+              <p class="text-2xl font-bold text-yellow-600">$<span id="branchPipelineNegotiation">0</span></p>
+            </div>
+            <div class="text-center p-4 bg-green-50 rounded cursor-pointer hover:bg-green-100 transition pipeline-stage" data-stage="Sold">
+              <p class="text-sm text-gray-600 mb-1">Sold</p>
+              <p class="text-2xl font-bold text-green-600">$<span id="branchPipelineSold">0</span></p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Additional KPIs -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1" id="branchCards"></div>
           <button id="branchExportBtn" class="md:w-auto w-full bg-indigo-600 text-white px-4 py-2 rounded-lg">Export Branch Report</button>
-        </div>
-        <div class="bg-white rounded-xl p-4 shadow">
-          <div class="flex justify-between items-center mb-2">
-            <h2 class="text-lg font-bold">AE Performance</h2>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="min-w-full" id="branchAeTable"></table>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl p-4 shadow">
-          <h2 class="text-lg font-bold mb-2">Ops Workload</h2>
-          <div class="overflow-x-auto">
-            <table class="min-w-full" id="branchOpsTable"></table>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl p-4 shadow">
-          <h2 class="text-lg font-bold mb-2">Ops Timeline</h2>
-          <div id="opsTimeline" class="space-y-3"></div>
         </div>
       </section>
 
@@ -500,37 +579,6 @@
           <div class="overflow-x-auto">
             <table class="min-w-full" id="marketAeTable"></table>
           </div>
-        </div>
-      </section>
-
-      <section id="view-executive" class="view hidden space-y-4">
-        <div class="bg-white rounded-xl p-4 shadow">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-bold mb-2">Executive ROI Overview</h2>
-              <p class="text-sm text-gray-500">Track adoption and time saved as Branch360 scales from the pilot branch to every region.</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700" id="execHoursBadge">-- hrs saved</span>
-              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700" id="execDollarsBadge">$0 value</span>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4" id="execKpiCards"></div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div class="bg-white rounded-xl p-4 shadow">
-            <h3 class="text-md font-bold text-gray-800 mb-2">Pilot Adoption (Houston)</h3>
-            <table class="min-w-full text-sm" id="execAdoptionTable"></table>
-          </div>
-          <div class="bg-white rounded-xl p-4 shadow">
-            <h3 class="text-md font-bold text-gray-800 mb-2">Regional Rollout Capacity</h3>
-            <p class="text-xs text-gray-500 mb-2">How many branches per region will benefit from automation.</p>
-            <table class="min-w-full text-sm" id="execRegionTable"></table>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl p-4 shadow">
-          <h3 class="text-md font-bold text-gray-800 mb-2">Executive Notes</h3>
-          <ul class="list-disc pl-5 space-y-1 text-sm text-gray-600" id="execSummaryList"></ul>
         </div>
       </section>
 
@@ -566,7 +614,12 @@
                   <h2 class="text-lg font-bold">Prospects</h2>
                   <p class="text-sm text-gray-500" id="prospectSummary">Select a territory to view prospects.</p>
                 </div>
-                <input type="search" id="prospectSearchInput" placeholder="Search prospects" class="border rounded-lg px-3 py-2 text-sm" />
+                <div class="flex gap-2">
+                  <button id="routeImportToAEBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold whitespace-nowrap">
+                    ➕ Import to Sales AE
+                  </button>
+                  <input type="search" id="prospectSearchInput" placeholder="Search prospects" class="border rounded-lg px-3 py-2 text-sm" />
+                </div>
               </div>
               <div class="overflow-x-auto" id="prospectTable"></div>
               <p id="prospectEmpty" class="text-center text-gray-500 text-sm mt-3">Select a territory to see prospects.</p>
@@ -639,17 +692,30 @@
             </div>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4" id="pilotCards"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="pilotCards"></div>
         <div class="bg-white rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-2">Executive Summary</h2>
           <p class="text-sm text-gray-700" id="pilotSummary">Report will generate once data is available.</p>
         </div>
+        <div class="bg-white rounded-xl p-4 shadow" id="pilotRoleBreakdownSection">
+          <h2 class="text-lg font-bold mb-2">Breakdown by Role</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full" id="pilotRoleBreakdown"></table>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow" id="pilotActionBreakdownSection">
+          <h2 class="text-lg font-bold mb-2">Breakdown by Action Type</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full" id="pilotActionBreakdown"></table>
+          </div>
+        </div>
         <div class="bg-white rounded-xl p-4 shadow">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-3">
-            <h2 class="text-lg font-bold">Per-User Breakdown</h2>
+            <h2 class="text-lg font-bold" id="pilotTableTitle">Per-User Breakdown</h2>
             <div class="flex gap-2">
               <button id="pilotSortHours" class="px-3 py-2 rounded-lg border text-sm">Sort by Hours</button>
               <button id="pilotSortDollars" class="px-3 py-2 rounded-lg border text-sm">Sort by $</button>
+              <button id="pilotSortActivities" class="px-3 py-2 rounded-lg border text-sm">Sort by Activities</button>
             </div>
           </div>
           <div class="overflow-x-auto">
@@ -674,114 +740,8 @@
         </div>
       </section>
 
-      <section id="view-territory" class="view hidden space-y-4">
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="bg-white rounded-xl p-4 shadow">
-            <p class="text-sm text-gray-500 mb-1">Total AEs</p>
-            <p class="text-2xl font-bold" id="territoryStatAEs">0</p>
-          </div>
-          <div class="bg-white rounded-xl p-4 shadow">
-            <p class="text-sm text-gray-500 mb-1">Total Zip Codes</p>
-            <p class="text-2xl font-bold" id="territoryStatZips">0</p>
-          </div>
-          <div class="bg-white rounded-xl p-4 shadow">
-            <p class="text-sm text-gray-500 mb-1">Avg Coverage / AE</p>
-            <p class="text-2xl font-bold" id="territoryStatAvg">0</p>
-          </div>
-          <div class="bg-white rounded-xl p-4 shadow">
-            <p class="text-sm text-gray-500 mb-1">Total Territories</p>
-            <p class="text-2xl font-bold" id="territoryStatTotal">0</p>
-          </div>
-        </div>
-
-        <!-- Action Bar -->
-        <div class="bg-white rounded-xl p-4 shadow">
-          <div class="flex flex-wrap gap-3">
-            <button id="territoryBtnUpload" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">
-              📤 Upload Territories CSV
-            </button>
-            <button id="territoryBtnAdd" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700">
-              ➕ Add Single Zip
-            </button>
-            <button id="territoryBtnExport" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700">
-              💾 Export CSV
-            </button>
-            <button id="territoryBtnRefresh" class="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700">
-              🔄 Refresh
-            </button>
-          </div>
-        </div>
-
-        <!-- Search Panel -->
-        <div class="bg-white rounded-xl p-4 shadow">
-          <input type="text" id="territorySearchInput" placeholder="🔍 Search for a zip code... (e.g., 77001)" maxlength="5" class="w-full border rounded-lg px-4 py-2" />
-          <p id="territorySearchResult" class="mt-2 text-sm font-semibold"></p>
-        </div>
-
-        <!-- Territory Grid -->
-        <div id="territoryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <p class="text-gray-500 col-span-full text-center py-8">Loading territories...</p>
-        </div>
-
-        <!-- Upload Modal -->
-        <div id="territoryUploadModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-bold">📤 Upload Territories CSV</h3>
-              <button id="territoryUploadClose" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-            </div>
-            <p class="text-sm text-gray-500 mb-4">Paste CSV data (ZipCode, AE_Email, BranchID, TerritoryName). Lines starting with # are ignored.</p>
-            <textarea id="territoryCsvTextarea" placeholder="ZipCode,AE_Email,BranchID,TerritoryName&#10;77001,ae@email.com,BRN-001,Houston Territory" class="w-full border rounded-lg px-3 py-2 h-48 font-mono text-sm"></textarea>
-            <div class="flex gap-3 mt-4">
-              <button id="territoryUploadSubmit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">
-                Upload CSV
-              </button>
-              <button id="territoryUploadCancel" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-400">
-                Cancel
-              </button>
-            </div>
-            <p id="territoryUploadStatus" class="mt-3 text-sm"></p>
-          </div>
-        </div>
-
-        <!-- Add Single Zip Modal -->
-        <div id="territoryAddModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-bold">➕ Add Single Zip</h3>
-              <button id="territoryAddClose" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-            </div>
-            <p class="text-sm text-gray-500 mb-4">Assign a single zip code to an AE and territory.</p>
-            <form id="territoryAddForm" class="space-y-3">
-              <div>
-                <label class="text-sm text-gray-700">Zip Code (5 digits)</label>
-                <input type="text" id="territoryAddZip" maxlength="5" class="w-full border rounded-lg px-3 py-2" required />
-              </div>
-              <div>
-                <label class="text-sm text-gray-700">AE Email</label>
-                <input type="email" id="territoryAddEmail" class="w-full border rounded-lg px-3 py-2" required />
-              </div>
-              <div>
-                <label class="text-sm text-gray-700">Branch ID</label>
-                <input type="text" id="territoryAddBranch" class="w-full border rounded-lg px-3 py-2" required />
-              </div>
-              <div>
-                <label class="text-sm text-gray-700">Territory Name</label>
-                <input type="text" id="territoryAddTerritory" class="w-full border rounded-lg px-3 py-2" required />
-              </div>
-            </form>
-            <div class="flex gap-3 mt-4">
-              <button id="territoryAddSubmit" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700">
-                Add Zip
-              </button>
-              <button id="territoryAddCancel" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-400">
-                Cancel
-              </button>
-            </div>
-            <p id="territoryAddStatus" class="mt-3 text-sm"></p>
-          </div>
-        </div>
+      <section id="view-admin" class="view hidden" style="height: calc(100vh - 200px);">
+        <iframe id="adminDashboardFrame" src="admin-dashboard.html" style="width: 100%; height: 100%; border: none; border-radius: 1rem;"></iframe>
       </section>
 
       <section id="view-settings" class="view hidden space-y-4">
@@ -971,19 +931,19 @@
     const ROLE_VIEWS = {
       ae: ['view-ae'],
       tech: ['view-tech'],
-      ops: ['view-ops','view-tech','view-time','view-route','view-handoff','view-territory'],
-      branch: ['view-branch','view-ae','view-tech','view-ops','view-market','view-executive','view-time','view-route','view-pilot','view-handoff','view-settings','view-territory'],
-      market: ['view-market','view-executive','view-branch','view-time','view-route','view-pilot'],
-      admin: ['view-branch','view-ae','view-tech','view-ops','view-market','view-executive','view-time','view-route','view-pilot','view-handoff','view-settings','view-territory']
+      ops: ['view-ops','view-tech','view-time','view-route','view-handoff'],
+      branch: ['view-branch','view-ae','view-tech','view-ops','view-market','view-time','view-route','view-pilot','view-handoff','view-settings'],
+      market: ['view-market','view-branch','view-time','view-route','view-pilot'],
+      admin: ['view-branch','view-ae','view-tech','view-ops','view-market','view-time','view-route','view-pilot','view-handoff','view-settings','view-admin']
     };
     const DEMO_USERS = [
+      { id: 'admin-me', name: 'Branch360 Admin', email: 'admin@branch360.demo', role: 'admin', roleLabel: 'Admin', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'branch' },
       { id: 'ae-blair', name: 'Blair Sloat', email: 'blair.sloat@rentokil-terminix.com', role: 'ae', roleLabel: 'Account Executive', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'ae' },
       { id: 'ae-demo2', name: 'Demo AE 2', email: 'demo.ae2@example.com', role: 'ae', roleLabel: 'Account Executive', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'ae' },
       { id: 'tech-demo', name: 'Demo Tech', email: 'demo.tech@example.com', role: 'tech', roleLabel: 'Technician', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'tech' },
       { id: 'ops-bruce', name: 'Bruce Hockless', email: 'bruce.hockless@prestox.com', role: 'ops', roleLabel: 'Operations Manager', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'ops' },
       { id: 'branch-brad', name: 'Brad Hudson', email: 'brad.hudson@example.com', role: 'branch', roleLabel: 'Branch Manager', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'branch' },
-      { id: 'market-adam', name: 'Adam Grier', email: 'adam.grier@rentokil.com', role: 'market', roleLabel: 'Market Director', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'market' },
-      { id: 'admin-me', name: 'Branch360 Admin', email: 'admin@branch360.demo', role: 'admin', roleLabel: 'Admin', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'branch' }
+      { id: 'market-adam', name: 'Adam Grier', email: 'adam.grier@rentokil.com', role: 'market', roleLabel: 'Market Director', branchId: 'BRN-001', branchName: 'Houston Branch', marketId: 'HOUSTON', defaultView: 'market' }
     ];
     const DEMO_ACCOUNTS = ['Houston Tower', 'East River Storage', 'Bayou Coffee', 'Montrose Medical'];
     const DEMO_DASHBOARD_DATA = {
@@ -1100,7 +1060,9 @@
     const personaLabel = document.getElementById('personaLabel');
     const demoUserSummary = document.getElementById('demoUserSummary');
     navButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (btn.classList.contains('hidden')) return;
         if (btn.dataset.view) {
           showView(btn.dataset.view);
@@ -1116,9 +1078,17 @@
         }
       });
     }
+    const submenuRouteProspects = document.getElementById('submenuRouteProspects');
+    if (submenuRouteProspects) {
+      submenuRouteProspects.addEventListener('click', function() {
+        showView('route');
+      });
+    }
 
     function roleCanView(view) {
       if (!currentRole) return true;
+      // Admin view is a separate page, not a regular view - always allow if user is admin
+      if (view === 'admin' && currentRole === 'admin') return true;
       const allowed = ROLE_VIEWS[currentRole] || [];
       return allowed.includes('view-' + view);
     }
@@ -1135,6 +1105,31 @@
     }
 
     function showView(view) {
+      // Admin dashboard should be shown inline, not navigate away
+      if (view === 'admin') {
+        // Show admin view inline using iframe
+        activeView = view;
+        document.querySelectorAll('.view').forEach(section => section.classList.add('hidden'));
+        const adminView = document.getElementById('view-admin');
+        if (adminView) {
+          adminView.classList.remove('hidden');
+        } else {
+          console.error('Admin view section not found');
+        }
+        navButtons.forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.nav-button[data-view="${view}"]`)?.classList.add('active');
+        return;
+      }
+      
+      // Ensure we're on the main dashboard page, not admin-dashboard
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('admin-dashboard.html')) {
+        // Redirect back to main dashboard
+        const dashboardPath = currentPath.replace(/admin-dashboard\.html$/, 'dashboard.html');
+        window.location.href = dashboardPath + '?view=' + view;
+        return;
+      }
+      
       if (currentRole && !roleCanView(view)) {
         const fallback = getDefaultViewForRole(currentRole);
         if (fallback && fallback !== view) {
@@ -1142,9 +1137,15 @@
         }
         return;
       }
+      
       activeView = view;
       document.querySelectorAll('.view').forEach(section => section.classList.add('hidden'));
-      document.getElementById('view-' + view)?.classList.remove('hidden');
+      const targetView = document.getElementById('view-' + view);
+      if (!targetView) {
+        console.error('View not found: view-' + view);
+        return;
+      }
+      targetView.classList.remove('hidden');
       navButtons.forEach(btn => btn.classList.remove('active'));
       document.querySelector(`.nav-button[data-view="${view}"]`)?.classList.add('active');
       if (aeSubmenu) {
@@ -1165,9 +1166,6 @@
       }
       if (view === 'settings') {
         loadSettingsView();
-      }
-      if (view === 'territory') {
-        loadTerritories();
       }
     }
 
@@ -1209,16 +1207,23 @@
 
     function applyRolePermissions(role) {
       currentRole = role;
+      console.log('Applying role permissions for role:', role);
       const allowedViews = ROLE_VIEWS[role] || ROLE_VIEWS.branch;
       const allowedViewIds = new Set(allowedViews);
       navButtons.forEach(btn => {
         const roleList = (btn.dataset.roles || 'branch').split(',').map(r => r.trim());
-        const allowed = role === 'admin' || roleList.includes(role);
+        // Allow admin role access to all buttons, or if role is in the list
+        const allowed = role === 'admin' || roleList.includes(role) || roleList.includes('admin');
         btn.classList.toggle('hidden', !allowed);
+        // Debug logging for admin button
+        if (btn.dataset.view === 'admin') {
+          console.log('Admin button visibility:', { role, roleList, allowed, button: btn });
+        }
       });
       submenuButtons.forEach(btn => {
         const roleList = (btn.dataset.roles || 'branch').split(',').map(r => r.trim());
-        const allowed = role === 'admin' || roleList.includes(role);
+        // Allow admin role access to all buttons, or if role is in the list
+        const allowed = role === 'admin' || roleList.includes(role) || roleList.includes('admin');
         btn.classList.toggle('hidden', !allowed);
       });
       document.querySelectorAll('.view').forEach(section => {
@@ -1226,10 +1231,23 @@
           section.classList.add('hidden');
         }
       });
-      const currentViewAllowed = allowedViewIds.has('view-' + activeView);
-      if (!currentViewAllowed) {
-        const fallback = getDefaultViewForRole(role);
-        showView(fallback);
+      
+      // Check URL parameter for view first
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlView = urlParams.get('view');
+      if (urlView && allowedViewIds.has('view-' + urlView)) {
+        activeView = urlView;
+        showView(urlView);
+      } else {
+        // Check if current view is allowed
+        const currentViewAllowed = allowedViewIds.has('view-' + activeView);
+        if (!currentViewAllowed) {
+          const fallback = getDefaultViewForRole(role);
+          showView(fallback);
+        } else {
+          // Make sure current view is shown
+          showView(activeView);
+        }
       }
       startDemoLoop();
     }
@@ -1287,12 +1305,66 @@
     }
 
     function initializeDemoUser() {
+      // First, try to get the real logged-in user
+      const runner = window && window.google && window.google.script && window.google.script.run;
+      if (runner && runner.getCurrentUser) {
+        runner
+          .withSuccessHandler(function(user) {
+            if (user && (user.role || user.Role)) {
+              // Map backend role to frontend role format
+              const roleMap = {
+                'Administrator': 'admin',
+                'Account Executive': 'ae',
+                'Technician': 'tech',
+                'Operations Manager': 'ops',
+                'Branch Manager': 'branch',
+                'Regional Director': 'region',
+                'Market Director': 'market',
+                'Executive': 'executive'
+              };
+              // Check both user.role and user.Role (case variations)
+              const backendRole = user.role || user.Role || '';
+              const frontendRole = roleMap[backendRole] || backendRole.toLowerCase();
+              
+              console.log('User role mapping:', { backendRole, frontendRole, user });
+              
+              // Apply real user's role
+              applyRolePermissions(frontendRole);
+              
+              // Still populate demo select for switching personas
+              populateDemoUserSelect();
+              if (demoUserSelect) {
+                demoUserSelect.addEventListener('change', function(e) {
+                  applyDemoUser(e.target.value);
+                });
+              }
+            } else {
+              console.warn('No user role found:', user);
+              // No real user, use demo mode
+              initializeDemoMode();
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.log('No real user found, using demo mode:', error);
+            // Fall back to demo mode if getCurrentUser fails
+            initializeDemoMode();
+          })
+          .getCurrentUser();
+      } else {
+        // No Apps Script runner, use demo mode
+        initializeDemoMode();
+      }
+    }
+    
+    function initializeDemoMode() {
       populateDemoUserSelect();
       let storedId = null;
       if (window.localStorage) {
         storedId = localStorage.getItem(SESSION_KEY);
       }
-      const defaultUser = DEMO_USERS.find(u => u.id === storedId) || DEMO_USERS[0];
+      // Default to admin user when running locally (no Apps Script)
+      const adminUser = DEMO_USERS.find(u => u.role === 'admin') || DEMO_USERS.find(u => u.id === 'admin-me');
+      const defaultUser = DEMO_USERS.find(u => u.id === storedId) || adminUser || DEMO_USERS[0];
       applyDemoUser(defaultUser.id);
       if (demoUserSelect) {
         demoUserSelect.addEventListener('change', function(e) {
@@ -1347,6 +1419,53 @@
 
     function loadBranchKPIs() {
       callServer('getBranchManagerKPIs', renderBranchKPIs, mockBranchKpis());
+      // Also load branch manager dashboard data for today's summary, teams, pipeline, alerts
+      callServerCustom('getBranchManagerDashboard', null, renderBranchDashboardData, {
+        user: { name: 'Demo Branch Manager', branchID: 'BRN-001' },
+        todaySummary: { sales: { tap: 0, appointments: 0, quotes: 0, revenue: 0 }, operations: { missedStops: 0, backlog: 0 } },
+        salesTeam: [],
+        opsTeam: [],
+        pipeline: { proposal: 0, negotiation: 0, sold: 0 },
+        alerts: [],
+        weekTrends: { thisWeek: 0, lastWeek: 0, change: 0 }
+      });
+    }
+
+    function renderBranchDashboardData(data) {
+      // Populate today's summary
+      if (data.todaySummary) {
+        const sales = data.todaySummary.sales || {};
+        const ops = data.todaySummary.operations || {};
+        const tapEl = document.getElementById('branchTodayTAP');
+        const apptsEl = document.getElementById('branchTodayAppts');
+        const quotesEl = document.getElementById('branchTodayQuotes');
+        const revenueEl = document.getElementById('branchTodayRevenue');
+        const missedStopsEl = document.getElementById('branchTodayMissedStops');
+        const backlogEl = document.getElementById('branchTodayBacklog');
+        
+        if (tapEl) tapEl.textContent = sales.tap || 0;
+        if (apptsEl) apptsEl.textContent = sales.appointments || 0;
+        if (quotesEl) quotesEl.textContent = sales.quotes || 0;
+        if (revenueEl) revenueEl.textContent = (sales.revenue || 0).toLocaleString();
+        if (missedStopsEl) missedStopsEl.textContent = ops.missedStops || 0;
+        if (backlogEl) backlogEl.textContent = ops.backlog || 0;
+      }
+
+      // Populate pipeline
+      if (data.pipeline) {
+        const proposalEl = document.getElementById('branchPipelineProposal');
+        const negotiationEl = document.getElementById('branchPipelineNegotiation');
+        const soldEl = document.getElementById('branchPipelineSold');
+        
+        if (proposalEl) proposalEl.textContent = (data.pipeline.proposal || 0).toLocaleString();
+        if (negotiationEl) negotiationEl.textContent = (data.pipeline.negotiation || 0).toLocaleString();
+        if (soldEl) soldEl.textContent = (data.pipeline.sold || 0).toLocaleString();
+      }
+
+      // Render teams and alerts
+      renderBranchSalesLeaderboard(data.salesTeam || []);
+      renderBranchOpsTeam(data.opsTeam || []);
+      renderBranchAlerts(data.alerts || []);
     }
 
     function renderBranchKPIs(data) {
@@ -1362,42 +1481,47 @@
       cards.innerHTML = cardItems.map(card => cardTemplate(card.label, card.value)).join('');
 
       const aeTable = document.getElementById('branchAeTable');
-      aeTable.innerHTML = tableTemplate([
-        'AE', 'Leads', 'Quotes', 'New Starts', 'Conversion %', 'Avg Days Lead → Start', 'Monthly Revenue', 'Initial Revenue', 'Hours Saved', '$ Value'
-      ], data.aeTable.map(row => [
-        row.name,
-        row.leads,
-        row.quotes,
-        row.starts,
-        row.conversion.toFixed(1) + '%',
-        row.avgLeadToStart.toFixed(1),
-        formatCurrency(row.revenueMonthly),
-        formatCurrency(row.revenueInitial),
-        formatHours(row.hoursSaved),
-        formatCurrency(row.dollarsSaved)
-      ]));
+      if (aeTable) {
+        aeTable.innerHTML = tableTemplate([
+          'AE', 'Leads', 'Quotes', 'New Starts', 'Conversion %', 'Avg Days Lead → Start', 'Monthly Revenue', 'Initial Revenue', 'Hours Saved', '$ Value'
+        ], data.aeTable.map(row => [
+          row.name,
+          row.leads,
+          row.quotes,
+          row.starts,
+          row.conversion.toFixed(1) + '%',
+          row.avgLeadToStart.toFixed(1),
+          formatCurrency(row.revenueMonthly),
+          formatCurrency(row.revenueInitial),
+          formatHours(row.hoursSaved),
+          formatCurrency(row.dollarsSaved)
+        ]));
+      }
 
       const opsTable = document.getElementById('branchOpsTable');
-      opsTable.innerHTML = tableTemplate(['Ops Manager', 'New Starts', 'Est. Hours', 'Overload'], data.opsTable.map(row => [
-        row.manager,
-        row.starts,
-        row.estimatedHours.toFixed(1),
-        row.overload ? '⚠️' : 'OK'
-      ]));
+      if (opsTable) {
+        opsTable.innerHTML = tableTemplate(['Ops Manager', 'New Starts', 'Est. Hours', 'Overload'], data.opsTable.map(row => [
+          row.manager,
+          row.starts,
+          row.estimatedHours.toFixed(1),
+          row.overload ? '⚠️' : 'OK'
+        ]));
+      }
 
       const aeFilter = document.getElementById('aeFilter');
-      const existing = new Set(Array.from(aeFilter.options).map(o => o.value));
-      data.aeTable.forEach(row => {
-        if (!existing.has(row.aeId)) {
-          const opt = document.createElement('option');
-          opt.value = row.aeId;
-          opt.textContent = row.name;
-          aeFilter.appendChild(opt);
-        }
-      });
+      if (aeFilter) {
+        const existing = new Set(Array.from(aeFilter.options).map(o => o.value));
+        data.aeTable.forEach(row => {
+          if (!existing.has(row.aeId)) {
+            const opt = document.createElement('option');
+            opt.value = row.aeId;
+            opt.textContent = row.name;
+            aeFilter.appendChild(opt);
+          }
+        });
+      }
 
       latestBranchKPIs = data;
-      renderExecutivePanel();
       loadOpsTimeline();
     }
 
@@ -1477,7 +1601,6 @@
         formatCurrency(row.dollarsSaved)
       ]));
       latestTimeAnalytics = data;
-      renderExecutivePanel();
     }
 
     function loadOpsTimeline() {
@@ -1707,13 +1830,53 @@
         return;
       }
       empty.classList.add('hidden');
-      table.innerHTML = tableTemplate(['Customer', 'Address', 'AE', 'Sold Date', 'Packet Status'], rows.map(row => [
-        row.customer,
-        row.address,
-        row.aeName,
-        row.soldDate ? new Date(row.soldDate).toLocaleDateString() : '--',
-        row.packetStatus
-      ]));
+      const headers = ['Customer', 'Address', 'AE', 'Sold Date', 'Packet Status', 'Actions'];
+      const tableRows = rows.map(function(row) {
+        const recordID = row.recordID || row.id || '';
+        const customer = (row.customer || 'N/A').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const address = (row.address || 'N/A').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const actions = (row.packetStatus === 'Pending' || !row.packetStatus)
+          ? `<button onclick="createStartPacketFromHandoff('${recordID}', '${customer}', '${address}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Create Start Packet</button>`
+          : `<span class="text-xs text-gray-500">${row.packetStatus}</span>`;
+        return [
+          row.customer || 'N/A',
+          row.address || 'N/A',
+          row.aeName || 'N/A',
+          row.soldDate ? new Date(row.soldDate).toLocaleDateString() : '--',
+          row.packetStatus || 'Pending',
+          actions
+        ];
+      });
+      table.innerHTML = tableTemplate(headers, tableRows);
+    }
+    
+    function createStartPacketFromHandoff(recordID, customer, address) {
+      if (!confirm('Create start packet for ' + customer + '?\n\nAddress: ' + address)) {
+        return;
+      }
+      
+      // Switch to AE view to open the unified sale form
+      showView('ae');
+      
+      // Wait for iframe to load, then send message to open unified sale form with pre-filled data
+      setTimeout(function() {
+        const frame = document.querySelector('#view-ae iframe');
+        if (frame && frame.contentWindow) {
+          try {
+            frame.contentWindow.postMessage({
+              type: 'CREATE_START_PACKET_FROM_HANDOFF',
+              data: {
+                recordID: recordID,
+                accountName: customer,
+                serviceAddress: address
+              }
+            }, '*');
+          } catch (e) {
+            console.error('Failed to send message to AE dashboard:', e);
+          }
+        }
+        alert('Opening start packet form. Please fill in the remaining details and submit.');
+      }, 500);
     }
 
     function mockHandoffQueue() {
@@ -2062,20 +2225,44 @@
     function renderPilotReport(data) {
       pilotDataCache = data;
       const totalHours = data.totals.hoursSaved || 0;
-      const cards = document.getElementById('pilotCards');
+      const totalHoursSpent = data.totals.hoursSpent || 0;
+      const totalActivities = (data.rows || []).reduce((sum, row) => sum + (row.activities || 0), 0);
+      const totalUsers = (data.rows || []).length;
+      const avgHoursPerUser = totalUsers > 0 ? totalHours / totalUsers : 0;
+      const avgActivitiesPerUser = totalUsers > 0 ? totalActivities / totalUsers : 0;
+      const efficiency = totalHoursSpent > 0 ? ((totalHours / (totalHours + totalHoursSpent)) * 100) : 0;
       const fte = totalHours / 40;
+      
+      const cards = document.getElementById('pilotCards');
+      const roleFilter = document.getElementById('pilotRole').value;
+      
       const cardItems = [
-        { label: 'Total Hours Saved', value: totalHours.toFixed(1) },
-        { label: 'AE Hours', value: (data.totals.hoursSavedAE || 0).toFixed(1) },
-        { label: 'Ops/Tech Hours', value: (data.totals.hoursSavedOps || 0).toFixed(1) },
-        { label: 'Total $ Value', value: formatCurrency(data.totals.dollarsSaved || 0) },
-        { label: 'Approx. FTE', value: fte.toFixed(1) }
+        { label: 'Total Hours Saved', value: totalHours.toFixed(1), sub: `${totalHoursSpent.toFixed(1)} hrs spent` },
+        { label: 'Total Activities', value: totalActivities.toLocaleString(), sub: `${avgActivitiesPerUser.toFixed(1)} avg per user` },
+        { label: 'Total $ Value', value: formatCurrency(data.totals.dollarsSaved || 0), sub: `${efficiency.toFixed(1)}% efficiency` },
+        { label: 'Active Users', value: totalUsers.toString(), sub: `${avgHoursPerUser.toFixed(1)} hrs avg` },
+        { label: 'AE Hours', value: (data.totals.hoursSavedAE || 0).toFixed(1), sub: roleFilter === 'Account Executive' ? 'Filtered' : 'All AEs' },
+        { label: 'Ops/Tech Hours', value: (data.totals.hoursSavedOps || 0).toFixed(1), sub: roleFilter === 'Technician' || roleFilter === 'Operations Manager' ? 'Filtered' : 'All Ops' },
+        { label: 'Branch Hours', value: (data.totals.hoursSavedBranch || 0).toFixed(1), sub: roleFilter === 'Branch Manager' ? 'Filtered' : 'All Branch' },
+        { label: 'Approx. FTE', value: fte.toFixed(1), sub: 'Based on 40hr/week' }
       ];
-      cards.innerHTML = cardItems.map(card => cardTemplate(card.label, card.value)).join('');
+      cards.innerHTML = cardItems.map(card => cardTemplate(card.label, card.value, card.sub)).join('');
 
       document.getElementById('pilotEmpty').classList.toggle('hidden', (data.rows && data.rows.length > 0));
 
+      // Update table title based on filter
+      const tableTitle = document.getElementById('pilotTableTitle');
+      if (tableTitle) {
+        if (roleFilter) {
+          tableTitle.textContent = `Per-User Breakdown (${roleFilter})`;
+        } else {
+          tableTitle.textContent = 'Per-User Breakdown';
+        }
+      }
+
       renderPilotSummary(data);
+      renderPilotRoleBreakdown(data);
+      renderPilotActionBreakdown(data);
       renderPilotTable();
       renderPilotTrend(data);
     }
@@ -2083,23 +2270,107 @@
     function renderPilotTable() {
       const table = document.getElementById('pilotTable');
       if (!pilotDataCache || !pilotDataCache.rows || pilotDataCache.rows.length === 0) {
-        table.innerHTML = '<tbody><tr><td class="px-3 py-2 text-sm text-gray-500">No activity logged yet.</td></tr></tbody>';
+        table.innerHTML = '<tbody><tr><td class="px-3 py-2 text-sm text-gray-500" colspan="7">No activity logged yet.</td></tr></tbody>';
         return;
       }
       const rows = [...pilotDataCache.rows];
       rows.sort((a, b) => {
         if (pilotSort === 'dollars') {
           return (b.dollarsSaved || 0) - (a.dollarsSaved || 0);
+        } else if (pilotSort === 'activities') {
+          return (b.activities || 0) - (a.activities || 0);
         }
         return (b.hoursSaved || 0) - (a.hoursSaved || 0);
       });
-      table.innerHTML = tableTemplate(['User', 'Role', 'Activities', 'Hours Saved', '$ Value'], rows.map(row => [
+      table.innerHTML = tableTemplate(['User', 'Role', 'Activities', 'Hours Saved', 'Hours Spent', 'Avg Duration', '$ Value'], rows.map(row => [
         row.name,
         row.role,
-        row.activities,
+        row.activities || 0,
         (row.hoursSaved || 0).toFixed(1),
+        (row.hoursSpent || 0).toFixed(1),
+        row.avgDurationMinutes ? row.avgDurationMinutes.toFixed(1) + ' min' : '--',
         formatCurrency(row.dollarsSaved || 0)
       ]));
+    }
+
+    function renderPilotRoleBreakdown(data) {
+      const table = document.getElementById('pilotRoleBreakdown');
+      const section = document.getElementById('pilotRoleBreakdownSection');
+      if (!table || !section) return;
+      
+      const roleFilter = document.getElementById('pilotRole').value;
+      let breakdown = data.breakdownByRole || [];
+      
+      // If a role filter is selected, only show that role's breakdown
+      if (roleFilter) {
+        breakdown = breakdown.filter(r => r.role === roleFilter);
+      }
+      
+      if (!breakdown || breakdown.length === 0) {
+        section.classList.add('hidden');
+        return;
+      }
+      
+      section.classList.remove('hidden');
+      
+      // Sort by hours saved descending
+      breakdown.sort((a, b) => (b.hoursSaved || 0) - (a.hoursSaved || 0));
+      
+      const totalHours = breakdown.reduce((sum, r) => sum + (r.hoursSaved || 0), 0);
+      const totalActivities = breakdown.reduce((sum, r) => sum + (r.activities || 0), 0);
+      
+      table.innerHTML = tableTemplate(
+        ['Role', 'Hours Saved', 'Activities', '% of Total Hours', '% of Total Activities'],
+        breakdown.map(row => {
+          const hoursPct = totalHours > 0 ? ((row.hoursSaved / totalHours) * 100).toFixed(1) : '0.0';
+          const activitiesPct = totalActivities > 0 ? ((row.activities / totalActivities) * 100).toFixed(1) : '0.0';
+          return [
+            row.role,
+            (row.hoursSaved || 0).toFixed(1),
+            (row.activities || 0).toLocaleString(),
+            hoursPct + '%',
+            activitiesPct + '%'
+          ];
+        })
+      );
+    }
+
+    function renderPilotActionBreakdown(data) {
+      const table = document.getElementById('pilotActionBreakdown');
+      const section = document.getElementById('pilotActionBreakdownSection');
+      if (!table || !section) return;
+      
+      const breakdown = data.breakdownByAction || [];
+      
+      if (!breakdown || breakdown.length === 0) {
+        section.classList.add('hidden');
+        return;
+      }
+      
+      section.classList.remove('hidden');
+      
+      // Sort by hours saved descending
+      breakdown.sort((a, b) => (b.hoursSaved || 0) - (a.hoursSaved || 0));
+      
+      // Show top 10 actions
+      const topActions = breakdown.slice(0, 10);
+      const totalHours = breakdown.reduce((sum, a) => sum + (a.hoursSaved || 0), 0);
+      const totalActivities = breakdown.reduce((sum, a) => sum + (a.activities || 0), 0);
+      
+      table.innerHTML = tableTemplate(
+        ['Action Type', 'Hours Saved', 'Activities', '% of Total Hours', '% of Total Activities'],
+        topActions.map(row => {
+          const hoursPct = totalHours > 0 ? ((row.hoursSaved / totalHours) * 100).toFixed(1) : '0.0';
+          const activitiesPct = totalActivities > 0 ? ((row.activities / totalActivities) * 100).toFixed(1) : '0.0';
+          return [
+            row.actionType,
+            (row.hoursSaved || 0).toFixed(1),
+            (row.activities || 0).toLocaleString(),
+            hoursPct + '%',
+            activitiesPct + '%'
+          ];
+        })
+      );
     }
 
     function renderPilotTrend(data) {
@@ -2119,97 +2390,35 @@
 
     function renderPilotSummary(data) {
       const totalHours = data.totals.hoursSaved || 0;
+      const totalHoursSpent = data.totals.hoursSpent || 0;
       const aeHours = data.totals.hoursSavedAE || 0;
       const opsHours = data.totals.hoursSavedOps || 0;
       const branchHours = data.totals.hoursSavedBranch || 0;
       const totalDollars = data.totals.dollarsSaved || 0;
+      const totalActivities = (data.rows || []).reduce((sum, row) => sum + (row.activities || 0), 0);
+      const totalUsers = (data.rows || []).length;
       const fte = totalHours / 40;
+      const efficiency = totalHoursSpent > 0 ? ((totalHours / (totalHours + totalHoursSpent)) * 100) : 0;
       const aePct = totalHours > 0 ? (aeHours / totalHours) * 100 : 0;
       const opsPct = totalHours > 0 ? (opsHours / totalHours) * 100 : 0;
       const branchPct = totalHours > 0 ? (branchHours / totalHours) * 100 : 0;
       const start = document.getElementById('pilotStart').value;
       const end = document.getElementById('pilotEnd').value;
-      const summary = totalHours > 0
-        ? `From ${start} to ${end}, Branch360 saved ${totalHours.toFixed(1)} hours (~${fte.toFixed(1)} FTEs) across Houston, worth ${formatCurrency(totalDollars)}. AEs accounted for ${aePct.toFixed(1)}% of hours saved, Ops/Techs ${opsPct.toFixed(1)}%, Branch/Others ${branchPct.toFixed(1)}%.`
-        : 'No activity logged for this period. Encourage the team to track their work in Branch360 to capture ROI.';
+      const roleFilter = document.getElementById('pilotRole').value;
+      
+      let summary = '';
+      if (totalHours > 0) {
+        const filterText = roleFilter ? ` (filtered by ${roleFilter})` : '';
+        summary = `From ${start} to ${end}${filterText}, Branch360 saved ${totalHours.toFixed(1)} hours (~${fte.toFixed(1)} FTEs) worth ${formatCurrency(totalDollars)}. `;
+        if (!roleFilter) {
+          summary += `AEs accounted for ${aePct.toFixed(1)}% of hours saved, Ops/Techs ${opsPct.toFixed(1)}%, Branch/Others ${branchPct.toFixed(1)}%. `;
+        }
+        summary += `Total of ${totalActivities.toLocaleString()} activities tracked across ${totalUsers} active user${totalUsers !== 1 ? 's' : ''} with ${efficiency.toFixed(1)}% time efficiency.`;
+      } else {
+        summary = 'No activity logged for this period. Encourage the team to track their work in Branch360 to capture ROI.';
+      }
       document.getElementById('pilotSummary').textContent = summary;
     }
-
-    function renderExecutivePanel() {
-      const cards = document.getElementById('execKpiCards');
-      if (!cards) return;
-      const hours = latestTimeAnalytics && latestTimeAnalytics.totals ? (latestTimeAnalytics.totals.hoursSaved || 0) : 0;
-      const dollars = latestTimeAnalytics && latestTimeAnalytics.totals ? (latestTimeAnalytics.totals.dollarsSaved || 0) : 0;
-      const starts = latestBranchKPIs ? (latestBranchKPIs.branchCards.starts || 0) : 0;
-      const conversion = latestBranchKPIs ? (latestBranchKPIs.branchCards.conversion || 0) : 0;
-      const proposals = getQuoteTrackerCount();
-      const cardsData = [
-        { label: 'Hours Saved', value: hours.toFixed(1), sub: 'Pilot period' },
-        { label: 'Labor Value', value: formatCurrency(dollars), sub: 'Loaded hourly impact' },
-        { label: 'New Starts (Houston)', value: starts, sub: conversion.toFixed ? conversion.toFixed(1) + '% conversion' : '--' },
-        { label: 'Salesforce Proposals', value: proposals, sub: 'Quotes imported' }
-      ];
-      cards.innerHTML = cardsData.map(function(card) {
-        return cardTemplate(card.label, card.value, card.sub);
-      }).join('');
-      const hoursBadge = document.getElementById('execHoursBadge');
-      const dollarsBadge = document.getElementById('execDollarsBadge');
-      if (hoursBadge) hoursBadge.textContent = hours.toFixed(1) + ' hrs saved';
-      if (dollarsBadge) dollarsBadge.textContent = formatCurrency(dollars) + ' value';
-      renderExecAdoption();
-      renderExecRegionTable();
-      renderExecSummary(hours, dollars, starts);
-    }
-
-    function renderExecAdoption() {
-      const table = document.getElementById('execAdoptionTable');
-      if (!table) return;
-      const aeCount = latestBranchKPIs && latestBranchKPIs.aeTable ? latestBranchKPIs.aeTable.length : 0;
-      const opsCount = latestBranchKPIs && latestBranchKPIs.opsTable ? latestBranchKPIs.opsTable.length : 0;
-      const rows = [
-        { role: 'Account Executives', target: PILOT_TEAM_TARGETS.aes, active: aeCount },
-        { role: 'Operations Managers', target: PILOT_TEAM_TARGETS.opsManagers, active: opsCount },
-        { role: 'Technicians', target: PILOT_TEAM_TARGETS.technicians, active: PILOT_TEAM_TARGETS.technicians },
-        { role: 'Branch Manager', target: PILOT_TEAM_TARGETS.branchManagers, active: 1 }
-      ];
-      table.innerHTML = tableTemplate(['Role', 'Active', 'Target', 'Adoption %'], rows.map(function(row) {
-        const pct = row.target ? Math.min(100, (row.active / row.target) * 100).toFixed(0) : 0;
-        return [
-          row.role,
-          row.active,
-          row.target,
-          pct + '%'
-        ];
-      }));
-    }
-
-    function renderExecRegionTable() {
-      const table = document.getElementById('execRegionTable');
-      if (!table) return;
-      const totalBranches = REGION_BRANCH_COUNTS.reduce(function(sum, region) { return sum + region.branches; }, 0);
-      const rows = REGION_BRANCH_COUNTS.map(function(region) {
-        return [
-          region.region,
-          region.branches,
-          ((region.branches / totalBranches) * 100).toFixed(1) + '%'
-        ];
-      });
-      table.innerHTML = tableTemplate(['Region', '# Branches', '% of Footprint'], rows);
-    }
-
-  function renderExecSummary(hours, dollars, starts) {
-    const list = document.getElementById('execSummaryList');
-    if (!list) return;
-    const bullets = [
-      `${hours.toFixed(1)} hours saved this period = direct leverage for 4 AEs, 5 Ops managers, and 25 techs in Houston.`,
-      `${formatCurrency(dollars)} in loaded labor value captured within the pilot branch.`,
-      `${starts} new starts logged via Branch360 this period with auto-generated Ops packets.`,
-      `${REGION_BRANCH_COUNTS.length} regions / ${REGION_BRANCH_COUNTS.reduce((sum, r) => sum + r.branches, 0)} total branches ready for rollout once Houston ROI is proven.`
-    ];
-    list.innerHTML = bullets.map(function(line) {
-      return `<li>${line}</li>`;
-    }).join('');
-  }
 
   let quoteTrackerEntries = [];
 
@@ -2451,6 +2660,405 @@
       }, { success: true });
     }
 
+    // Branch Manager Action Functions
+    function generateDailyReport() {
+      if (!confirm('Generate daily cadence report for today?')) return;
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              alert('Daily report generated successfully! Summary ID: ' + result.summaryID);
+              loadBranchKPIs();
+            } else {
+              alert('Failed to generate report: ' + (result.message || 'Unknown error'));
+            }
+          })
+          .withFailureHandler(function(error) {
+            alert('Error generating report: ' + error.message);
+          })
+          .generateBranchDailyReport();
+      } else {
+        alert('Daily report generation (local mode - connect to backend API)');
+      }
+    }
+
+    function viewWeeklyTrends() {
+      callServer('getWeekTrends', function(data) {
+        if (data && data.thisWeek !== undefined) {
+          const change = parseFloat(data.change) || 0;
+          const changeSymbol = change >= 0 ? '↑' : '↓';
+          const message = `Weekly Sales Trends
+═══════════════════
+
+This Week: $${(data.thisWeek || 0).toLocaleString()}
+Last Week: $${(data.lastWeek || 0).toLocaleString()}
+Change: ${changeSymbol} ${Math.abs(change)}%
+
+${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Review strategy.'}`;
+          alert(message);
+        } else {
+          alert('Weekly trends data not available');
+        }
+      }, { thisWeek: 0, lastWeek: 0, change: 0 });
+    }
+
+    function exportBranchData() {
+      if (!confirm('Export branch data to CSV?')) return;
+      exportBranchReport();
+    }
+
+    function viewDetailedPipeline() {
+      callServer('getDetailedBranchPipeline', function(data) {
+        if (data && data.entries) {
+          const entries = data.entries.slice(0, 10);
+          const message = entries.length > 0 
+            ? 'Pipeline Entries:\n\n' + entries.map(e => `${e.customerName}: $${e.value.toLocaleString()} (${e.stage})`).join('\n')
+            : 'No pipeline entries found';
+          alert(message);
+        } else {
+          alert('Pipeline data not available');
+        }
+      }, { entries: [] });
+    }
+
+    function sendTeamMessage() {
+      const message = prompt('Enter message to send to your team:');
+      if (message && message.trim()) {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result.success) {
+                alert('Message sent to team successfully!');
+              } else {
+                alert('Failed to send message: ' + (result.message || 'Unknown error'));
+              }
+            })
+            .withFailureHandler(function(error) {
+              alert('Error sending message: ' + error.message);
+            })
+            .sendBranchTeamMessage(message);
+        } else {
+          alert('Team message: ' + message + ' (local mode - connect to backend API)');
+        }
+      }
+    }
+
+    // Additional Branch Manager Functions
+    function viewSalesDetails() {
+      callServer('getBranchSalesDetails', function(data) {
+        const modal = createModal('Sales Details', `
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div><strong>Total TAP:</strong> ${data.totalTAP || 0}</div>
+              <div><strong>Appointments:</strong> ${data.appointments || 0}</div>
+              <div><strong>Quotes:</strong> ${data.quotes || 0}</div>
+              <div><strong>Revenue:</strong> $${(data.revenue || 0).toLocaleString()}</div>
+            </div>
+            ${data.breakdown ? `
+              <div class="mt-4">
+                <h4 class="font-semibold mb-2">By AE:</h4>
+                ${data.breakdown.map(ae => `
+                  <p class="text-sm">${ae.name}: $${ae.revenue.toLocaleString()}</p>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `);
+        document.body.appendChild(modal);
+      }, { totalTAP: 0, appointments: 0, quotes: 0, revenue: 0, breakdown: [] });
+    }
+
+    function viewOpsDetails() {
+      callServer('getBranchOpsDetails', function(data) {
+        const modal = createModal('Operations Details', `
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div><strong>Missed Stops:</strong> ${data.missedStops || 0}</div>
+              <div><strong>Backlog %:</strong> ${data.backlog || 0}%</div>
+            </div>
+          </div>
+        `);
+        document.body.appendChild(modal);
+      }, { missedStops: 0, backlog: 0 });
+    }
+
+    function viewMetricDetail(metricType) {
+      callServerCustom('getMetricDetails', { metricType: metricType }, function(data) {
+        const modal = createModal(`${metricType} Details`, `
+          <div class="space-y-4">
+            <p><strong>Current Value:</strong> ${data.current || 0}</p>
+            <p><strong>Target:</strong> ${data.target || 'N/A'}</p>
+            <p><strong>Status:</strong> ${data.status || 'N/A'}</p>
+            ${data.trend ? `<p><strong>Trend:</strong> ${data.trend}</p>` : ''}
+          </div>
+        `);
+        document.body.appendChild(modal);
+      }, { current: 0, target: 'N/A', status: 'Local Mode', trend: 'N/A' });
+    }
+
+    function viewPipelineStage(stage) {
+      callServerCustom('getPipelineStageDetails', { stage: stage }, function(data) {
+        const modal = createModal(`${stage} Stage Pipeline`, `
+          <div class="space-y-4">
+            ${data.entries && data.entries.length > 0 ? data.entries.map(entry => `
+              <div class="border-l-4 border-blue-500 bg-gray-50 p-3 rounded">
+                <p class="font-semibold">${entry.customerName}</p>
+                <p class="text-sm text-gray-600">Value: $${entry.value.toLocaleString()}</p>
+                <p class="text-xs text-gray-500">AE: ${entry.aeName}</p>
+              </div>
+            `).join('') : `<p class="text-gray-500">No entries in ${stage} stage</p>`}
+          </div>
+        `);
+        document.body.appendChild(modal);
+      }, { entries: [] });
+    }
+
+    function viewAEPerformance(userID) {
+      callServerCustom('getAEPerformanceDetails', { userID: userID }, function(data) {
+        const modal = createModal(`AE Performance: ${data.name}`, `
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div><strong>Month Sales:</strong> $${(data.monthSales || 0).toLocaleString()}</div>
+              <div><strong>Month TAP:</strong> ${data.monthTAP || 0}</div>
+              <div><strong>Month Quotes:</strong> ${data.monthQuotes || 0}</div>
+              <div><strong>Win Rate:</strong> ${data.winRate || 0}%</div>
+            </div>
+          </div>
+        `);
+        document.body.appendChild(modal);
+      }, { name: 'Demo AE', monthSales: 0, monthTAP: 0, monthQuotes: 0, winRate: 0 });
+    }
+
+    function viewTechPerformance(userID) {
+      callServerCustom('getTechPerformanceDetails', { userID: userID }, function(data) {
+        const modal = createModal(`Technician Performance: ${data.name}`, `
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div><strong>Leads Submitted:</strong> ${data.leadsSubmitted || 0}</div>
+              <div><strong>Installs Completed:</strong> ${data.installsCompleted || 0}</div>
+            </div>
+          </div>
+        `);
+        document.body.appendChild(modal);
+      }, { name: 'Demo Tech', leadsSubmitted: 0, installsCompleted: 0 });
+    }
+
+    function viewAlertDetails(alertType, alertID) {
+      callServerCustom('getAlertDetails', { alertType: alertType, alertID: alertID }, function(data) {
+        const modal = createModal('Alert Details', `
+          <div class="space-y-4">
+            <p><strong>Type:</strong> ${data.type || 'N/A'}</p>
+            <p><strong>Message:</strong> ${data.message || 'N/A'}</p>
+            <p><strong>Severity:</strong> ${data.severity || 'N/A'}</p>
+            ${data.details ? `<p><strong>Details:</strong> ${data.details}</p>` : ''}
+          </div>
+        `);
+        document.body.appendChild(modal);
+      }, { type: alertType, message: 'Demo alert', severity: 'medium', details: 'Local mode' });
+    }
+
+    function resolveAlert(alertType, alertID) {
+      const notes = prompt('Resolution notes:');
+      if (notes === null || !notes.trim()) {
+        if (notes !== null) alert('Please provide resolution notes.');
+        return;
+      }
+      
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              alert('Alert resolved successfully!');
+              loadBranchKPIs();
+            } else {
+              alert('Failed to resolve alert: ' + (result.message || 'Unknown error'));
+            }
+          })
+          .withFailureHandler(function(error) {
+            alert('Error resolving alert: ' + error.message);
+          })
+          .resolveBranchAlert(alertType, alertID, notes);
+      } else {
+        alert('Alert resolved (local mode - connect to backend API)');
+        loadBranchKPIs();
+      }
+    }
+
+    function renderBranchSalesLeaderboard(team) {
+      const container = document.getElementById('branchSalesLeaderboard');
+      if (!container) return;
+      if (!team || team.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm">No sales team members found</p>';
+        return;
+      }
+      container.innerHTML = team.map((ae, index) => `
+        <div class="flex justify-between items-center p-3 ${index === 0 ? 'bg-yellow-50' : 'bg-gray-50'} rounded mb-2 cursor-pointer hover:shadow-md transition" data-ae-id="${ae.email || ae.userID || ''}" data-action="view-ae">
+          <div>
+            <span class="font-semibold">${index + 1}. ${ae.name}</span>
+            <p class="text-xs text-gray-600">TAP: ${ae.monthTAP} | Quotes: ${ae.monthQuotes}</p>
+          </div>
+          <div class="text-right">
+            <p class="font-bold text-green-600">$${ae.monthSales.toLocaleString()}</p>
+            <p class="text-xs text-gray-500">MTD</p>
+          </div>
+        </div>
+      `).join('');
+      
+      container.querySelectorAll('[data-action="view-ae"]').forEach(function(el) {
+        el.addEventListener('click', function() {
+          const aeId = this.getAttribute('data-ae-id');
+          if (aeId) viewAEPerformance(aeId);
+        });
+      });
+    }
+
+    function renderBranchOpsTeam(team) {
+      const container = document.getElementById('branchOpsTeam');
+      if (!container) return;
+      if (!team || team.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm">No operations team members found</p>';
+        return;
+      }
+      container.innerHTML = team.map(tech => `
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded mb-2 cursor-pointer hover:shadow-md transition" data-tech-id="${tech.email || tech.userID || ''}" data-action="view-tech">
+          <p class="font-semibold">${tech.name}</p>
+          <div class="text-right text-sm">
+            <p>Leads: ${tech.leadsSubmitted}</p>
+            <p>Installs: ${tech.installsCompleted}</p>
+          </div>
+        </div>
+      `).join('');
+      
+      container.querySelectorAll('[data-action="view-tech"]').forEach(function(el) {
+        el.addEventListener('click', function() {
+          const techId = this.getAttribute('data-tech-id');
+          if (techId) viewTechPerformance(techId);
+        });
+      });
+    }
+
+    function renderBranchAlerts(alerts) {
+      const container = document.getElementById('branchAlertsSection');
+      if (!container) return;
+      if (!alerts || alerts.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-bold text-gray-800 mb-4">⚠️ Alerts (${alerts.length})</h3>
+          ${alerts.map((alert, index) => `
+            <div class="border-l-4 ${alert.severity === 'high' ? 'border-red-500 bg-red-50' : 'border-yellow-500 bg-yellow-50'} p-3 rounded mb-2 cursor-pointer hover:shadow-md transition" data-alert-index="${index}" data-action="view-alert">
+              <div class="flex justify-between items-start">
+                <p class="font-semibold text-gray-800">${alert.message}</p>
+                <button data-resolve-index="${index}" data-action="resolve-alert" 
+                  class="ml-2 text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
+                  Resolve
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      window.currentBranchAlerts = alerts;
+      
+      container.querySelectorAll('[data-action="view-alert"]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          if (e.target.closest('[data-action="resolve-alert"]')) return;
+          const index = parseInt(this.getAttribute('data-alert-index'));
+          const alert = window.currentBranchAlerts[index];
+          if (alert) {
+            const alertID = alert.data ? (alert.data.EntryID || alert.data.issueID || alert.data.packetID || '') : '';
+            viewAlertDetails(alert.type, alertID);
+          }
+        });
+      });
+      
+      container.querySelectorAll('[data-action="resolve-alert"]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const index = parseInt(this.getAttribute('data-resolve-index'));
+          const alert = window.currentBranchAlerts[index];
+          if (alert) {
+            const alertID = alert.data ? (alert.data.EntryID || alert.data.issueID || alert.data.packetID || '') : '';
+            resolveAlert(alert.type, alertID);
+          }
+        });
+      });
+    }
+
+    function createModal(title, content) {
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      overlay.onclick = function(e) {
+        if (e.target === overlay) {
+          overlay.remove();
+        }
+      };
+      
+      const modal = document.createElement('div');
+      modal.className = 'bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto';
+      modal.onclick = function(e) { e.stopPropagation(); };
+      
+      modal.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-gray-800">${title}</h3>
+          <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        </div>
+        ${content}
+      `;
+      
+      overlay.appendChild(modal);
+      return overlay;
+    }
+
+    // Set up branch manager button event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      const btnGenerate = document.getElementById('btn-generate-report');
+      if (btnGenerate) btnGenerate.addEventListener('click', generateDailyReport);
+      
+      const btnTrends = document.getElementById('btn-weekly-trends');
+      if (btnTrends) btnTrends.addEventListener('click', viewWeeklyTrends);
+      
+      const btnExport = document.getElementById('btn-export-data');
+      if (btnExport) btnExport.addEventListener('click', exportBranchData);
+      
+      const btnPipeline = document.getElementById('btn-detailed-pipeline');
+      if (btnPipeline) btnPipeline.addEventListener('click', viewDetailedPipeline);
+      
+      const btnMessage = document.getElementById('btn-team-message');
+      if (btnMessage) btnMessage.addEventListener('click', sendTeamMessage);
+
+      const btnSalesDetails = document.getElementById('btn-sales-details');
+      if (btnSalesDetails) btnSalesDetails.addEventListener('click', viewSalesDetails);
+
+      const btnOpsDetails = document.getElementById('btn-ops-details');
+      if (btnOpsDetails) btnOpsDetails.addEventListener('click', viewOpsDetails);
+
+      const btnPipelineAll = document.getElementById('btn-pipeline-all');
+      if (btnPipelineAll) btnPipelineAll.addEventListener('click', viewDetailedPipeline);
+
+      // Make metric cards clickable (delegated event listener)
+      document.addEventListener('click', function(e) {
+        const metricEl = e.target.closest('.metric-clickable');
+        if (metricEl) {
+          const metric = metricEl.getAttribute('data-metric');
+          if (metric) viewMetricDetail(metric);
+          return;
+        }
+        
+        // Pipeline stage handlers
+        const stageEl = e.target.closest('.pipeline-stage');
+        if (stageEl) {
+          const stage = stageEl.getAttribute('data-stage');
+          if (stage) viewPipelineStage(stage);
+          return;
+        }
+      });
+    });
+
     applyBrandStylesFromKey(window.currentBrand, mockBrandPresets());
 
     ['branchSelect','startDate','endDate','aeFilter','serviceFilter'].forEach(id => {
@@ -2498,9 +3106,118 @@
       pilotSort = 'dollars';
       renderPilotTable();
     });
+    const pilotSortActivitiesBtn = document.getElementById('pilotSortActivities');
+    if (pilotSortActivitiesBtn) {
+      pilotSortActivitiesBtn.addEventListener('click', () => {
+        pilotSort = 'activities';
+        renderPilotTable();
+      });
+    }
     ['pilotStart','pilotEnd','pilotRole'].forEach(id => {
       document.getElementById(id).addEventListener('change', loadPilotReport);
     });
+    
+    // Pilot report action buttons
+    const pilotExportBtn = document.getElementById('pilotExportBtn');
+    if (pilotExportBtn) {
+      pilotExportBtn.addEventListener('click', function() {
+        if (!pilotDataCache || !pilotDataCache.rows) {
+          alert('Please run the report first before exporting.');
+          return;
+        }
+        const csv = convertPilotDataToCSV(pilotDataCache);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '90-day-pilot-report-' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+    
+    const pilotPrintBtn = document.getElementById('pilotPrintBtn');
+    if (pilotPrintBtn) {
+      pilotPrintBtn.addEventListener('click', function() {
+        window.print();
+      });
+    }
+    
+    const pilotEmailBtn = document.getElementById('pilotEmailBtn');
+    if (pilotEmailBtn) {
+      pilotEmailBtn.addEventListener('click', function() {
+        if (!pilotDataCache || !pilotDataCache.rows) {
+          alert('Please run the report first before emailing.');
+          return;
+        }
+        const emailSubject = encodeURIComponent('90-Day Pilot Report - ' + new Date().toLocaleDateString());
+        const emailBody = encodeURIComponent('Please find the attached 90-day pilot report.');
+        const csv = convertPilotDataToCSV(pilotDataCache);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const emailLink = 'mailto:?subject=' + emailSubject + '&body=' + emailBody;
+        // Note: Attachments via mailto: are limited. In production, use a server-side email API.
+        alert('Email functionality: In production, this will send the report via email API. For now, please use the export button and attach manually.');
+        URL.revokeObjectURL(url);
+      });
+    }
+    
+    const pilotResetBtn = document.getElementById('pilotResetBtn');
+    if (pilotResetBtn) {
+      pilotResetBtn.addEventListener('click', function() {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        document.getElementById('pilotStart').value = start.toISOString().slice(0, 10);
+        document.getElementById('pilotEnd').value = now.toISOString().slice(0, 10);
+        document.getElementById('pilotRole').value = '';
+        loadPilotReport();
+      });
+    }
+    
+    function convertPilotDataToCSV(data) {
+      const headers = ['User', 'Role', 'Activities', 'Hours Saved', 'Hours Spent', 'Avg Duration (min)', '$ Value'];
+      const rows = (data.rows || []).map(row => [
+        row.name || '',
+        row.role || '',
+        row.activities || 0,
+        (row.hoursSaved || 0).toFixed(1),
+        (row.hoursSpent || 0).toFixed(1),
+        row.avgDurationMinutes ? row.avgDurationMinutes.toFixed(1) : '0',
+        (row.dollarsSaved || 0).toFixed(2)
+      ]);
+      const csvRows = [headers.join(','), ...rows.map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(','))];
+      return csvRows.join('\n');
+    }
+    
+    // Handoff queue refresh button
+    const handoffRefreshBtn = document.getElementById('handoffRefreshBtn');
+    if (handoffRefreshBtn) {
+      handoffRefreshBtn.addEventListener('click', loadHandoffQueue);
+    }
+    
+    // Route & Prospects import to Sales AE button
+    const routeImportToAEBtn = document.getElementById('routeImportToAEBtn');
+    if (routeImportToAEBtn) {
+      routeImportToAEBtn.addEventListener('click', function() {
+        if (!selectedTerritory || !prospectsFiltered || prospectsFiltered.length === 0) {
+          alert('Please select a territory and ensure prospects are visible before importing to Sales AE.');
+          return;
+        }
+        
+        // Switch to AE view
+        const aeViewButton = document.querySelector('[data-view="ae"]');
+        if (aeViewButton) {
+          aeViewButton.click();
+        }
+        
+        // Show notification
+        setTimeout(function() {
+          alert('Prospects from ' + selectedTerritory.name + ' are now available in the Sales AE dashboard. You can use "Load from Calendar" or filter by zip code to view them.');
+        }, 500);
+      });
+    }
 
     // Settings event listeners
     const settingsInputs = [
@@ -2577,299 +3294,20 @@
     updatePricingHelper();
     loadHandoffQueue();
     loadSettingsView();
+
+    // Handle navigation messages from iframes
+    window.addEventListener('message', function(event) {
+      // Handle navigation to tech dashboard
+      if (event.data && event.data.type === 'NAVIGATE_TO_TECH_DASHBOARD') {
+        showView('tech');
+      }
+      // Handle navigation to tech lead form
+      if (event.data && event.data.type === 'NAVIGATE_TO_TECH_LEAD_FORM') {
+        showView('tech');
+        // The tech dashboard iframe will handle opening the lead form
+      }
+    });
   </script>
 
-  <script>
-    // Territory Manager Functions
-    let territoryManagerData = {
-      territories: [],
-      stats: { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 },
-      searchTimer: null
-    };
-
-    function initializeTerritoryManager() {
-      // Event listeners
-      document.getElementById('territoryBtnUpload').addEventListener('click', () => {
-        document.getElementById('territoryUploadModal').classList.remove('hidden');
-      });
-      document.getElementById('territoryBtnAdd').addEventListener('click', () => {
-        document.getElementById('territoryAddModal').classList.remove('hidden');
-      });
-      document.getElementById('territoryBtnExport').addEventListener('click', exportTerritories);
-      document.getElementById('territoryBtnRefresh').addEventListener('click', loadTerritories);
-
-      // Modal close handlers
-      document.getElementById('territoryUploadClose').addEventListener('click', () => {
-        document.getElementById('territoryUploadModal').classList.add('hidden');
-      });
-      document.getElementById('territoryUploadCancel').addEventListener('click', () => {
-        document.getElementById('territoryUploadModal').classList.add('hidden');
-      });
-      document.getElementById('territoryAddClose').addEventListener('click', () => {
-        document.getElementById('territoryAddModal').classList.add('hidden');
-      });
-      document.getElementById('territoryAddCancel').addEventListener('click', () => {
-        document.getElementById('territoryAddModal').classList.add('hidden');
-      });
-
-      // Upload submit
-      document.getElementById('territoryUploadSubmit').addEventListener('click', uploadTerritoriesCSV);
-      
-      // Add zip submit
-      document.getElementById('territoryAddSubmit').addEventListener('click', addSingleZip);
-
-      // Search input
-      document.getElementById('territorySearchInput').addEventListener('input', function() {
-        clearTimeout(territoryManagerData.searchTimer);
-        const term = this.value.trim();
-        if (term.length < 5) {
-          document.getElementById('territorySearchResult').textContent = '';
-          return;
-        }
-        territoryManagerData.searchTimer = setTimeout(() => searchTerritoryZip(term), 500);
-      });
-
-      // Initial load if already on territory view
-      if (activeView === 'territory') {
-        loadTerritories();
-      }
-    }
-
-    function loadTerritories() {
-      const branchId = document.getElementById('branchSelect') ? document.getElementById('branchSelect').value : null;
-      const payload = branchId ? { branchId: branchId } : {};
-      
-      // Show loading state
-      const grid = document.getElementById('territoryGrid');
-      if (grid) {
-        grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">Loading territories...</p>';
-      }
-      
-      callServerCustom('getAllTerritories', payload, function(data) {
-        if (data && data.success !== false) {
-          territoryManagerData.territories = data.territories || [];
-          territoryManagerData.stats = data.stats || { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 };
-          renderTerritoryStats();
-          renderTerritoryGrid();
-        } else {
-          // Even on error, show empty state instead of alert
-          const errorMsg = data && data.message ? data.message : 'No territories found';
-          console.log('Territory load result:', errorMsg);
-          territoryManagerData.territories = [];
-          territoryManagerData.stats = { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 };
-          renderTerritoryStats();
-          renderTerritoryGrid();
-          // Only show toast if there's an actual error (not just empty data)
-          if (data && data.success === false && data.message && !data.message.includes('not found')) {
-            showTerritoryToast(errorMsg, 'error');
-          }
-        }
-      }, { success: true, territories: [], stats: { totalAEs: 0, totalZipCodes: 0, averageCoverage: 0, totalTerritories: 0 } });
-    }
-
-    function renderTerritoryStats() {
-      const stats = territoryManagerData.stats;
-      document.getElementById('territoryStatAEs').textContent = stats.totalAEs || 0;
-      document.getElementById('territoryStatZips').textContent = stats.totalZipCodes || 0;
-      document.getElementById('territoryStatAvg').textContent = stats.averageCoverage || 0;
-      document.getElementById('territoryStatTotal').textContent = stats.totalTerritories || 0;
-    }
-
-    function renderTerritoryGrid() {
-      const container = document.getElementById('territoryGrid');
-      const territories = territoryManagerData.territories;
-
-      if (!territories || territories.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">No territories configured. Upload CSV or add zip codes to get started.</p>';
-        return;
-      }
-
-      const gradientColors = [
-        ['#5f72ff', '#9921e8'],
-        ['#38b6ff', '#3a47d5'],
-        ['#ff6cab', '#7366ff'],
-        ['#f7971e', '#ffd200'],
-        ['#00c6ff', '#0072ff']
-      ];
-
-      container.innerHTML = territories.map(function(territory, index) {
-        const colorIndex = Math.abs([...territory.territoryName].reduce((acc, char) => acc + char.charCodeAt(0), 0)) % gradientColors.length;
-        const gradient = `linear-gradient(135deg, ${gradientColors[colorIndex][0]}, ${gradientColors[colorIndex][1]})`;
-        const previewZips = territory.zipCodes.slice(0, 15);
-        
-        return `
-          <div class="bg-white rounded-xl shadow overflow-hidden">
-            <div class="p-4 text-white font-bold" style="background: ${gradient}">
-              ${territory.territoryName}
-            </div>
-            <div class="p-4 space-y-3">
-              <div>
-                <p class="text-sm text-gray-500">${territory.aeName}</p>
-                <p class="text-sm text-gray-500">${territory.aeEmail}</p>
-              </div>
-              <div>
-                <p class="text-lg font-semibold">${territory.zipCount} Zip Codes</p>
-                <p class="text-sm text-gray-500">${territory.prospectCount} Prospects</p>
-              </div>
-              <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                ${previewZips.map(zip => `<span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">${zip}</span>`).join('')}
-                ${territory.zipCodes.length > 15 ? `<span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">+${territory.zipCodes.length - 15} more</span>` : ''}
-              </div>
-              <button onclick="removeZipFromTerritory('${territory.territoryID}')" class="w-full bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-200">
-                Remove Zip
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function uploadTerritoriesCSV() {
-      const csvData = document.getElementById('territoryCsvTextarea').value.trim();
-      if (!csvData) {
-        showTerritoryToast('CSV content is empty', 'error');
-        return;
-      }
-
-      const statusEl = document.getElementById('territoryUploadStatus');
-      statusEl.textContent = 'Uploading...';
-      statusEl.className = 'mt-3 text-sm text-blue-600';
-
-      callServerCustom('uploadTerritories', { csvData: csvData }, function(result) {
-        if (result && result.success) {
-          statusEl.textContent = `✅ ${result.message || 'Territories uploaded successfully'}`;
-          statusEl.className = 'mt-3 text-sm text-green-600';
-          document.getElementById('territoryCsvTextarea').value = '';
-          setTimeout(() => {
-            document.getElementById('territoryUploadModal').classList.add('hidden');
-            loadTerritories();
-          }, 1500);
-        } else {
-          statusEl.textContent = `❌ ${result.message || 'Upload failed'}`;
-          statusEl.className = 'mt-3 text-sm text-red-600';
-        }
-      }, { success: false, message: 'Upload failed' });
-    }
-
-    function addSingleZip() {
-      const zip = document.getElementById('territoryAddZip').value.trim();
-      const email = document.getElementById('territoryAddEmail').value.trim();
-      const branch = document.getElementById('territoryAddBranch').value.trim();
-      const territory = document.getElementById('territoryAddTerritory').value.trim();
-
-      if (zip.length !== 5 || !/^[0-9]{5}$/.test(zip)) {
-        showTerritoryToast('Zip must be 5 digits', 'error');
-        return;
-      }
-
-      if (!email.includes('@')) {
-        showTerritoryToast('Enter a valid AE email', 'error');
-        return;
-      }
-
-      if (!branch || !territory) {
-        showTerritoryToast('Branch ID and Territory are required', 'error');
-        return;
-      }
-
-      const statusEl = document.getElementById('territoryAddStatus');
-      statusEl.textContent = 'Adding...';
-      statusEl.className = 'mt-3 text-sm text-blue-600';
-
-      callServerCustom('addTerritoryZip', { zipCode: zip, aeEmail: email, branchID: branch, territoryName: territory }, function(result) {
-        if (result && result.success) {
-          statusEl.textContent = `✅ ${result.message || 'Zip added successfully'}`;
-          statusEl.className = 'mt-3 text-sm text-green-600';
-          document.getElementById('territoryAddForm').reset();
-          setTimeout(() => {
-            document.getElementById('territoryAddModal').classList.add('hidden');
-            loadTerritories();
-          }, 1500);
-        } else {
-          statusEl.textContent = `❌ ${result.message || 'Failed to add zip'}`;
-          statusEl.className = 'mt-3 text-sm text-red-600';
-        }
-      }, { success: false, message: 'Failed to add zip' });
-    }
-
-    function searchTerritoryZip(zip) {
-      const resultEl = document.getElementById('territorySearchResult');
-      resultEl.textContent = 'Searching...';
-      resultEl.className = 'mt-2 text-sm font-semibold text-blue-600';
-
-      callServerCustom('searchTerritoryZip', { zipCode: zip }, function(result) {
-        if (result && result.success && result.record) {
-          const r = result.record;
-          resultEl.textContent = `✅ Zip ${r.zipCode} assigned to ${r.aeName} (${r.territoryName})`;
-          resultEl.className = 'mt-2 text-sm font-semibold text-green-600';
-        } else {
-          resultEl.textContent = `⚠️ ${result && result.message ? result.message : 'Zip not assigned'}`;
-          resultEl.className = 'mt-2 text-sm font-semibold text-yellow-600';
-        }
-      }, { success: false, message: 'Zip not assigned' });
-    }
-
-    function exportTerritories() {
-      callServerCustom('exportTerritoriesCSV', {}, function(csvData) {
-        if (csvData) {
-          const blob = new Blob([csvData], { type: 'text/csv' });
-          const url = URL.createObjectURL(blob);
-          const anchor = document.createElement('a');
-          anchor.href = url;
-          anchor.download = 'territories-export-' + new Date().toISOString().split('T')[0] + '.csv';
-          anchor.click();
-          URL.revokeObjectURL(url);
-          showTerritoryToast('CSV exported successfully', 'success');
-        } else {
-          showTerritoryToast('Export failed', 'error');
-        }
-      }, '');
-    }
-
-    function removeZipFromTerritory(territoryID) {
-      const zip = prompt('Enter the zip code to remove:');
-      if (!zip || zip.length !== 5 || !/^[0-9]{5}$/.test(zip)) {
-        if (zip) showTerritoryToast('Zip must be 5 digits', 'error');
-        return;
-      }
-
-      if (!confirm(`Remove zip code ${zip} from this territory?`)) {
-        return;
-      }
-
-      callServerCustom('removeTerritoryZip', { zipCode: zip }, function(result) {
-        if (result && result.success) {
-          showTerritoryToast(result.message || 'Zip removed successfully', 'success');
-          loadTerritories();
-        } else {
-          showTerritoryToast(result && result.message ? result.message : 'Failed to remove zip', 'error');
-        }
-      }, { success: false, message: 'Failed to remove zip' });
-    }
-
-
-    // Helper to show toast messages - check for existing toast system first
-    function showTerritoryToast(message, type) {
-      // Check if there's an existing toast system (not our own)
-      const existingToast = window.showToast;
-      if (existingToast && typeof existingToast === 'function' && existingToast !== showTerritoryToast) {
-        existingToast(message, type);
-      } else if (typeof window.showNotification === 'function') {
-        window.showNotification(message, type);
-      } else {
-        // Fallback to alert
-        alert(message);
-      }
-    }
-    
-    // Initialize Territory Manager after DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(initializeTerritoryManager, 100);
-      });
-    } else {
-      setTimeout(initializeTerritoryManager, 100);
-    }
-  </script>
 </body>
 </html>

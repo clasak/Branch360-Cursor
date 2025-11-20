@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Branch360">
   <link rel="manifest" href="manifest.json">
-  <script src="activity-client.js"></script>
-  <script src="options-data.js"></script>
+  <script src="activity-client.html"></script>
+  <script src="options-data.html"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -378,7 +378,7 @@
 </div>
 
 <!-- Daily Activity Modal -->
-<div id="dailyActivityModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div id="dailyActivityModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="if(event.target.id==='dailyActivityModal')closeDailyActivityForm()">
   <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
     <h3 class="text-xl font-bold text-gray-800 mb-4">Log Today's Activity</h3>
     <form id="dailyActivityForm" class="space-y-4">
@@ -440,7 +440,7 @@
   </div>
 </div>
 
-<div id="unifiedSaleModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+<div id="unifiedSaleModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='unifiedSaleModal')closeUnifiedSaleForm()">
   <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <div>
@@ -494,6 +494,18 @@
           <input id="unifiedPOCEmail" type="email" class="w-full border rounded-lg px-3 py-2" placeholder="contact@example.com">
         </div>
         <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Billing Email</label>
+          <input id="unifiedBillingEmail" type="email" class="w-full border rounded-lg px-3 py-2" placeholder="billing@example.com">
+        </div>
+        <div class="flex items-center space-x-2">
+          <input id="unifiedBillingAddressDifferent" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+          <label for="unifiedBillingAddressDifferent" class="text-sm text-gray-700">Billing address different from service address</label>
+        </div>
+        <div id="billingAddressContainer" class="hidden">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Billing Address</label>
+          <input id="unifiedBillingAddress" type="text" class="w-full border rounded-lg px-3 py-2" placeholder="Enter billing address">
+        </div>
+        <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Initial Price (One-Time)</label>
           <input id="unifiedInitialPrice" type="number" step="0.01" class="w-full border rounded-lg px-3 py-2" required>
         </div>
@@ -536,6 +548,39 @@
       <div class="border rounded-lg p-4">
         <p class="text-sm font-semibold text-gray-700 mb-2">Service Months</p>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="serviceMonthOptions"></div>
+      </div>
+
+      <div class="border rounded-lg p-4">
+        <p class="text-sm font-semibold text-gray-700 mb-3">Equipment Counts</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">MRT Count</label>
+            <input id="unifiedMRTCount" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" onchange="updateInitialServiceDescription()">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">RBS Count</label>
+            <input id="unifiedRBSCount" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" onchange="updateInitialServiceDescription()">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">ILT Count</label>
+            <input id="unifiedILTCount" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" onchange="updateInitialServiceDescription()">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Initial Service Description</label>
+          <textarea id="unifiedInitialServiceDescription" rows="3" class="w-full border rounded-lg px-3 py-2" placeholder="e.g., Install 22 MRTs, 14 RBSs, For ILTs, Initial GPC"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Maintenance Scope Description</label>
+          <textarea id="unifiedMaintenanceScopeDescription" rows="3" class="w-full border rounded-lg px-3 py-2" placeholder="e.g., Monthly GPC exterior tour, rodent monitoring, Semi-monthly interior rodent monitoring and ILT Maintenance"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Service Areas</label>
+          <input id="unifiedServiceAreas" type="text" class="w-full border rounded-lg px-3 py-2" placeholder="Enter service areas">
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -618,7 +663,7 @@
   </div>
 </div>
 
-<div id="salesforceImportModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+<div id="salesforceImportModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='salesforceImportModal')closeSalesforceImportModal()">
   <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <div>
@@ -651,7 +696,7 @@
 </div>
 
 <!-- Pipeline Detail Modal -->
-<div id="pipelineDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+<div id="pipelineDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='pipelineDetailModal')closePipelineDetailModal()">
   <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <div>
@@ -678,7 +723,7 @@
 </div>
 
 <!-- Month-to-Date Detail Modal -->
-<div id="monthDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+<div id="monthDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='monthDetailModal')closeMonthDetailModal()">
   <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <div>
@@ -701,7 +746,7 @@
 </div>
 
 <!-- Follow-Up Manager Modal -->
-<div id="followUpModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+<div id="followUpModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='followUpModal')closeFollowUpModal()">
   <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <div>
@@ -742,7 +787,7 @@
 </div>
 
 <!-- Quote Tracker Modal -->
-<div id="quoteTrackerModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+<div id="quoteTrackerModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='quoteTrackerModal')closeQuoteTrackerModal()">
   <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <div>
@@ -926,7 +971,10 @@
   function openMonthDetailModal() {
     populateMonthDetailModal();
     const modal = document.getElementById('monthDetailModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+      modal.classList.remove('hidden');
+      setupModalEscKey(modal, closeMonthDetailModal);
+    }
   }
 
   function closeMonthDetailModal() {
@@ -1076,7 +1124,10 @@
   function openFollowUpModal() {
     renderFollowUpModalList();
     const modal = document.getElementById('followUpModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+      modal.classList.remove('hidden');
+      setupModalEscKey(modal, closeFollowUpModal);
+    }
   }
 
   function closeFollowUpModal() {
@@ -1191,7 +1242,10 @@
   function openQuoteTrackerModal() {
     renderQuoteTrackerModal();
     const modal = document.getElementById('quoteTrackerModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+      modal.classList.remove('hidden');
+      setupModalEscKey(modal, closeQuoteTrackerModal);
+    }
   }
 
   function closeQuoteTrackerModal() {
@@ -1428,14 +1482,30 @@
       if (saleRecordID && item.saleRecordID === saleRecordID) return true;
       return false;
     });
-    if (entry && entry.status !== 'Sold') {
-      entry.status = 'Sold';
-      entry.saleRecordID = saleRecordID || entry.saleRecordID;
-      entry.soldAt = new Date().toISOString();
-      saveQuoteTrackerEntries();
-      renderQuoteTracker();
-      refreshTodayMetricsFromQuotes();
+    if (!entry) {
+      alert('Quote entry not found.');
+      return;
     }
+    if (entry.status === 'Sold') {
+      alert('This quote has already been marked as sold.');
+      return;
+    }
+    
+    // Build draft from entry and open unified sale form
+    const draft = buildDraftFromQuoteTrackerEntry(entry);
+    applyStartPacketDraft(draft);
+    closeQuoteTrackerModal();
+    
+    // Show confirmation message
+    alert('Quote marked as sold. Please review and submit the start packet form below. Once submitted, the quote will be updated automatically.');
+    
+    // Update entry status after form submission will be handled by unified form submit
+    entry.status = 'Sold';
+    entry.saleRecordID = saleRecordID || entry.saleRecordID;
+    entry.soldAt = new Date().toISOString();
+    saveQuoteTrackerEntries();
+    renderQuoteTracker();
+    refreshTodayMetricsFromQuotes();
   }
 
   function humanizeQuoteStatus(entry) {
@@ -1751,11 +1821,23 @@
       document.getElementById('formEventsCount').value = today.eventsCount || 0;
       document.getElementById('formEvents').value = today.eventsSummary || '';
     }
-    document.getElementById('dailyActivityModal').classList.remove('hidden');
+    const modal = document.getElementById('dailyActivityModal');
+    modal.classList.remove('hidden');
+    setupModalEscKey(modal, closeDailyActivityForm);
   }
   
   function closeDailyActivityForm() {
     document.getElementById('dailyActivityModal').classList.add('hidden');
+  }
+  
+  function setupModalEscKey(modal, closeFn) {
+    const escHandler = function(e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeFn();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
   }
   
   document.getElementById('dailyActivityForm').addEventListener('submit', function(e) {
@@ -1882,7 +1964,10 @@
     }
     renderPipelineDetailModal();
     const modal = document.getElementById('pipelineDetailModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+      modal.classList.remove('hidden');
+      setupModalEscKey(modal, closePipelineDetailModal);
+    }
   }
 
   function closePipelineDetailModal() {
@@ -2234,7 +2319,9 @@
 
   function openUnifiedSaleForm() {
     resetUnifiedSaleForm();
-    document.getElementById('unifiedSaleModal').classList.remove('hidden');
+    const modal = document.getElementById('unifiedSaleModal');
+    modal.classList.remove('hidden');
+    setupModalEscKey(modal, closeUnifiedSaleForm);
   }
 
   function closeUnifiedSaleForm() {
@@ -2276,6 +2363,15 @@
     const additionalHazards = document.getElementById('unifiedAdditionalHazards');
     if (additionalHazards) {
       additionalHazards.value = 'None';
+    }
+    // Reset billing address toggle
+    const billingAddressContainer = document.getElementById('billingAddressContainer');
+    if (billingAddressContainer) {
+      billingAddressContainer.classList.add('hidden');
+    }
+    const billingAddressDifferent = document.getElementById('unifiedBillingAddressDifferent');
+    if (billingAddressDifferent) {
+      billingAddressDifferent.checked = false;
     }
     currentImportedContactEmail = '';
     currentQuoteTrackerId = null;
@@ -2347,7 +2443,9 @@
     }
     salesforceQuoteFile = null;
     updateImportStatus('No file selected.');
-    document.getElementById('salesforceImportModal').classList.remove('hidden');
+    const modal = document.getElementById('salesforceImportModal');
+    modal.classList.remove('hidden');
+    setupModalEscKey(modal, closeSalesforceImportModal);
   }
 
   function closeSalesforceImportModal() {
@@ -4017,6 +4115,56 @@
       }
     }
 
+    // Billing email and address
+    const billingEmailInput = document.getElementById('unifiedBillingEmail');
+    if (billingEmailInput) billingEmailInput.value = draft.billingEmail || '';
+    const billingAddressDifferentCheckbox = document.getElementById('unifiedBillingAddressDifferent');
+    const billingAddressContainer = document.getElementById('billingAddressContainer');
+    const billingAddressInput = document.getElementById('unifiedBillingAddress');
+    if (draft.billingAddress && draft.billingAddress.trim()) {
+      if (billingAddressDifferentCheckbox) billingAddressDifferentCheckbox.checked = true;
+      if (billingAddressContainer) billingAddressContainer.classList.remove('hidden');
+      if (billingAddressInput) billingAddressInput.value = draft.billingAddress;
+    }
+    
+    // Equipment counts
+    const mrtCountInput = document.getElementById('unifiedMRTCount');
+    if (mrtCountInput) {
+      const mrtCount = draft.mrtCount || (draft.equipment && draft.equipment.multCatchQty) || 0;
+      mrtCountInput.value = mrtCount;
+    }
+    const rbsCountInput = document.getElementById('unifiedRBSCount');
+    if (rbsCountInput) {
+      const rbsCount = draft.rbsCount || (draft.equipment && draft.equipment.rbsQty) || 0;
+      rbsCountInput.value = rbsCount;
+    }
+    const iltCountInput = document.getElementById('unifiedILTCount');
+    if (iltCountInput) {
+      const iltCount = draft.iltCount || (draft.equipment && draft.equipment.iltQty) || 0;
+      iltCountInput.value = iltCount;
+    }
+    
+    // Auto-generate initial service description from equipment counts
+    updateInitialServiceDescription();
+    
+    // If there's a custom initial service description, allow override
+    const initialServiceDescInput = document.getElementById('unifiedInitialServiceDescription');
+    if (initialServiceDescInput && draft.initialServiceDescription && draft.initialServiceDescription.trim()) {
+      // Only override if it's different from auto-generated
+      const autoGenerated = initialServiceDescInput.value;
+      if (draft.initialServiceDescription !== autoGenerated) {
+        initialServiceDescInput.value = draft.initialServiceDescription;
+      }
+    }
+    
+    // Maintenance scope description
+    const maintenanceScopeDescInput = document.getElementById('unifiedMaintenanceScopeDescription');
+    if (maintenanceScopeDescInput) maintenanceScopeDescInput.value = draft.maintenanceScopeDescription || '';
+    
+    // Service areas
+    const serviceAreasInput = document.getElementById('unifiedServiceAreas');
+    if (serviceAreasInput) serviceAreasInput.value = draft.serviceAreas || '';
+
     const notesField = document.getElementById('unifiedNotes');
     if (notesField) {
       const summaryLines = [];
@@ -4088,8 +4236,31 @@
     updateSRAReviewStamp();
   }
 
+  function updateInitialServiceDescription() {
+    const mrtCount = parseInt(document.getElementById('unifiedMRTCount').value, 10) || 0;
+    const rbsCount = parseInt(document.getElementById('unifiedRBSCount').value, 10) || 0;
+    const iltCount = parseInt(document.getElementById('unifiedILTCount').value, 10) || 0;
+    
+    const parts = [];
+    if (mrtCount > 0) parts.push('Install ' + mrtCount + ' MRT' + (mrtCount !== 1 ? 's' : ''));
+    if (rbsCount > 0) parts.push(rbsCount + ' RBS' + (rbsCount !== 1 ? 's' : ''));
+    if (iltCount > 0) parts.push('For ILT' + (iltCount !== 1 ? 's' : ''));
+    if (parts.length > 0) {
+      parts.push('Initial GPC');
+    }
+    
+    const initialDescInput = document.getElementById('unifiedInitialServiceDescription');
+    if (initialDescInput) {
+      initialDescInput.value = parts.length > 0 ? parts.join(', ') : '';
+    }
+  }
+
   function collectUnifiedSalePayload(event) {
     const selectedMonths = Array.from(document.querySelectorAll('input[name="serviceMonthOption"]:checked')).map(function(cb) { return cb.value; });
+    const billingAddressDifferent = document.getElementById('unifiedBillingAddressDifferent');
+    const billingAddress = billingAddressDifferent && billingAddressDifferent.checked 
+      ? document.getElementById('unifiedBillingAddress').value.trim() 
+      : '';
     const payload = {
       accountName: document.getElementById('unifiedAccountName').value.trim(),
       serviceAddress: document.getElementById('unifiedServiceAddress').value.trim(),
@@ -4098,6 +4269,9 @@
       pocName: document.getElementById('unifiedPOCName').value,
       pocPhone: document.getElementById('unifiedPOCPhone').value,
       pocEmail: document.getElementById('unifiedPOCEmail').value,
+      billingEmail: document.getElementById('unifiedBillingEmail').value.trim(),
+      billingAddressDifferent: billingAddressDifferent ? billingAddressDifferent.checked : false,
+      billingAddress: billingAddress,
       initialPrice: parseFloat(document.getElementById('unifiedInitialPrice').value) || 0,
       maintenancePrice: parseFloat(document.getElementById('unifiedMaintenancePrice').value) || 0,
       serviceName: document.getElementById('unifiedServiceName').value,
@@ -4106,6 +4280,12 @@
       leadType: document.getElementById('unifiedLeadType').value,
       jobType: document.getElementById('unifiedJobType').value,
       frequency: parseInt(document.getElementById('unifiedFrequency').value, 10) || 12,
+      mrtCount: parseInt(document.getElementById('unifiedMRTCount').value, 10) || 0,
+      rbsCount: parseInt(document.getElementById('unifiedRBSCount').value, 10) || 0,
+      iltCount: parseInt(document.getElementById('unifiedILTCount').value, 10) || 0,
+      initialServiceDescription: document.getElementById('unifiedInitialServiceDescription').value.trim(),
+      maintenanceScopeDescription: document.getElementById('unifiedMaintenanceScopeDescription').value.trim(),
+      serviceAreas: document.getElementById('unifiedServiceAreas').value.trim(),
       serviceMonths: selectedMonths,
       salesRepIDs: document.getElementById('unifiedSalesReps').value.split(',').map(function(rep) { return rep.trim(); }).filter(Boolean),
       branchID: document.getElementById('unifiedBranch').value,
@@ -4248,6 +4428,20 @@
     } else if (payload.serviceType && !draft.services[0].category) {
       draft.services[0].category = payload.serviceType;
     }
+    // Preserve equipment object if it exists, or build it from counts
+    if (!draft.equipment && (payload.mrtCount || payload.rbsCount || payload.iltCount)) {
+      draft.equipment = {
+        multCatchQty: payload.mrtCount || 0,
+        rbsQty: payload.rbsCount || 0,
+        iltQty: payload.iltCount || 0,
+        otherEquipment: []
+      };
+    } else if (draft.equipment) {
+      // Update equipment object with form values if they exist
+      if (payload.mrtCount !== undefined) draft.equipment.multCatchQty = payload.mrtCount;
+      if (payload.rbsCount !== undefined) draft.equipment.rbsQty = payload.rbsCount;
+      if (payload.iltCount !== undefined) draft.equipment.iltQty = payload.iltCount;
+    }
     draft.branchId = payload.branchID;
     draft.aeName = dashboardData && dashboardData.user ? dashboardData.user.name : '';
     draft.aeEmail = dashboardData && dashboardData.user ? dashboardData.user.email : '';
@@ -4277,6 +4471,16 @@
       draft.combinedAnnualTotal = annual;
       draft.annualCost = annual;
     }
+    // Add new fields
+    draft.billingEmail = payload.billingEmail || '';
+    draft.billingAddress = payload.billingAddress || '';
+    draft.billingAddressDifferent = payload.billingAddressDifferent || false;
+    draft.mrtCount = payload.mrtCount || 0;
+    draft.rbsCount = payload.rbsCount || 0;
+    draft.iltCount = payload.iltCount || 0;
+    draft.initialServiceDescription = payload.initialServiceDescription || '';
+    draft.maintenanceScopeDescription = payload.maintenanceScopeDescription || '';
+    draft.serviceAreas = payload.serviceAreas || '';
     return draft;
   }
 
@@ -4526,6 +4730,21 @@
     if (unifiedSaleForm) {
       unifiedSaleForm.addEventListener('submit', submitUnifiedSaleForm);
     }
+    
+    // Billing address toggle
+    var billingAddressDifferent = document.getElementById('unifiedBillingAddressDifferent');
+    var billingAddressContainer = document.getElementById('billingAddressContainer');
+    if (billingAddressDifferent && billingAddressContainer) {
+      billingAddressDifferent.addEventListener('change', function() {
+        if (this.checked) {
+          billingAddressContainer.classList.remove('hidden');
+        } else {
+          billingAddressContainer.classList.add('hidden');
+          var billingAddressInput = document.getElementById('unifiedBillingAddress');
+          if (billingAddressInput) billingAddressInput.value = '';
+        }
+      });
+    }
 
     var followUpForm = document.getElementById('followUpForm');
     if (followUpForm) {
@@ -4552,6 +4771,18 @@
     }
     if (event && event.data && event.data.type === 'OPEN_SALESFORCE_IMPORT') {
       openSalesforceImportModal();
+    }
+    if (event && event.data && event.data.type === 'CREATE_START_PACKET_FROM_HANDOFF') {
+      const handoffData = event.data.data || {};
+      const draft = fillDraftDefaults({
+        accountName: handoffData.accountName || '',
+        serviceAddressLine1: handoffData.serviceAddress || '',
+        branchId: (dashboardData && dashboardData.user ? (dashboardData.user.branchID || dashboardData.user.BranchID) : 'HOUSTON'),
+        quoteTrackerId: 'HANDOFF-' + (handoffData.recordID || ''),
+        saleDate: new Date().toISOString().split('T')[0]
+      });
+      applyStartPacketDraft(draft);
+      openUnifiedSaleForm();
     }
   });
 
@@ -4728,34 +4959,117 @@
   
   // Initialize Mapbox map
   function initMap() {
+    const mapContainer = document.getElementById('prospectMap');
+    if (!mapContainer) return;
+    
+    // Try to get token from localStorage first (for demo/fallback)
+    let tokenToUse = null;
+    try {
+      if (window.localStorage) {
+        tokenToUse = localStorage.getItem('MAPBOX_TOKEN');
+      }
+    } catch (e) {
+      console.warn('Cannot access localStorage:', e);
+    }
+    
     const runner = hasAppsScript() ? google.script.run : null;
     
     if (runner && runner.getMapboxToken) {
       runner
         .withSuccessHandler(function(token) {
-          mapboxToken = token;
-          mapboxgl.accessToken = token;
-          map = new mapboxgl.Map({
-            container: 'prospectMap',
-            style: 'mapbox://styles/mapbox/streets-v11',
-            center: [-95.3698, 29.7604], // Houston default
-            zoom: 11
-          });
-          
-          map.on('load', function() {
-            updateMap();
-          });
+          if (token && token.trim().length > 0) {
+            tokenToUse = token;
+            // Store in localStorage for future use
+            try {
+              if (window.localStorage) {
+                localStorage.setItem('MAPBOX_TOKEN', token);
+              }
+            } catch (e) {}
+            initializeMapWithToken(token);
+          } else if (tokenToUse) {
+            // Fallback to stored token
+            console.log('Server returned empty token, using fallback');
+            initializeMapWithToken(tokenToUse);
+          } else {
+            showMapPlaceholder('Mapbox token is not configured. Please configure your Mapbox token in settings to view the map.');
+          }
         })
         .withFailureHandler(function(error) {
-          console.error('Failed to get Mapbox token:', error);
-          alert('Map initialization failed. Please check Mapbox token configuration.');
+          console.warn('Failed to get Mapbox token from server:', error);
+          // Try fallback token if available
+          if (tokenToUse) {
+            console.log('Using fallback token from localStorage');
+            initializeMapWithToken(tokenToUse);
+          } else {
+            showMapPlaceholder('Mapbox token configuration is required. Please configure your Mapbox token in settings to view the map.');
+          }
         })
         .getMapboxToken();
     } else {
-      // Demo mode - try to use a placeholder or show message
-      document.getElementById('prospectMap').innerHTML = 
-        '<div class="flex items-center justify-center h-full bg-gray-100 text-gray-500">Map requires Mapbox token configuration</div>';
+      // No Apps Script available - try stored token or fallback
+      if (tokenToUse) {
+        console.log('Using stored token (no Apps Script available)');
+        initializeMapWithToken(tokenToUse);
+      } else {
+        // Last resort: try default token from config (if embedded in page)
+        const defaultToken = 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA';
+        if (defaultToken && defaultToken.startsWith('pk.')) {
+          console.log('Using default Mapbox token');
+          initializeMapWithToken(defaultToken);
+        } else {
+          showMapPlaceholder('Mapbox token configuration required. Configure your Mapbox token in settings to view prospects on the map.');
+        }
+      }
     }
+  }
+  
+  function initializeMapWithToken(token) {
+    if (!token || token.trim().length === 0) {
+      showMapPlaceholder('Invalid Mapbox token provided.');
+      return;
+    }
+    
+    const mapContainer = document.getElementById('prospectMap');
+    if (!mapContainer) return;
+    
+    try {
+      mapboxToken = token;
+      mapboxgl.accessToken = token;
+      map = new mapboxgl.Map({
+        container: 'prospectMap',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [-95.3698, 29.7604], // Houston default
+        zoom: 11
+      });
+      
+      map.on('load', function() {
+        updateMap();
+      });
+      
+      map.on('error', function(e) {
+        console.error('Mapbox error:', e);
+        showMapPlaceholder('Map failed to load. The token may be invalid or expired. Error: ' + (e.error ? e.error.message : 'Unknown error'));
+      });
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      showMapPlaceholder('Map initialization failed: ' + error.message);
+    }
+  }
+  
+  function showMapPlaceholder(message) {
+    const mapContainer = document.getElementById('prospectMap');
+    if (!mapContainer) return;
+    
+    mapContainer.innerHTML = `
+      <div class="flex flex-col items-center justify-center h-full bg-gray-100 text-gray-600 p-8">
+        <div class="text-4xl mb-4">🗺️</div>
+        <p class="text-center font-semibold mb-2">Map View Unavailable</p>
+        <p class="text-center text-sm mb-4">${message || 'Mapbox token configuration required.'}</p>
+        <button onclick="switchView('list')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">
+          Switch to List View
+        </button>
+      </div>
+    `;
   }
   
   // Update map with filtered prospects
@@ -4832,26 +5146,97 @@
   
   // Load prospects from calendar (site assessments)
   function loadProspectsFromCalendar() {
-    // This would integrate with Google Calendar API
-    // For now, show a message
-    alert('Calendar integration: This will load prospects near your scheduled site assessments.\n\n' +
-          'When you have a site assessment scheduled in your calendar, this feature will:\n' +
-          '1. Get the location from the calendar event\n' +
-          '2. Find all prospects within the selected radius\n' +
-          '3. Filter by your selected verticals\n' +
-          '4. Show them on the map/list for easy prospecting');
+    const runner = hasAppsScript() ? google.script.run : null;
     
-    // Demo: Simulate loading prospects near a calendar event
-    const demoCalendarEvent = {
-      location: '123 Main St, Houston, TX 77002',
-      date: new Date(),
-      type: 'Site Assessment'
-    };
-    
-    // Filter prospects by zip code of calendar event location
-    const eventZip = '77002';
-    document.getElementById('zipFilter').value = eventZip;
-    applyFilters();
+    if (runner && runner.getCalendarEvents) {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      runner
+        .withSuccessHandler(function(events) {
+          if (!events || events.length === 0) {
+            alert('No calendar events found for today or tomorrow. Calendar integration will load prospects near your scheduled site assessments.');
+            return;
+          }
+          
+          // Find events with locations
+          const eventsWithLocations = events.filter(function(event) {
+            return event.location && event.location.trim().length > 0;
+          });
+          
+          if (eventsWithLocations.length === 0) {
+            alert('Found calendar events but none have location information. Please add locations to your calendar events to use this feature.');
+            return;
+          }
+          
+          // Extract zip codes from event locations and filter prospects
+          const zipCodes = [];
+          eventsWithLocations.forEach(function(event) {
+            const zipMatch = event.location.match(/\b(\d{5})\b/);
+            if (zipMatch) {
+              zipCodes.push(zipMatch[1]);
+            }
+          });
+          
+          if (zipCodes.length > 0) {
+            // Filter by first zip code found
+            const firstZip = zipCodes[0];
+            document.getElementById('zipFilter').value = firstZip;
+            applyFilters();
+            
+            alert('Loaded prospects near your calendar events!\n\n' +
+                  'Found ' + eventsWithLocations.length + ' event(s) with locations.\n' +
+                  'Filtering by zip code: ' + firstZip + '\n\n' +
+                  'Prospects matching your calendar events are now shown in the list.');
+          } else {
+            alert('Could not extract zip codes from calendar event locations. Please ensure your calendar events include full addresses with zip codes.');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.warn('Calendar integration failed:', error);
+          // Demo: Simulate loading prospects near a calendar event
+          const demoCalendarEvent = {
+            location: '123 Main St, Houston, TX 77002',
+            date: new Date(),
+            type: 'Site Assessment'
+          };
+          
+          // Filter prospects by zip code of calendar event location
+          const eventZip = '77002';
+          document.getElementById('zipFilter').value = eventZip;
+          applyFilters();
+          
+          alert('Calendar integration (demo mode): Loading prospects near your scheduled site assessments.\n\n' +
+                'Using demo location: ' + demoCalendarEvent.location + '\n' +
+                'Filtering by zip code: ' + eventZip);
+        })
+        .getCalendarEvents({ 
+          startDate: today.toISOString(), 
+          endDate: tomorrow.toISOString() 
+        });
+    } else {
+      // Demo: Simulate loading prospects near a calendar event
+      const demoCalendarEvent = {
+        location: '123 Main St, Houston, TX 77002',
+        date: new Date(),
+        type: 'Site Assessment'
+      };
+      
+      // Filter prospects by zip code of calendar event location
+      const eventZip = '77002';
+      document.getElementById('zipFilter').value = eventZip;
+      applyFilters();
+      
+      alert('Calendar integration (demo mode): Loading prospects near your scheduled site assessments.\n\n' +
+            'Using demo location: ' + demoCalendarEvent.location + '\n' +
+            'Filtering by zip code: ' + eventZip + '\n\n' +
+            'When Google Calendar API is configured, this will automatically:\n' +
+            '1. Get locations from your calendar events\n' +
+            '2. Find all prospects within the selected radius\n' +
+            '3. Filter by your selected verticals\n' +
+            '4. Show them on the map/list for easy prospecting');
+    }
   }
   
   // Map zoom functions
@@ -4905,8 +5290,103 @@
   }
   
   function viewProspect(id) {
-    alert('View prospect details for: ' + id);
-    // This would open a modal or navigate to prospect details
+    const prospect = filteredProspects.find(function(p) { return p.id === id; }) || 
+                     allProspects.find(function(p) { return p.id === id; });
+    if (!prospect) {
+      alert('Prospect not found: ' + id);
+      return;
+    }
+    
+    // Create and show prospect details modal
+    const modalHtml = `
+      <div id="prospectDetailModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='prospectDetailModal')closeProspectDetailModal()">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between px-6 py-4 border-b">
+            <div>
+              <p class="text-xs uppercase tracking-wide text-gray-500">Prospect Details</p>
+              <h3 class="text-xl font-semibold text-gray-900">${prospect.customer || 'Unknown'}</h3>
+            </div>
+            <button onclick="closeProspectDetailModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+          </div>
+          <div class="px-6 py-4 space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Customer Name</label>
+              <p class="text-gray-900">${prospect.customer || 'N/A'}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Address</label>
+              <p class="text-gray-900">${prospect.address || 'N/A'}</p>
+              <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prospect.address || '')}" 
+                 target="_blank" class="text-blue-600 hover:underline text-sm mt-1">View on Maps</a>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Zip Code</label>
+                <p class="text-gray-900">${prospect.zip || 'N/A'}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Vertical</label>
+                <p class="text-gray-900">${formatVertical(prospect.vertical) || 'N/A'}</p>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+              <span class="inline-block px-3 py-1 rounded-full text-xs ${getStatusClass(prospect.status)}">${prospect.status || 'New'}</span>
+            </div>
+            <div class="pt-4 border-t flex gap-3">
+              <button onclick="startPacketFromProspect('${prospect.id}'); closeProspectDetailModal();" 
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">
+                Create Start Packet
+              </button>
+              <button onclick="closeProspectDetailModal()" 
+                class="px-6 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if present
+    const existingModal = document.getElementById('prospectDetailModal');
+    if (existingModal) existingModal.remove();
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Add ESC key handler
+    const escHandler = function(e) {
+      if (e.key === 'Escape') {
+        closeProspectDetailModal();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+  }
+  
+  function closeProspectDetailModal() {
+    const modal = document.getElementById('prospectDetailModal');
+    if (modal) modal.remove();
+  }
+  
+  function startPacketFromProspect(prospectId) {
+    const prospect = filteredProspects.find(function(p) { return p.id === prospectId; }) || 
+                     allProspects.find(function(p) { return p.id === prospectId; });
+    if (!prospect) return;
+    
+    const draft = fillDraftDefaults({
+      accountName: prospect.customer,
+      serviceAddressLine1: prospect.address || '',
+      branchId: (dashboardData && dashboardData.user ? (dashboardData.user.branchID || dashboardData.user.BranchID) : 'HOUSTON'),
+      services: [{
+        serviceName: 'Prospect Import',
+        category: prospect.vertical || 'General',
+        descriptionText: 'Imported from prospect list.'
+      }],
+      quoteTrackerId: 'PROSPECT-' + prospectId
+    });
+    applyStartPacketDraft(draft);
   }
   
   function getCurrentUserBranchID() {
