@@ -3225,17 +3225,6 @@
 
     return parseSalesforceQuoteTextToStartPacketDraft;
   })();
-      var addr=b.find(l=>ADDRESS_LINE_REGEX.test(l));
-      if(addr)d.serviceAddressLine1=addr;
-      
-      d.accountName=b.find(l=>l.length<50 && !/[@\d]/.test(l) && !/prepared|tailored/i.test(l));
-      
-      return d;
-    }
-    function extractPreparedBySection(l){return{aeName:null,aeEmail:null}}
-
-    return parseSalesforceQuoteTextToStartPacketDraft;
-  })();
 
 
 
