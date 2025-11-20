@@ -237,10 +237,31 @@ function extractPreparedForFields(lines) {
     serviceZip: null
   };
 
+  // Enhanced: Try multiple header variations
   var idx = findFirstIndex(lines, function(line) {
-    return isTailoredPreparedAnchor(line) || /account\s+name/i.test(line) || /customer\s+name/i.test(line);
+    return isTailoredPreparedAnchor(line) ||
+           /account\s+name/i.test(line) ||
+           /customer\s+name/i.test(line) ||
+           /client\s+name/i.test(line) ||
+           /prepared\s+for/i.test(line) ||
+           /quote\s+for/i.test(line) ||
+           /proposal\s+for/i.test(line);
   });
+
+  // Fallback: If no header found, try to find email and work backwards
   if (idx === -1) {
+    logDebug('[Parser] No standard header found, searching for email as fallback');
+    for (var i = 0; i < Math.min(30, lines.length); i++) {
+      if (EMAIL_REGEX.test(lines[i])) {
+        idx = Math.max(0, i - 3); // Start 3 lines before email
+        logDebug('[Parser] Found email at line ' + i + ', using line ' + idx + ' as header start');
+        break;
+      }
+    }
+  }
+
+  if (idx === -1) {
+    logDebug('[Parser] Cannot find header block - no anchor or email found in first 30 lines');
     return data;
   }
 
@@ -606,20 +627,28 @@ function formatQuantity(value) {
 }
 
 function extractPricing(lines) {
-  // First, find the Investment Summary section (more flexible search)
-  // Skip table of contents entries (lines that are just numbers or page numbers)
+  // Enhanced: Try multiple pricing section headers
   var summaryIdx = findFirstIndex(lines, function(line) {
     if (!line) return false;
     var lower = line.toLowerCase();
     // Skip if it looks like a table of contents entry (just a number or page number)
-    if (/^\d+\s+(investment\s+summary|total\s+investment)/i.test(line)) {
+    if (/^\d+\s+(investment|pricing|quote|total)/i.test(line)) {
       return false;
     }
-    // Look for Investment Summary or Total investment, but not in TOC format
+    // Look for various pricing section headers
     if (/investment\s+summary/i.test(line) && !/^\d+\s+investment/i.test(line)) {
       return true;
     }
+    if (/pricing\s+summary/i.test(line) && !/^\d+\s+pricing/i.test(line)) {
+      return true;
+    }
+    if (/quote\s+summary/i.test(line) && !/^\d+\s+quote/i.test(line)) {
+      return true;
+    }
     if (/total\s+investment/i.test(lower) && !/^\d+\s+total/i.test(line)) {
+      return true;
+    }
+    if (/cost\s+summary/i.test(line) && !/^\d+\s+cost/i.test(line)) {
       return true;
     }
     return false;
@@ -627,18 +656,20 @@ function extractPricing(lines) {
   
   // If not found, search entire document for pricing labels and "Total investment" line
   if (summaryIdx === -1) {
-    logDebug('[Pricing] Investment Summary section not found, searching entire document');
-    
+    logDebug('[Pricing] Pricing section not found, searching entire document');
+
     // First, try to find "Total investment" line (most reliable)
     var totalLine = null;
     for (var k = 0; k < lines.length; k++) {
-      if (/total\s+investment/i.test(lines[k].toLowerCase())) {
+      if (/total\s+investment/i.test(lines[k].toLowerCase()) ||
+          /total\s+pricing/i.test(lines[k].toLowerCase()) ||
+          /grand\s+total/i.test(lines[k].toLowerCase())) {
         totalLine = lines[k];
-        logDebug('[Pricing] Found Total investment line in full document: ' + totalLine);
+        logDebug('[Pricing] Found total line in full document: ' + totalLine);
         break;
       }
     }
-    
+
     if (totalLine) {
       // Extract all currency values from this line
       var allCurrencies = [];
@@ -647,7 +678,7 @@ function extractPricing(lines) {
       while ((match = currencyRegex.exec(totalLine)) !== null) {
         allCurrencies.push(parseFloat(match[1].replace(/,/g, '')));
       }
-      logDebug('[Pricing] Extracted ' + allCurrencies.length + ' currency values from Total investment line: ' + allCurrencies.join(', '));
+      logDebug('[Pricing] Extracted ' + allCurrencies.length + ' currency values from total line: ' + allCurrencies.join(', '));
       // If we found 3 or more values, use them
       if (allCurrencies.length >= 3) {
         return {
@@ -656,13 +687,34 @@ function extractPricing(lines) {
           avgMonthlyCost: allCurrencies[2]
         };
       }
+      // If we found 2 values, assume they are one-time and monthly (skip initial)
+      if (allCurrencies.length === 2) {
+        logDebug('[Pricing] Found 2 values, assuming one-time and monthly');
+        return {
+          oneTimeCost: allCurrencies[0],
+          initialSvcCost: null,
+          avgMonthlyCost: allCurrencies[1]
+        };
+      }
     }
-    
-    // Fallback to searching for individual labels
+
+    // Enhanced fallback: Search for individual labels with more variations
+    logDebug('[Pricing] Searching for individual pricing labels');
+    var oneTimeCost = findCurrencyAfterLabel(lines, /one[-\s]?time\s+(?:cost|fee|charge|price)/i) ||
+                      findCurrencyAfterLabel(lines, /setup\s+(?:cost|fee|charge)/i) ||
+                      findCurrencyAfterLabel(lines, /installation\s+(?:cost|fee|charge)/i);
+
+    var initialSvcCost = findCurrencyAfterLabel(lines, /initial\s+(?:svc|service)\s+(?:cost|fee|charge)/i) ||
+                         findCurrencyAfterLabel(lines, /first\s+service\s+(?:cost|fee|charge)/i);
+
+    var avgMonthlyCost = findCurrencyAfterLabel(lines, /(?:avg|average)\s+monthly\s+(?:cost|fee|charge|price)/i) ||
+                         findCurrencyAfterLabel(lines, /monthly\s+(?:cost|fee|charge|price)/i) ||
+                         findCurrencyAfterLabel(lines, /recurring\s+(?:cost|fee|charge|price)/i);
+
     return {
-      oneTimeCost: findCurrencyAfterLabel(lines, /one[-\s]?time\s+cost/i),
-      initialSvcCost: findCurrencyAfterLabel(lines, /initial\s+(?:svc|service)\s+cost/i),
-      avgMonthlyCost: findCurrencyAfterLabel(lines, /(?:avg|average)\s+monthly\s+cost/i)
+      oneTimeCost: oneTimeCost,
+      initialSvcCost: initialSvcCost,
+      avgMonthlyCost: avgMonthlyCost
     };
   }
   
@@ -1178,17 +1230,46 @@ function dedupeList(list) {
 
 function extractRequestedStart(lines) {
   var result = { requestedStartDate: null, startMonth: null };
+
+  // Enhanced: Try multiple start date label variations
   var idx = findFirstIndex(lines, function(line) {
-    return /requested\s+start\s+date/i.test(line);
+    return /requested\s+start\s+date/i.test(line) ||
+           /requested\s+start/i.test(line) ||
+           /start\s+date/i.test(line) ||
+           /service\s+start/i.test(line) ||
+           /begin\s+date/i.test(line) ||
+           /commencement\s+date/i.test(line);
   });
+
+  // Fallback: Search entire document for any date after "start" keyword
   if (idx === -1) {
+    logDebug('[StartDate] No start date label found, searching for dates near "start" keyword');
+    for (var k = 0; k < lines.length; k++) {
+      if (/start/i.test(lines[k])) {
+        // Check this line and next 3 lines for a date
+        for (var j = k; j <= k + 3 && j < lines.length; j++) {
+          var parsed = parseDateLine(lines[j]);
+          if (parsed) {
+            result.requestedStartDate = parsed;
+            result.startMonth = monthNameFromIso(parsed);
+            logDebug('[StartDate] Found date via fallback: ' + parsed);
+            return result;
+          }
+        }
+      }
+    }
+    logDebug('[StartDate] No start date found');
     return result;
   }
 
+  logDebug('[StartDate] Found start date section at line ' + idx);
+
+  // Look for date in the section
   for (var i = idx; i <= idx + 3 && i < lines.length; i++) {
     var parsed = parseDateLine(lines[i]);
     if (parsed) {
       result.requestedStartDate = parsed;
+      logDebug('[StartDate] Parsed date: ' + parsed);
       break;
     }
   }
@@ -1198,10 +1279,12 @@ function extractRequestedStart(lines) {
     return result;
   }
 
+  // If no date found, try to find just a month name
   if (idx + 1 < lines.length) {
     var monthCandidate = normalizeMonthName(lines[idx + 1]);
     if (monthCandidate) {
       result.startMonth = monthCandidate;
+      logDebug('[StartDate] Found month name: ' + monthCandidate);
     }
   }
 
