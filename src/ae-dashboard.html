@@ -682,7 +682,7 @@
       <p class="text-sm text-gray-600">
         Upload the exported Salesforce quote PDF. Branch360 will extract customer, pricing, and scope information, pre-fill the start packet, and populate the SRA checklist automatically.
       </p>
-      <input type="file" id="salesforceQuoteFile" accept="application/pdf" class="w-full border rounded-lg px-3 py-2">
+      <input type="file" id="salesforceQuoteFile" accept="application/pdf" onchange="handleSalesforceQuoteFile(event)" class="w-full border rounded-lg px-3 py-2">
       <div id="importStatus" class="text-xs text-gray-500">No file selected.</div>
       <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-600">
         <p>Supported sections:</p>
