@@ -11,7 +11,6 @@
   <link rel="manifest" href="manifest.json">
   <script src="activity-client.html"></script>
   <script src="options-data.html"></script>
-  <script src="notification-system.html"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -30,9 +29,105 @@
     .highlight-flash { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.6); transition: box-shadow 0.3s ease; }
     .chip-button { border: 1px solid #d1d5db; border-radius: 9999px; padding: 0.25rem 0.9rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
     .chip-button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+    /* Toast Notification System */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 400px;
+    }
+    .toast {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      padding: 16px;
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      animation: slideIn 0.3s ease-out;
+      min-width: 300px;
+    }
+    .toast.success { border-left: 4px solid #10b981; }
+    .toast.error { border-left: 4px solid #ef4444; }
+    .toast.info { border-left: 4px solid #3b82f6; }
+    .toast.warning { border-left: 4px solid #f59e0b; }
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(400px); opacity: 0; }
+    }
+    .toast.hiding { animation: slideOut 0.3s ease-in; }
+    .toast-icon { flex-shrink: 0; width: 24px; height: 24px; }
+    .toast-content { flex: 1; }
+    .toast-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .toast-message { font-size: 13px; color: #6b7280; line-height: 1.4; }
+    .toast-close { cursor: pointer; color: #9ca3af; padding: 4px; line-height: 1; font-size: 20px; }
+    .toast-close:hover { color: #4b5563; }
+
+    /* Data Display Panel */
+    .data-panel {
+      position: fixed;
+      top: 0;
+      right: -500px;
+      width: 500px;
+      height: 100vh;
+      background: white;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+      z-index: 9998;
+      transition: right 0.3s ease-out;
+      overflow-y: auto;
+    }
+    .data-panel.visible { right: 0; }
+    .data-panel-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9997;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease-out;
+    }
+    .data-panel-overlay.visible { opacity: 1; pointer-events: all; }
+    .data-panel-header {
+      position: sticky;
+      top: 0;
+      background: white;
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .data-panel-body { padding: 20px; }
   </style>
 </head>
 <body class="bg-gray-100">
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Data Panel -->
+<div class="data-panel-overlay" id="dataPanelOverlay" onclick="closeDataPanel()"></div>
+<div class="data-panel" id="dataPanel">
+  <div class="data-panel-header">
+    <h3 class="text-lg font-bold" id="dataPanelTitle">Details</h3>
+    <button onclick="closeDataPanel()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+  </div>
+  <div class="data-panel-body" id="dataPanelBody">
+    <!-- Content will be dynamically loaded here -->
+  </div>
+</div>
 
 <!-- Navigation -->
 <nav class="bg-white shadow-sm border-b">
@@ -815,6 +910,68 @@
 </div>
 
 <script>
+  // ==================== NOTIFICATION SYSTEM ====================
+
+  /**
+   * Override alert() to use toast notifications instead
+   */
+  window.alert = function(message) {
+    let type = 'info';
+    let title = '';
+    const msg = message.toLowerCase();
+    if (msg.includes('success') || msg.includes('✓') || msg.includes('saved') || msg.includes('completed')) {
+      type = 'success';
+      title = 'Success';
+    } else if (msg.includes('error') || msg.includes('fail') || msg.includes('✕') || msg.includes('unable')) {
+      type = 'error';
+      title = 'Error';
+    } else if (msg.includes('warning') || msg.includes('⚠') || msg.includes('please')) {
+      type = 'warning';
+      title = 'Note';
+    }
+    showToast(message, type, title);
+  };
+
+  function showToast(message, type = 'info', title = '', duration = 5000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+    const titles = { success: title || 'Success', error: title || 'Error', info: title || 'Info', warning: title || 'Warning' };
+    toast.innerHTML = `
+      <div class="toast-icon text-${type === 'success' ? 'green' : type === 'error' ? 'red' : type === 'warning' ? 'yellow' : 'blue'}-600 text-xl">
+        ${icons[type]}
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">${titles[type]}</div>
+        <div class="toast-message">${message}</div>
+      </div>
+      <div class="toast-close" onclick="this.parentElement.remove()">×</div>
+    `;
+    container.appendChild(toast);
+    if (duration > 0) {
+      setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+  }
+
+  function showDataPanel(title, content) {
+    document.getElementById('dataPanelTitle').textContent = title;
+    document.getElementById('dataPanelBody').innerHTML = content;
+    document.getElementById('dataPanel').classList.add('visible');
+    document.getElementById('dataPanelOverlay').classList.add('visible');
+  }
+
+  function closeDataPanel() {
+    document.getElementById('dataPanel').classList.remove('visible');
+    document.getElementById('dataPanelOverlay').classList.remove('visible');
+  }
+
+  // ==================== DASHBOARD CODE ====================
+
   function getActiveDemoUser() {
     try {
       if (window.parent && window.parent.Branch360CurrentUser) {
