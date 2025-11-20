@@ -1,0 +1,385 @@
+<!-- Toast Notification System for Branch360 Dashboards -->
+<style>
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+  }
+
+  .toast {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+    min-width: 300px;
+  }
+
+  .toast.success {
+    border-left: 4px solid #10b981;
+  }
+
+  .toast.error {
+    border-left: 4px solid #ef4444;
+  }
+
+  .toast.info {
+    border-left: 4px solid #3b82f6;
+  }
+
+  .toast.warning {
+    border-left: 4px solid #f59e0b;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+  }
+
+  .toast.hiding {
+    animation: slideOut 0.3s ease-in;
+  }
+
+  .toast-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+  }
+
+  .toast-content {
+    flex: 1;
+  }
+
+  .toast-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .toast-message {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+
+  .toast-close {
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 4px;
+    line-height: 1;
+    font-size: 20px;
+  }
+
+  .toast-close:hover {
+    color: #4b5563;
+  }
+
+  /* Data Display Panel */
+  .data-panel {
+    position: fixed;
+    top: 0;
+    right: -500px;
+    width: 500px;
+    height: 100vh;
+    background: white;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    z-index: 9998;
+    transition: right 0.3s ease-out;
+    overflow-y: auto;
+  }
+
+  .data-panel.visible {
+    right: 0;
+  }
+
+  .data-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9997;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .data-panel-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .data-panel-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .data-panel-body {
+    padding: 20px;
+  }
+</style>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Data Panel -->
+<div class="data-panel-overlay" id="dataPanelOverlay" onclick="closeDataPanel()"></div>
+<div class="data-panel" id="dataPanel">
+  <div class="data-panel-header">
+    <h3 class="text-lg font-bold" id="dataPanelTitle">Details</h3>
+    <button onclick="closeDataPanel()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+  </div>
+  <div class="data-panel-body" id="dataPanelBody">
+    <!-- Content will be dynamically loaded here -->
+  </div>
+</div>
+
+<script>
+  /**
+   * Override alert() to use toast notifications instead
+   * Automatically converts alerts to appropriate toast types based on content
+   */
+  window.alert = function(message) {
+    let type = 'info';
+    let title = '';
+
+    // Auto-detect type based on message content
+    const msg = message.toLowerCase();
+    if (msg.includes('success') || msg.includes('✓') || msg.includes('saved') || msg.includes('completed')) {
+      type = 'success';
+      title = 'Success';
+    } else if (msg.includes('error') || msg.includes('fail') || msg.includes('✕') || msg.includes('unable')) {
+      type = 'error';
+      title = 'Error';
+    } else if (msg.includes('warning') || msg.includes('⚠') || msg.includes('please')) {
+      type = 'warning';
+      title = 'Note';
+    }
+
+    showToast(message, type, title);
+  };
+
+  /**
+   * Show a toast notification
+   * @param {string} message - The message to display
+   * @param {string} type - Type: 'success', 'error', 'info', 'warning'
+   * @param {string} title - Optional title
+   * @param {number} duration - Duration in ms (default 5000)
+   */
+  function showToast(message, type = 'info', title = '', duration = 5000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    const icons = {
+      success: '✓',
+      error: '✕',
+      info: 'ℹ',
+      warning: '⚠'
+    };
+
+    const titles = {
+      success: title || 'Success',
+      error: title || 'Error',
+      info: title || 'Info',
+      warning: title || 'Warning'
+    };
+
+    toast.innerHTML = `
+      <div class="toast-icon text-${type === 'success' ? 'green' : type === 'error' ? 'red' : type === 'warning' ? 'yellow' : 'blue'}-600 text-xl">
+        ${icons[type]}
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">${titles[type]}</div>
+        <div class="toast-message">${message}</div>
+      </div>
+      <div class="toast-close" onclick="this.parentElement.remove()">×</div>
+    `;
+
+    container.appendChild(toast);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+  }
+
+  /**
+   * Show data in a side panel
+   * @param {string} title - Panel title
+   * @param {string} content - HTML content to display
+   */
+  function showDataPanel(title, content) {
+    document.getElementById('dataPanelTitle').textContent = title;
+    document.getElementById('dataPanelBody').innerHTML = content;
+    document.getElementById('dataPanel').classList.add('visible');
+    document.getElementById('dataPanelOverlay').classList.add('visible');
+  }
+
+  /**
+   * Close the data panel
+   */
+  function closeDataPanel() {
+    document.getElementById('dataPanel').classList.remove('visible');
+    document.getElementById('dataPanelOverlay').classList.remove('visible');
+  }
+
+  /**
+   * Show a confirmation dialog with action buttons
+   * @param {string} message - Message to display
+   * @param {Function} onConfirm - Callback when confirmed
+   * @param {Function} onCancel - Callback when cancelled
+   */
+  function showConfirm(message, onConfirm, onCancel) {
+    const content = `
+      <div class="text-center">
+        <div class="text-4xl mb-4">⚠️</div>
+        <p class="text-gray-700 mb-6">${message}</p>
+        <div class="flex gap-3 justify-center">
+          <button onclick="closeDataPanel(); (${onCancel || function(){}})()"
+                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+            Cancel
+          </button>
+          <button onclick="closeDataPanel(); (${onConfirm})()"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Confirm
+          </button>
+        </div>
+      </div>
+    `;
+    showDataPanel('Confirm Action', content);
+  }
+
+  /**
+   * Format currency for display
+   */
+  function formatCurrency(value) {
+    if (value === null || value === undefined) return '$0.00';
+    return '$' + parseFloat(value).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  /**
+   * Format date for display
+   */
+  function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  /**
+   * Create a data table HTML from an array of objects
+   */
+  function createDataTable(data, title = '') {
+    if (!data || data.length === 0) {
+      return '<p class="text-gray-500 text-center py-8">No data available</p>';
+    }
+
+    const keys = Object.keys(data[0]);
+    let html = title ? `<h4 class="font-semibold text-lg mb-4">${title}</h4>` : '';
+    html += '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200">';
+
+    // Header
+    html += '<thead class="bg-gray-50"><tr>';
+    keys.forEach(key => {
+      const label = key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim();
+      html += `<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${label}</th>`;
+    });
+    html += '</tr></thead>';
+
+    // Body
+    html += '<tbody class="bg-white divide-y divide-gray-200">';
+    data.forEach(row => {
+      html += '<tr>';
+      keys.forEach(key => {
+        let value = row[key];
+        // Format based on key name
+        if (key.toLowerCase().includes('price') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('cost')) {
+          value = formatCurrency(value);
+        } else if (key.toLowerCase().includes('date')) {
+          value = formatDate(value);
+        }
+        html += `<td class="px-4 py-3 text-sm text-gray-900">${value || 'N/A'}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    return html;
+  }
+
+  /**
+   * Create a key-value details panel
+   */
+  function createDetailsPanel(data, title = '') {
+    if (!data) {
+      return '<p class="text-gray-500 text-center py-8">No data available</p>';
+    }
+
+    let html = title ? `<h4 class="font-semibold text-lg mb-4">${title}</h4>` : '';
+    html += '<div class="space-y-3">';
+
+    Object.keys(data).forEach(key => {
+      const label = key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim();
+      let value = data[key];
+
+      // Format based on key name
+      if (key.toLowerCase().includes('price') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('cost')) {
+        value = formatCurrency(value);
+      } else if (key.toLowerCase().includes('date')) {
+        value = formatDate(value);
+      }
+
+      html += `
+        <div class="flex justify-between py-2 border-b border-gray-200">
+          <span class="font-medium text-gray-700">${label}:</span>
+          <span class="text-gray-900">${value || 'N/A'}</span>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+    return html;
+  }
+</script>

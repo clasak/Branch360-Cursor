@@ -11,6 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <script src="activity-client.html"></script>
   <script src="options-data.html"></script>
+  <script src="notification-system.html"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -1903,27 +1904,99 @@
   function viewMetricDetails(metricType) {
     const today = dashboardData && dashboardData.todayMetrics ? dashboardData.todayMetrics : {};
     const month = dashboardData && dashboardData.monthMetrics ? dashboardData.monthMetrics : {};
-    let details = 'Sales Metrics - ' + metricType.toUpperCase() + '\n';
-    details += '═══════════════════════════════════\n\n';
+
+    let content = '';
+    let title = 'Sales Metrics';
+
     switch(metricType.toLowerCase()) {
       case 'proposals':
-        details += 'Proposals Delivered Today: ' + (today.proposalsDelivered || 0) + '\n';
-        details += 'LOBs on Proposals: ' + (Array.isArray(today.lobsOnProposals) ? today.lobsOnProposals.join(', ') : today.lobsOnProposals || 'None') + '\n\n';
-        details += 'Month to Date: ' + (month.totalQuotes || 0) + ' quotes\n';
-        details += 'Target: ' + (month.quotesTarget || 'N/A') + '\n';
-        details += 'Status: ' + ((today.proposalsDelivered || 0) > 0 ? '✓ Active' : '⚠ No proposals today');
+        title = 'Proposals Delivered';
+        content = `
+          <div class="space-y-6">
+            <div class="bg-blue-50 rounded-lg p-4">
+              <h5 class="font-semibold text-blue-900 mb-3">Today's Activity</h5>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Proposals Delivered:</span>
+                  <span class="font-bold text-blue-600">${today.proposalsDelivered || 0}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-700">LOBs on Proposals:</span>
+                  <span class="font-semibold">${Array.isArray(today.lobsOnProposals) ? today.lobsOnProposals.join(', ') : today.lobsOnProposals || 'None'}</span>
+                </div>
+                <div class="mt-3 pt-3 border-t border-blue-200">
+                  <span class="text-sm ${(today.proposalsDelivered || 0) > 0 ? 'text-green-600' : 'text-yellow-600'}">
+                    ${(today.proposalsDelivered || 0) > 0 ? '✓ Active' : '⚠ No proposals today'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h5 class="font-semibold text-gray-900 mb-3">Month to Date</h5>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Total Quotes:</span>
+                  <span class="font-semibold">${month.totalQuotes || 0}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Target:</span>
+                  <span class="font-semibold">${month.quotesTarget || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
         break;
+
       case 'lobs':
-        details += 'PRP LOBs Sold Today: ' + (today.lobsSoldCount || 0) + '\n';
-        details += 'Lines Sold: ' + (Array.isArray(today.lobsSold) ? today.lobsSold.join(', ') : today.lobsSold || 'None') + '\n\n';
-        details += 'Month to Date: ' + (month.totalSales || 0) + ' sales\n';
-        details += 'Win Rate: ' + (month.winRate || 0) + '%\n';
-        details += 'Status: ' + ((today.lobsSoldCount || 0) > 0 ? '✓ Sales Today' : '⚠ No sales today');
+        title = 'PRP LOBs Sold';
+        content = `
+          <div class="space-y-6">
+            <div class="bg-green-50 rounded-lg p-4">
+              <h5 class="font-semibold text-green-900 mb-3">Today's Sales</h5>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-700">LOBs Sold:</span>
+                  <span class="font-bold text-green-600">${today.lobsSoldCount || 0}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Lines:</span>
+                  <span class="font-semibold">${Array.isArray(today.lobsSold) ? today.lobsSold.join(', ') : today.lobsSold || 'None'}</span>
+                </div>
+                <div class="mt-3 pt-3 border-t border-green-200">
+                  <span class="text-sm ${(today.lobsSoldCount || 0) > 0 ? 'text-green-600' : 'text-yellow-600'}">
+                    ${(today.lobsSoldCount || 0) > 0 ? '✓ Sales Today' : '⚠ No sales today'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h5 class="font-semibold text-gray-900 mb-3">Month to Date</h5>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Total Sales:</span>
+                  <span class="font-semibold">${month.totalSales || 0}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-700">Win Rate:</span>
+                  <span class="font-semibold">${month.winRate || 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
         break;
+
       default:
-        details += 'Details for this metric will be available soon.';
+        content = '<p class="text-gray-500 text-center py-8">Detailed metrics for this category coming soon.</p>';
     }
-    alert(details);
+
+    if (typeof showDataPanel === 'function') {
+      showDataPanel(title, content);
+    } else {
+      // Fallback to alert if notification system not loaded
+      alert(`${title}\n\nToday: ${JSON.stringify(today, null, 2)}\n\nMonth: ${JSON.stringify(month, null, 2)}`);
+    }
   }
 
   function viewPipeline(event) {
