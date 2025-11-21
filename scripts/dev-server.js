@@ -138,7 +138,16 @@ function serveFile(res, filePath) {
 
       const ext = path.extname(finalPath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': contentType });
+
+      // Add no-cache headers for HTML files to prevent browser caching during development
+      const headers = { 'Content-Type': contentType };
+      if (ext === '.html') {
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+        headers['Pragma'] = 'no-cache';
+        headers['Expires'] = '0';
+      }
+
+      res.writeHead(200, headers);
       res.end(data);
     });
   });
