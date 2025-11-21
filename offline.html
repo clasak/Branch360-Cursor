@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - Branch360</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .offline-container {
+      background: white;
+      border-radius: 16px;
+      padding: 48px 32px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .offline-icon {
+      font-size: 72px;
+      margin-bottom: 24px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #1a202c;
+      margin-bottom: 16px;
+    }
+
+    p {
+      font-size: 16px;
+      color: #4a5568;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .connection-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: #fef5e7;
+      border: 1px solid #f39c12;
+      border-radius: 8px;
+      color: #7d6608;
+      font-weight: 500;
+      margin-bottom: 24px;
+    }
+
+    .connection-status.online {
+      background: #d4edda;
+      border-color: #28a745;
+      color: #155724;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f39c12;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    .status-dot.online {
+      background: #28a745;
+      animation: none;
+    }
+
+    @keyframes blink {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .retry-button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .retry-button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .retry-button:active {
+      transform: translateY(0);
+    }
+
+    .queued-items {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .queued-items-count {
+      font-size: 14px;
+      color: #718096;
+    }
+
+    .queued-items-count strong {
+      color: #667eea;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">📡</div>
+
+    <h1>You're Offline</h1>
+
+    <p>
+      It looks like you've lost your internet connection. Don't worry - your data is safe
+      and any submissions will be queued automatically.
+    </p>
+
+    <div class="connection-status" id="connectionStatus">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Offline</span>
+    </div>
+
+    <button class="retry-button" onclick="retryConnection()">
+      Retry Connection
+    </button>
+
+    <div class="queued-items">
+      <p class="queued-items-count">
+        <strong id="queuedCount">0</strong> items queued for sync
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Check connection status
+    function updateConnectionStatus() {
+      const isOnline = navigator.onLine;
+      const statusEl = document.getElementById('connectionStatus');
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+
+      if (isOnline) {
+        statusEl.classList.add('online');
+        statusDot.classList.add('online');
+        statusText.textContent = 'Back Online';
+
+        // Redirect to home after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } else {
+        statusEl.classList.remove('online');
+        statusDot.classList.remove('online');
+        statusText.textContent = 'Offline';
+      }
+    }
+
+    // Get queued items count from localStorage
+    function updateQueuedCount() {
+      try {
+        const queue = localStorage.getItem('branch360_offline_queue');
+        const queueData = queue ? JSON.parse(queue) : [];
+        document.getElementById('queuedCount').textContent = queueData.length;
+      } catch (e) {
+        document.getElementById('queuedCount').textContent = '0';
+      }
+    }
+
+    // Retry connection
+    function retryConnection() {
+      updateConnectionStatus();
+
+      if (!navigator.onLine) {
+        // Optionally try fetching a small resource to test connectivity
+        fetch('/', { method: 'HEAD', mode: 'no-cors' })
+          .then(() => {
+            window.location.href = '/';
+          })
+          .catch(() => {
+            alert('Still offline. Please check your internet connection.');
+          });
+      } else {
+        window.location.href = '/';
+      }
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+
+    // Initial status check
+    updateConnectionStatus();
+    updateQueuedCount();
+
+    // Update queued count every 5 seconds
+    setInterval(updateQueuedCount, 5000);
+  </script>
+</body>
+</html>
