@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Branch360">
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script src="activity-client.html"></script>
+</head>
+<body class="bg-gray-100">
+
+<nav class="bg-blue-900 text-white p-4">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold">Branch360 Technician</h1>
+        <p class="text-sm opacity-75" id="techName">Loading...</p>
+      </div>
+      <button onclick="openLeadForm()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-semibold">
+        + Submit Lead
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+  
+  <!-- Quick Actions -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <button onclick="viewRoute()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">🗺️</div>
+      <div class="font-semibold">My Route</div>
+    </button>
+    
+    <button onclick="openLeadForm()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">📝</div>
+      <div class="font-semibold">Submit Lead</div>
+    </button>
+    
+    <button onclick="viewInstalls()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">🔧</div>
+      <div class="font-semibold">Installations</div>
+      <div class="text-sm text-gray-600" id="pendingInstallsCount">0</div>
+    </button>
+    
+    <button onclick="reportIssue()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+      <div class="text-3xl mb-2">⚠️</div>
+      <div class="font-semibold">Report Issue</div>
+    </button>
+  </div>
+  
+  <!-- Pending Installations -->
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">🔧 Pending Installations</h2>
+    <div id="installsList">
+      <p class="text-gray-500">Loading...</p>
+    </div>
+  </div>
+  
+  <!-- Recent Leads Submitted -->
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">📋 Leads I've Submitted</h2>
+    <div id="leadsList">
+      <p class="text-gray-500">Loading...</p>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Directions Modal -->
+<div id="directionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id==='directionsModal')closeDirectionsModal()">
+  <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div class="flex justify-between items-center p-4 border-b">
+      <h3 class="text-lg font-bold text-gray-800" id="directionsAddress">Directions</h3>
+      <button onclick="closeDirectionsModal()" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+    </div>
+    <div class="flex-1 relative overflow-hidden" style="min-height: 400px; height: 500px;">
+      <div id="directionsMap" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
+    </div>
+    <div class="p-4 border-t" id="mapsAppButtonContainer" style="display: none;">
+      <button onclick="openInMapsApp()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
+        Open in Apple Maps
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function ensureGoogleStub(){
+    if (typeof window !== 'undefined') {
+      if (typeof window.google === 'undefined') {
+        window.google = {};
+      }
+      if (window.google && typeof window.google.script === 'undefined') {
+        window.google.script = { run: null };
+      }
+    }
+  })();
+
+  function getActiveDemoUser() {
+    try {
+      if (window.parent && window.parent.Branch360CurrentUser) {
+        return window.parent.Branch360CurrentUser;
+      }
+      if (window.localStorage) {
+        const stored = localStorage.getItem('branch360CurrentUser');
+        return stored ? JSON.parse(stored) : null;
+      }
+    } catch (err) {
+      console.warn('Unable to read demo user context', err);
+    }
+    return null;
+  }
+
+  function hasAppsScript() {
+    const w = typeof window !== 'undefined' ? window : {};
+    return !!(w.google && w.google.script && w.google.script.run);
+  }
+
+  function getAppsScriptRunner() {
+    if (!hasAppsScript()) return null;
+    const w = typeof window !== 'undefined' ? window : {};
+    return w.google && w.google.script && w.google.script.run;
+  }
+
+  function loadDashboard() {
+    const runner = getAppsScriptRunner();
+    if (runner && runner.getTechnicianDashboard) {
+      runner
+        .withSuccessHandler(renderTechDashboard)
+        .withFailureHandler(function(error) {
+          console.error('Failed to load dashboard:', error);
+          alert('Failed to load dashboard: ' + error.message);
+        })
+        .getTechnicianDashboard();
+    } else {
+      renderTechDashboard(getDemoTechData());
+    }
+  }
+
+  function renderTechDashboard(data) {
+    if (!data) return;
+    const persona = getActiveDemoUser();
+    if (persona) {
+      data.user = data.user || {};
+      data.user.name = persona.name || data.user.name;
+    }
+    document.getElementById('techName').textContent = data.user && data.user.name ? data.user.name : 'Technician';
+    renderInstalls(data.pendingInstalls || []);
+    renderLeads(data.leadsSubmitted || []);
+    document.getElementById('pendingInstallsCount').textContent = (data.pendingInstalls || []).length;
+  }
+  
+  function renderInstalls(installs) {
+    const container = document.getElementById('installsList');
+    
+    if (installs.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">No pending installations</p>';
+      return;
+    }
+    
+    container.innerHTML = installs.map(install => `
+      <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded mb-3" data-packet-id="${install.packetID || ''}">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h3 class="font-bold text-gray-800">${install.accountName || 'Unknown Account'}</h3>
+            <p class="text-sm text-gray-600">${install.serviceAddress || 'No address'}</p>
+          </div>
+          ${install.scheduledDate ? `
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              ${formatDate(install.scheduledDate)}
+            </span>
+          ` : ''}
+        </div>
+        <p class="text-sm mb-2"><strong>Service:</strong> ${install.serviceType || 'N/A'}</p>
+        <p class="text-sm mb-2"><strong>Contact:</strong> ${install.pocInfo || 'N/A'}</p>
+        ${install.notes ? `<p class="text-sm text-gray-700 bg-yellow-50 p-2 rounded">${install.notes}</p>` : ''}
+        <div class="mt-3 flex gap-2">
+          <button onclick="completeInstall('${install.packetID || ''}')" 
+            class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded">
+            Mark Complete
+          </button>
+          <button onclick="openMapboxDirections('${(install.serviceAddress || '').replace(/'/g, "\\'")}')" 
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded">
+            Directions
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function renderLeads(leads) {
+    const container = document.getElementById('leadsList');
+    
+    if (leads.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">No leads submitted yet</p>';
+      return;
+    }
+    
+    container.innerHTML = leads.map(lead => `
+      <div class="flex justify-between items-center p-3 border-b cursor-pointer hover:bg-blue-50 transition-colors" onclick="editLead('${lead.leadID || ''}', '${lead.customer || ''}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editLead('${lead.leadID || ''}', '${lead.customer || ''}')}">
+        <div>
+          <p class="font-semibold">${lead.customer}</p>
+          <p class="text-sm text-gray-600">${formatDate(lead.date)}</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs px-2 py-1 rounded ${getStatusColor(lead.status)}">${lead.status}</span>
+          <p class="text-xs text-gray-500 mt-1">AE: ${lead.assignedAE}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function editLead(leadID, customer) {
+    // Open lead form with pre-filled data
+    if (leadID) {
+      // Store lead ID in sessionStorage to pre-fill form
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem('editLeadID', leadID);
+        // Also store customer name for reference
+        if (customer) {
+          window.sessionStorage.setItem('editLeadCustomer', customer);
+        }
+      }
+    }
+    
+    // Check if we're in an iframe (unified dashboard)
+    if (window.parent && window.parent !== window) {
+      // Try to navigate parent frame
+      try {
+        const currentUrl = window.parent.location.href;
+        const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+        window.parent.location.href = baseUrl + '/tech-lead-form.html' + (leadID ? '?edit=' + leadID : '');
+        return;
+      } catch (e) {
+        // Cross-origin or other issue - use hash navigation or direct navigation
+        if (window.parent.postMessage) {
+          window.parent.postMessage({ 
+            type: 'NAVIGATE_TO_TECH_LEAD_FORM', 
+            leadID: leadID,
+            customer: customer 
+          }, '*');
+          return;
+        }
+      }
+    }
+    
+    // Not in iframe, navigate directly
+    try {
+      const currentUrl = window.location.href;
+      const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+      window.location.href = baseUrl + '/tech-lead-form.html' + (leadID ? '?edit=' + leadID : '');
+    } catch (e) {
+      window.location.href = 'tech-lead-form.html' + (leadID ? '?edit=' + leadID : '');
+    }
+  }
+  
+  function getStatusColor(status) {
+    switch(status) {
+      case 'New': return 'bg-blue-100 text-blue-800';
+      case 'Contacted': return 'bg-yellow-100 text-yellow-800';
+      case 'Converted': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+  
+  function formatDate(date) {
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  
+  function openLeadForm() {
+    window.location.href = 'tech-lead-form.html';
+  }
+  
+  function completeInstall(packetID) {
+    if (!packetID) {
+      alert('Error: Missing installation ID');
+      return;
+    }
+    
+    const notes = prompt('Installation notes (optional):');
+    if (notes === null) return; // User cancelled
+    
+    // Show immediate feedback
+    const button = event.target;
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Processing...';
+    }
+    
+    var activityToken = window.ActivityClient ? ActivityClient.start('TECH_COMPLETE_INSTALL', packetID, { role: 'Technician' }) : null;
+    const runner = getAppsScriptRunner();
+    
+    if (runner && runner.completeInstallation) {
+      runner
+        .withSuccessHandler(function(result) {
+          if (activityToken && window.ActivityClient) {
+            ActivityClient.finish(activityToken, { success: result && result.success });
+            activityToken = null;
+          }
+          if (result && result.success) {
+            // Reload dashboard to refresh the list
+            loadDashboard();
+            // Show success message
+            setTimeout(function() {
+              alert('✓ Installation marked complete successfully!');
+            }, 100);
+          } else {
+            if (button) {
+              button.disabled = false;
+              button.textContent = 'Mark Complete';
+            }
+            alert('Failed to mark complete: ' + (result && result.message ? result.message : 'Unknown error'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          if (activityToken && window.ActivityClient) {
+            ActivityClient.finish(activityToken, { error: true, message: error.message });
+            activityToken = null;
+          }
+          if (button) {
+            button.disabled = false;
+            button.textContent = 'Mark Complete';
+          }
+          alert('Error marking installation complete: ' + error.message);
+        })
+        .completeInstallation(packetID, { 
+          completionDate: new Date(), 
+          notes: notes || '' 
+        });
+    } else {
+      // Demo mode - update immediately
+      if (activityToken && window.ActivityClient) {
+        ActivityClient.finish(activityToken, { success: true, demo: true });
+        activityToken = null;
+      }
+      
+      // Get current dashboard data
+      const container = document.getElementById('installsList');
+      if (container) {
+        // Find and remove the install from the UI immediately
+        const installElements = container.querySelectorAll('[data-packet-id="' + packetID + '"]');
+        installElements.forEach(function(el) {
+          el.style.transition = 'opacity 0.3s';
+          el.style.opacity = '0';
+          setTimeout(function() {
+            el.remove();
+          }, 300);
+        });
+      }
+      
+      // Reload dashboard to sync state
+      const demoData = getDemoTechData();
+      demoData.pendingInstalls = (demoData.pendingInstalls || []).filter(function(install) {
+        return install.packetID !== packetID;
+      });
+      renderTechDashboard(demoData);
+      
+      setTimeout(function() {
+        alert('✓ Installation marked complete!');
+      }, 100);
+    }
+  }
+  
+  // Cache Mapbox token to avoid repeated server calls
+  let cachedMapboxToken = null;
+  let directionsMap = null;
+  let routeLayer = null;
+  let currentDestinationAddress = null;
+  let currentOrigin = null;
+  let currentDestination = null;
+  let markers = [];
+  
+  function getMapboxToken(callback) {
+    if (cachedMapboxToken) {
+      callback(cachedMapboxToken);
+      return;
+    }
+    
+    const runner = getAppsScriptRunner();
+    if (runner && runner.getMapboxToken) {
+      runner
+        .withSuccessHandler(function(token) {
+          cachedMapboxToken = token;
+          callback(token);
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to get Mapbox token:', error);
+          // Fallback to hardcoded token if server call fails
+          const fallbackToken = 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA';
+          cachedMapboxToken = fallbackToken;
+          callback(fallbackToken);
+        })
+        .getMapboxToken();
+    } else {
+      // Fallback for demo mode
+      const fallbackToken = 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA';
+      cachedMapboxToken = fallbackToken;
+      callback(fallbackToken);
+    }
+  }
+  
+  function openMapboxDirections(address) {
+    if (!address) {
+      alert('No address provided');
+      return;
+    }
+    
+    currentDestinationAddress = address;
+    document.getElementById('directionsAddress').textContent = 'Directions to: ' + address;
+    
+    // Show modal first
+    const modal = document.getElementById('directionsModal');
+    modal.classList.remove('hidden');
+    
+    // Setup ESC key handler
+    const escHandler = function(e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeDirectionsModal();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    // Check if iOS for Apple Maps button
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+    const mapsButtonContainer = document.getElementById('mapsAppButtonContainer');
+    if (isIOS) {
+      mapsButtonContainer.style.display = 'block';
+    } else {
+      mapsButtonContainer.style.display = 'none';
+    }
+    
+    // Get token and initialize map after modal is visible
+    getMapboxToken(function(mapboxToken) {
+      // Wait for modal to be fully rendered
+      setTimeout(function() {
+        if (typeof mapboxgl === 'undefined') {
+          alert('Mapbox library failed to load. Please refresh the page.');
+          return;
+        }
+        
+        mapboxgl.accessToken = mapboxToken;
+        
+        const mapContainer = document.getElementById('directionsMap');
+        if (!mapContainer) {
+          console.error('Map container not found');
+          return;
+        }
+        
+        // Destroy existing map if it exists
+        if (directionsMap) {
+          try {
+            directionsMap.remove();
+          } catch (e) {
+            console.warn('Error removing existing map:', e);
+          }
+          directionsMap = null;
+        }
+        
+        // Clear any existing markers
+        markers = [];
+        
+        // Ensure container has proper dimensions and is visible
+        mapContainer.style.width = '100%';
+        mapContainer.style.height = '100%';
+        mapContainer.style.minHeight = '400px';
+        mapContainer.style.display = 'block';
+        
+        // Force a reflow to ensure dimensions are set
+        void mapContainer.offsetHeight;
+        
+        try {
+          directionsMap = new mapboxgl.Map({
+            container: 'directionsMap',
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [-95.3698, 29.7604], // Default to Houston
+            zoom: 10,
+            attributionControl: true
+          });
+          
+          // Add navigation control
+          directionsMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+          
+          // Wait for map to load before adding route
+          directionsMap.once('load', function() {
+            // Ensure map is resized to container
+            directionsMap.resize();
+            // Load directions
+            loadDirections(address, mapboxToken);
+          });
+          
+          directionsMap.on('error', function(e) {
+            console.error('Mapbox error:', e);
+            alert('Failed to load map. Please check your Mapbox token.');
+          });
+          
+          // Handle resize events
+          window.addEventListener('resize', function() {
+            if (directionsMap) {
+              directionsMap.resize();
+            }
+          });
+        } catch (error) {
+          console.error('Error creating map:', error);
+          alert('Failed to initialize map: ' + error.message);
+        }
+      }, 200); // Increased delay to ensure modal is fully rendered
+    });
+  }
+  
+  function clearMap() {
+    if (!directionsMap) return;
+    
+    // Remove existing route
+    if (directionsMap.getLayer('route')) {
+      directionsMap.removeLayer('route');
+    }
+    if (directionsMap.getSource('route')) {
+      directionsMap.removeSource('route');
+    }
+    // Remove existing markers
+    markers.forEach(function(marker) {
+      marker.remove();
+    });
+    markers = [];
+  }
+  
+  function loadDirections(destinationAddress, token) {
+    // Update header to show loading
+    document.getElementById('directionsAddress').innerHTML = 
+      'Directions to: ' + destinationAddress + '<br><span class="text-sm text-gray-500">Loading...</span>';
+    
+    // First, geocode the destination
+    geocodeAddress(destinationAddress, token, function(destCoords) {
+      if (!destCoords) {
+        alert('Could not find address: ' + destinationAddress);
+        document.getElementById('directionsAddress').textContent = 'Directions to: ' + destinationAddress;
+        return;
+      }
+      
+      currentDestination = destCoords;
+      
+      // Try to get user's current location as origin
+      let origin = null;
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            origin = [position.coords.longitude, position.coords.latitude];
+            currentOrigin = origin;
+            getRoute(origin, destCoords, token);
+          },
+          function(error) {
+            console.log('Geolocation error:', error);
+            // Use default Houston location as fallback
+            origin = [-95.3698, 29.7604]; // Houston, TX center
+            currentOrigin = origin;
+            getRoute(origin, destCoords, token);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        // Use default Houston location as fallback
+        origin = [-95.3698, 29.7604]; // Houston, TX center
+        currentOrigin = origin;
+        getRoute(origin, destCoords, token);
+      }
+    });
+  }
+  
+  function getRoute(origin, destination, token) {
+    if (!directionsMap) {
+      console.error('Map not initialized');
+      return;
+    }
+    
+    // Wait for map to be loaded if not already
+    if (!directionsMap.loaded()) {
+      directionsMap.once('load', function() {
+        getRoute(origin, destination, token);
+      });
+      return;
+    }
+    
+    const url = 'https://api.mapbox.com/directions/v5/mapbox/driving/' + 
+      origin[0] + ',' + origin[1] + ';' + destination[0] + ',' + destination[1] +
+      '?geometries=geojson&steps=true&overview=full&access_token=' + token;
+    
+    fetch(url)
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Directions API returned status: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(data) {
+        console.log('Directions API response:', data);
+        
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const routeData = data.routes[0];
+          const routeGeometry = routeData.geometry;
+          const distance = (routeData.distance / 1609.34).toFixed(1); // Convert to miles
+          const duration = Math.round(routeData.duration / 60); // Convert to minutes
+          
+          // Remove existing route layer if it exists
+          if (directionsMap.getLayer('route')) {
+            directionsMap.removeLayer('route');
+          }
+          if (directionsMap.getSource('route')) {
+            directionsMap.removeSource('route');
+          }
+          
+          // Add route to map
+          directionsMap.addSource('route', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              geometry: routeGeometry
+            }
+          });
+          
+          directionsMap.addLayer({
+            id: 'route',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#3b82f6',
+              'line-width': 4,
+              'line-opacity': 0.75
+            }
+          });
+          
+          // Add markers
+          addMarker(origin, 'Your Location');
+          addMarker(destination, 'Destination');
+          
+          // Fit map to route bounds
+          if (routeGeometry && routeGeometry.coordinates && routeGeometry.coordinates.length > 0) {
+            const coordinates = routeGeometry.coordinates;
+            const bounds = coordinates.reduce(function(bounds, coord) {
+              return bounds.extend(coord);
+            }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+            
+            directionsMap.fitBounds(bounds, {
+              padding: { top: 50, bottom: 50, left: 50, right: 50 }
+            });
+          } else {
+            // Fallback: center on route midpoint
+            const midLng = (origin[0] + destination[0]) / 2;
+            const midLat = (origin[1] + destination[1]) / 2;
+            directionsMap.setCenter([midLng, midLat]);
+            directionsMap.setZoom(12);
+          }
+          
+          // Show route info
+          const isDefaultOrigin = origin[0] === -95.3698 && origin[1] === 29.7604;
+          document.getElementById('directionsAddress').innerHTML = 
+            'Directions to: ' + currentDestinationAddress + 
+            '<br><span class="text-sm text-gray-600 font-semibold">Distance: ' + distance + ' miles • Time: ~' + duration + ' min</span>' +
+            (isDefaultOrigin ? '<br><span class="text-xs text-gray-500">Using Houston center as starting point</span>' : '');
+          
+          console.log('Route displayed successfully:', { distance, duration });
+        } else {
+          throw new Error('No routes found: ' + (data.code || data.message || 'Unknown error'));
+        }
+      })
+      .catch(function(error) {
+        console.error('Directions API error:', error);
+        alert('Failed to get directions: ' + error.message + '\n\nShowing destination marker only.');
+        
+        // Still show markers even if route fails
+        if (origin) {
+          addMarker(origin, 'Starting Location');
+        }
+        if (destination) {
+          addMarker(destination, 'Destination');
+          directionsMap.setCenter(destination);
+          directionsMap.setZoom(14);
+        }
+        
+        document.getElementById('directionsAddress').innerHTML = 
+          'Directions to: ' + currentDestinationAddress + 
+          '<br><span class="text-sm text-red-600">Unable to calculate route. Showing destination only.</span>';
+      });
+  }
+  
+  function addMarker(coords, label) {
+    const el = document.createElement('div');
+    el.className = 'marker';
+    el.style.width = '20px';
+    el.style.height = '20px';
+    el.style.borderRadius = '50%';
+    el.style.backgroundColor = label === 'Your Location' ? '#3b82f6' : '#ef4444';
+    el.style.border = '2px solid white';
+    el.style.cursor = 'pointer';
+    
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat(coords)
+      .setPopup(new mapboxgl.Popup().setText(label))
+      .addTo(directionsMap);
+    
+    markers.push(marker);
+  }
+  
+  function geocodeAddress(address, token, callback) {
+    const url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/' + 
+      encodeURIComponent(address) + 
+      '.json?access_token=' + token + '&limit=1';
+    
+    fetch(url)
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.features && data.features.length > 0) {
+          const coords = data.features[0].center;
+          if (callback) callback(coords);
+        } else {
+          console.error('Address not found:', address);
+          if (callback) callback(null);
+        }
+      })
+      .catch(function(error) {
+        console.error('Geocoding error:', error);
+        if (callback) callback(null);
+      });
+  }
+  
+  function closeDirectionsModal() {
+    const modal = document.getElementById('directionsModal');
+    modal.classList.add('hidden');
+    
+    // Clean up map when modal is closed
+    if (directionsMap) {
+      try {
+        clearMap();
+        // Don't destroy map completely, just clear markers and route
+        // This allows map to persist if modal is reopened
+      } catch (e) {
+        console.warn('Error cleaning up map:', e);
+      }
+    }
+  }
+  
+  function openInMapsApp() {
+    if (!currentDestinationAddress) return;
+    
+    const encodedAddress = encodeURIComponent(currentDestinationAddress);
+    
+    // Only open Apple Maps for iOS devices
+    // Google Maps integration disabled until Google API is available
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+    
+    if (isIOS) {
+      // Open in Apple Maps
+      window.open('https://maps.apple.com/?daddr=' + encodedAddress, '_blank');
+    } else {
+      // Don't open Google Maps until API is available
+      alert('Native maps integration coming soon. Please use the map above for directions.');
+    }
+  }
+  
+  function viewRoute() {
+    alert('Route1 integration coming soon!');
+  }
+  
+  function viewInstalls() {
+    document.querySelector('#installsList').scrollIntoView({ behavior: 'smooth' });
+  }
+  
+  function reportIssue() {
+    // Navigate to issue reporting form
+    window.location.href = 'report-issue.html';
+  }
+  
+  function getDemoTechData() {
+    const now = new Date();
+    return {
+      user: { name: 'Jordan Ellis (Demo)' },
+      pendingInstalls: [
+        {
+          packetID: 'PKT-DEMO-1',
+          accountName: 'Texas Thrift - Midtown',
+          serviceAddress: '1234 Westheimer Rd, Houston, TX',
+          scheduledDate: now.toISOString(),
+          serviceType: 'GPC Interior/Exterior',
+          pocInfo: 'Alex Taylor • 713-555-0182',
+          notes: 'Install 10 ILTs and 24 RBS units.'
+        }
+      ],
+      leadsSubmitted: [
+        { customer: 'Bayou Coffee', date: now.toISOString(), status: 'New', assignedAE: 'Alex Taylor' },
+        { customer: 'Garden Heights HOA', date: new Date(now - 86400000).toISOString(), status: 'Contacted', assignedAE: 'Maria Lopez' }
+      ]
+    };
+  }
+
+  loadDashboard();
+  
+  // Register service worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(function(registration) {
+          console.log('ServiceWorker registration successful');
+        })
+        .catch(function(error) {
+          console.log('ServiceWorker registration failed:', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>

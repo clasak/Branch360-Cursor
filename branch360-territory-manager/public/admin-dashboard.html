@@ -1,0 +1,2702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Branch360">
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script src="activity-client.html"></script>
+  <style>
+    .tab-button { transition: all 0.2s; }
+    .tab-button.active { background: #2563EB; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .metric-card { transition: transform 0.2s; }
+    .metric-card:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body class="bg-gray-100">
+
+<!-- Navigation -->
+<nav class="bg-white shadow-sm border-b">
+  <div class="max-w-7xl mx-auto px-4 py-3">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">Branch360</h1>
+        <p class="text-sm text-gray-600">Admin Dashboard</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-semibold text-gray-800" id="adminName">Loading...</p>
+        <p class="text-xs text-gray-500" id="adminEmail">-</p>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+  
+  <!-- Quick Stats -->
+  <div class="mb-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-3">System Overview</h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="metric-card bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow">
+        <div class="text-sm text-gray-600 mb-1">Total Users</div>
+        <div class="text-3xl font-bold text-blue-600" id="statTotalUsers">-</div>
+      </div>
+      <div class="metric-card bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow">
+        <div class="text-sm text-gray-600 mb-1">Active Users</div>
+        <div class="text-3xl font-bold text-green-600" id="statActiveUsers">-</div>
+      </div>
+      <div class="metric-card bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow">
+        <div class="text-sm text-gray-600 mb-1">Territories</div>
+        <div class="text-3xl font-bold text-blue-600" id="statTerritories">-</div>
+      </div>
+      <div class="metric-card bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow">
+        <div class="text-sm text-gray-600 mb-1">System Status</div>
+        <div class="text-3xl font-bold text-emerald-600" id="statSystemStatus">✓</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Tab Navigation -->
+  <div class="bg-white rounded-lg shadow mb-6">
+    <div class="border-b border-gray-200 flex flex-wrap">
+      <button onclick="switchTab('users')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 active" id="tab-btn-users">
+        👥 Users
+      </button>
+      <button onclick="switchTab('territories')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" id="tab-btn-territories">
+        🗺️ Territories
+      </button>
+      <button onclick="switchTab('deployment')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" id="tab-btn-deployment">
+        🚀 Deployment
+      </button>
+      <button onclick="switchTab('github')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" id="tab-btn-github">
+        📦 GitHub
+      </button>
+      <button onclick="switchTab('database')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" id="tab-btn-database">
+        💾 Database
+      </button>
+      <button onclick="switchTab('audit')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" id="tab-btn-audit">
+        📋 Audit Log
+      </button>
+      <button onclick="switchTab('roi')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" id="tab-btn-roi">
+        📊 Executive ROI
+      </button>
+      <button onclick="switchTab('settings')" class="tab-button px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" id="tab-btn-settings">
+        ⚙️ Settings
+      </button>
+    </div>
+    
+    <!-- Users Tab -->
+    <div class="tab-content active p-6" id="tab-users">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-800">User Management</h2>
+        <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">
+          ➕ Add User
+        </button>
+      </div>
+      
+      <div class="mb-4 flex gap-2">
+        <input type="search" id="userSearch" placeholder="Search users..." class="flex-1 border rounded-lg px-4 py-2">
+        <select id="userRoleFilter" class="border rounded-lg px-4 py-2">
+          <option value="">All Roles</option>
+          <option value="Administrator">Administrator</option>
+          <option value="Account Executive">Account Executive</option>
+          <option value="Technician">Technician</option>
+          <option value="Operations Manager">Operations Manager</option>
+          <option value="Branch Manager">Branch Manager</option>
+        </select>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Name</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Email</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Role</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Branch</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td colspan="6" class="px-4 py-8 text-center text-gray-500">Loading users...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Territories Tab -->
+    <div class="tab-content p-6" id="tab-territories">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+          <div class="text-sm text-gray-600 mb-1">Total Territories</div>
+          <div class="text-2xl font-bold text-gray-800" id="territoryStatTotal">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+          <div class="text-sm text-gray-600 mb-1">Total Zip Codes</div>
+          <div class="text-2xl font-bold text-gray-800" id="territoryStatZips">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-indigo-500">
+          <div class="text-sm text-gray-600 mb-1">AEs Assigned</div>
+          <div class="text-2xl font-bold text-gray-800" id="territoryStatAEs">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+          <div class="text-sm text-gray-600 mb-1">Avg Zips/Territory</div>
+          <div class="text-2xl font-bold text-gray-800" id="territoryStatAvg">-</div>
+        </div>
+      </div>
+
+      <!-- Actions Bar -->
+      <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <button onclick="openAddTerritoryModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+              ➕ Add Territory
+            </button>
+            <button onclick="openUploadTerritoriesModal()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+              📤 Upload CSV
+            </button>
+             <button onclick="exportTerritoriesCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+               💾 Export CSV
+             </button>
+            <button onclick="bulkDeleteTerritories()" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm hidden" id="bulkDeleteBtn">
+              🗑️ Delete Selected
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="territoryViewMode" onchange="changeTerritoryView()" class="border rounded-lg px-3 py-2 text-sm">
+              <option value="grid">Grid View</option>
+              <option value="list">List View</option>
+              <option value="table">Table View</option>
+              <option value="map">Map View</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters Bar -->
+      <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Search</label>
+            <input type="text" id="territorySearch" placeholder="Search territories, zip codes..." 
+              class="w-full border rounded-lg px-3 py-2 text-sm" onkeyup="filterTerritories()">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Branch</label>
+            <select id="territoryBranchFilter" onchange="filterTerritories()" 
+              class="w-full border rounded-lg px-3 py-2 text-sm">
+              <option value="">All Branches</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Account Executive</label>
+            <select id="territoryAEFilter" onchange="filterTerritories()" 
+              class="w-full border rounded-lg px-3 py-2 text-sm">
+              <option value="">All AEs</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+            <select id="territoryStatusFilter" onchange="filterTerritories()" 
+              class="w-full border rounded-lg px-3 py-2 text-sm">
+              <option value="">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <label class="block text-xs font-semibold text-gray-700">Sort By:</label>
+            <select id="territorySortBy" onchange="sortTerritories()" 
+              class="border rounded-lg px-3 py-2 text-sm">
+              <option value="name">Territory Name</option>
+              <option value="ae">Account Executive</option>
+              <option value="branch">Branch</option>
+              <option value="zips">Zip Code Count</option>
+              <option value="created">Date Created</option>
+            </select>
+            <select id="territorySortOrder" onchange="sortTerritories()" 
+              class="border rounded-lg px-3 py-2 text-sm">
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </div>
+          <div class="text-sm text-gray-600">
+            Showing <span id="territoryCount">0</span> of <span id="territoryTotal">0</span> territories
+          </div>
+        </div>
+      </div>
+      
+      <!-- Map View Controls (shown when map view is active) -->
+      <div id="mapViewControls" class="bg-white rounded-lg shadow p-4 mb-4 hidden">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Map Type</label>
+            <select id="mapTypeSelector" onchange="switchMapType()" class="w-full border rounded-lg px-3 py-2 text-sm">
+              <option value="territories">Territories</option>
+              <option value="ae-routes">AE Daily Routes</option>
+            </select>
+          </div>
+          <div id="aeRouteDateSelector">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Date</label>
+            <input type="date" id="aeRouteDate" onchange="loadAERoutes()" 
+              class="w-full border rounded-lg px-3 py-2 text-sm" value="">
+          </div>
+          <div id="aeRouteAESelector">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Account Executive</label>
+            <select id="aeRouteAE" onchange="loadAERoutes()" 
+              class="w-full border rounded-lg px-3 py-2 text-sm">
+              <option value="">All AEs</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Actions</label>
+            <button onclick="fitMapBounds()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg text-sm">
+              🎯 Fit All
+            </button>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Legend</label>
+            <div id="mapLegend" class="text-xs text-gray-600 space-y-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Territories Container -->
+      <div id="territoriesContainer">
+        <div id="territoriesList" class="space-y-4">
+          <p class="text-gray-500 text-center py-8">Loading territories...</p>
+        </div>
+        <!-- Map Container -->
+        <div id="territoryMapContainer" class="hidden" style="height: 600px;">
+          <div id="territoryMap" style="width: 100%; height: 100%; border-radius: 0.5rem; overflow: hidden;"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Deployment Tab -->
+    <div class="tab-content p-6" id="tab-deployment">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">🚀 Deployment & Sync</h2>
+      <p class="text-sm text-gray-600 mb-6">Manage Apps Script deployment with clasp commands</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <!-- Clasp Push -->
+        <div class="border rounded-lg p-4 bg-blue-50">
+          <h4 class="font-semibold text-gray-800 mb-2">📤 Push to Apps Script</h4>
+          <p class="text-xs text-gray-600 mb-3">Upload all local changes to Apps Script</p>
+          <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm mb-3" id="pushCommand">
+            cd /Users/codylytle/Documents/Branch360 && npm run clasp:push
+          </div>
+          <button onclick="copyCommand('pushCommand', 'pushCopied')" 
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm mb-2">
+            📋 Copy Command
+          </button>
+          <span id="pushCopied" class="text-xs text-green-600 hidden">✅ Copied!</span>
+        </div>
+        
+        <!-- Clasp Watch -->
+        <div class="border rounded-lg p-4 bg-green-50">
+          <h4 class="font-semibold text-gray-800 mb-2">👁️ Watch Mode</h4>
+          <p class="text-xs text-gray-600 mb-3">Auto-sync changes as you code (for development)</p>
+          <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm mb-3" id="watchCommand">
+            cd /Users/codylytle/Documents/Branch360 && npm run clasp:watch
+          </div>
+          <button onclick="copyCommand('watchCommand', 'watchCopied')" 
+            class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm mb-2">
+            📋 Copy Command
+          </button>
+          <span id="watchCopied" class="text-xs text-green-600 hidden">✅ Copied!</span>
+        </div>
+      </div>
+      
+      <div class="border-t pt-4 mt-4">
+        <h4 class="font-semibold text-gray-800 mb-2">📝 Instructions</h4>
+        <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700 mb-4">
+          <li>Open Terminal on your Mac</li>
+          <li>Click "Copy Command" above for the action you want</li>
+          <li>Paste the command into Terminal (Cmd+V) and press Enter</li>
+          <li><strong>For Watch Mode:</strong> Keep Terminal open - it will auto-sync changes. Press Ctrl+C to stop.</li>
+          <li><strong>For Push:</strong> Command runs once and uploads all files.</li>
+        </ol>
+        
+        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+          <p class="text-xs text-yellow-800">
+            <strong>💡 Tip:</strong> Use "Watch Mode" during active development. It automatically pushes changes every time you save a file. 
+            Use "Push" when you want to manually sync after making multiple changes.
+          </p>
+        </div>
+        
+        <button onclick="showDeploymentStatus()" class="mt-4 text-sm text-blue-600 hover:text-blue-800 font-semibold">
+          🔍 Check Deployment Status →
+        </button>
+      </div>
+    </div>
+    
+    <!-- GitHub Tab -->
+    <div class="tab-content p-6" id="tab-github">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">📦 GitHub Integration</h2>
+      <p class="text-sm text-gray-600 mb-6">Push changes to GitHub repository</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <!-- GitHub Status -->
+        <div class="border rounded-lg p-4 bg-gray-50">
+          <h4 class="font-semibold text-gray-800 mb-2">📊 Repository Status</h4>
+          <div class="space-y-2 text-sm" id="githubStatus">
+            <p class="text-gray-600">Checking repository status...</p>
+          </div>
+        </div>
+        
+        <!-- GitHub Actions -->
+        <div class="border rounded-lg p-4 bg-blue-50">
+          <h4 class="font-semibold text-gray-800 mb-2">⚡ Quick Actions</h4>
+          <div class="space-y-2">
+            <button onclick="showGitHubCommand('status')" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+              📊 Git Status
+            </button>
+            <button onclick="showGitHubCommand('add')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+              ➕ Git Add All
+            </button>
+            <button onclick="showGitHubCommand('commit')" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+              💾 Git Commit
+            </button>
+            <button onclick="showGitHubCommand('push')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+              🚀 Git Push
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- GitHub Commands -->
+      <div class="border rounded-lg p-4 bg-gray-50 mb-4">
+        <h4 class="font-semibold text-gray-800 mb-3">📋 Git Commands</h4>
+        
+        <!-- Git Status -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-gray-700">Check Repository Status</label>
+            <button onclick="copyCommand('gitStatusCommand', 'gitStatusCopied')" class="text-xs text-blue-600 hover:text-blue-800">Copy</button>
+          </div>
+          <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm" id="gitStatusCommand">
+            cd /Users/codylytle/Documents/Branch360 && git status
+          </div>
+          <span id="gitStatusCopied" class="text-xs text-green-600 hidden">✅ Copied!</span>
+        </div>
+        
+        <!-- Git Add All -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-gray-700">Stage All Changes</label>
+            <button onclick="copyCommand('gitAddCommand', 'gitAddCopied')" class="text-xs text-blue-600 hover:text-blue-800">Copy</button>
+          </div>
+          <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm" id="gitAddCommand">
+            cd /Users/codylytle/Documents/Branch360 && git add .
+          </div>
+          <span id="gitAddCopied" class="text-xs text-green-600 hidden">✅ Copied!</span>
+        </div>
+        
+        <!-- Git Commit -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-gray-700">Commit Changes</label>
+            <button onclick="copyCommand('gitCommitCommand', 'gitCommitCopied')" class="text-xs text-blue-600 hover:text-blue-800">Copy</button>
+          </div>
+          <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm" id="gitCommitCommand">
+            cd /Users/codylytle/Documents/Branch360 && git commit -m "Update Branch360 CRM"
+          </div>
+          <span id="gitCommitCopied" class="text-xs text-green-600 hidden">✅ Copied!</span>
+          <input type="text" id="commitMessage" placeholder="Custom commit message..." class="mt-2 w-full border rounded px-3 py-2 text-sm" onchange="updateCommitCommand()">
+        </div>
+        
+        <!-- Git Push -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-gray-700">Push to GitHub</label>
+            <button onclick="copyCommand('gitPushCommand', 'gitPushCopied')" class="text-xs text-blue-600 hover:text-blue-800">Copy</button>
+          </div>
+          <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm" id="gitPushCommand">
+            cd /Users/codylytle/Documents/Branch360 && git push
+          </div>
+          <span id="gitPushCopied" class="text-xs text-green-600 hidden">✅ Copied!</span>
+        </div>
+        
+        <!-- Quick Push (Add + Commit + Push) -->
+        <div class="border-t pt-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-gray-700">🚀 Quick Push (All in One)</label>
+            <button onclick="copyCommand('gitQuickPushCommand', 'gitQuickPushCopied')" class="text-xs text-blue-600 hover:text-blue-800">Copy</button>
+          </div>
+          <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm" id="gitQuickPushCommand">
+            cd /Users/codylytle/Documents/Branch360 && git add . && git commit -m "Update Branch360 CRM" && git push
+          </div>
+          <span id="gitQuickPushCopied" class="text-xs text-green-600 hidden">✅ Copied!</span>
+          <p class="text-xs text-gray-500 mt-2">This command stages all changes, commits, and pushes in one go.</p>
+        </div>
+      </div>
+      
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-semibold text-blue-900 mb-2">📖 GitHub Setup Instructions</h4>
+        <ol class="list-decimal list-inside space-y-1 text-sm text-blue-800">
+          <li>Make sure you're logged into GitHub: <code class="bg-blue-100 px-1 rounded">gh auth login</code></li>
+          <li>Check if repository exists: <code class="bg-blue-100 px-1 rounded">git remote -v</code></li>
+          <li>If not set up, initialize: <code class="bg-blue-100 px-1 rounded">git init</code></li>
+          <li>Add remote: <code class="bg-blue-100 px-1 rounded">git remote add origin YOUR_REPO_URL</code></li>
+          <li>Use the commands above to push your changes</li>
+        </ol>
+      </div>
+    </div>
+    
+    <!-- Database Tab -->
+    <div class="tab-content p-6" id="tab-database">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">💾 Database Management</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="border rounded-lg p-4 bg-blue-50">
+          <h4 class="font-semibold text-gray-800 mb-2">🔄 Database Setup</h4>
+          <p class="text-xs text-gray-600 mb-3">Initialize or reset database structure</p>
+          <button onclick="setupDatabase()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+            Setup Database
+          </button>
+        </div>
+        
+        <div class="border rounded-lg p-4 bg-yellow-50">
+          <h4 class="font-semibold text-gray-800 mb-2">🧪 Test Data</h4>
+          <p class="text-xs text-gray-600 mb-3">Load sample data for testing</p>
+          <button onclick="loadDemoData()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+            Load Demo Data
+          </button>
+        </div>
+      </div>
+      
+      <div class="border rounded-lg p-4 bg-gray-50">
+        <h4 class="font-semibold text-gray-800 mb-3">📊 Database Statistics</h4>
+        <div id="databaseStats" class="space-y-2 text-sm">
+          <p class="text-gray-600">Loading database statistics...</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Audit Log Tab -->
+    <div class="tab-content p-6" id="tab-audit">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">📋 Audit Log</h2>
+      
+      <div class="mb-4 flex gap-2">
+        <input type="date" id="auditDateFilter" class="border rounded-lg px-4 py-2">
+        <select id="auditActionFilter" class="border rounded-lg px-4 py-2">
+          <option value="">All Actions</option>
+          <option value="CREATE">Create</option>
+          <option value="UPDATE">Update</option>
+          <option value="DELETE">Delete</option>
+          <option value="AUTH_FAIL">Auth Failed</option>
+        </select>
+        <button onclick="loadAuditLog()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">
+          🔍 Filter
+        </button>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Timestamp</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Action</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">User</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Table</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Details</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogBody" class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading audit log...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- ROI Tab -->
+    <div class="tab-content p-6" id="tab-roi">
+      <div class="bg-white rounded-xl p-4 shadow mb-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold mb-2">Executive ROI Overview</h2>
+            <p class="text-sm text-gray-500">Track adoption and time saved as Branch360 scales from the pilot branch to every region.</p>
+            <button onclick="document.getElementById('execROIInfoModal').classList.remove('hidden')" class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline">
+              ℹ️ How is ROI calculated?
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700" id="execHoursBadge">-- hrs saved</span>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700" id="execDollarsBadge">$0 value</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4" id="execKpiCards"></div>
+      </div>
+      
+      <!-- ROI Calculation Info Modal -->
+      <div id="execROIInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onclick="if(event.target.id==='execROIInfoModal')document.getElementById('execROIInfoModal').classList.add('hidden')">
+        <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">How ROI is Calculated</h3>
+            <button onclick="document.getElementById('execROIInfoModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+          </div>
+          <div class="space-y-4 text-sm text-gray-700">
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-2">Hours Saved</h4>
+              <p class="mb-2">Calculated from activity logs tracked in Branch360:</p>
+              <ul class="list-disc pl-5 space-y-1 mb-2">
+                <li>Account Executives: Time saved from automated lead routing, prospect management, and quote tracking</li>
+                <li>Operations: Time saved from automated scheduling, workflow management, and specialist assignment</li>
+                <li>Technicians: Time saved from streamlined lead submission and route optimization</li>
+                <li>Branch Managers: Time saved from automated reporting and metric aggregation</li>
+              </ul>
+              <p class="text-xs text-gray-500">Each activity is assigned a time-saving value based on role-specific baselines.</p>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-2">Labor Value (Dollars Saved)</h4>
+              <p class="mb-2">Calculated using loaded hourly rates:</p>
+              <ul class="list-disc pl-5 space-y-1 mb-2">
+                <li>Account Executives: $45/hour × hours saved</li>
+                <li>Operations Managers: $40/hour × hours saved</li>
+                <li>Technicians: $35/hour × hours saved</li>
+                <li>Branch Managers: $50/hour × hours saved</li>
+              </ul>
+              <p class="text-xs text-gray-500">Rates reflect fully loaded labor costs including benefits and overhead.</p>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-2">Data Sources</h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Activity logs from <code class="bg-gray-100 px-1 rounded">ActivityLog</code> sheet</li>
+                <li>Sales metrics from branch KPIs (TAP, quotes, sales)</li>
+                <li>Operations metrics (missed stops, backlog, efficiency)</li>
+                <li>Time tracking from daily activity forms</li>
+              </ul>
+            </div>
+            <div class="pt-4 border-t">
+              <button onclick="document.getElementById('execROIInfoModal').classList.add('hidden')" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-semibold">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h3 class="text-md font-bold text-gray-800 mb-2">Pilot Adoption (Houston)</h3>
+          <table class="min-w-full text-sm" id="execAdoptionTable"></table>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow">
+          <h3 class="text-md font-bold text-gray-800 mb-2">Regional Rollout Capacity</h3>
+          <p class="text-xs text-gray-500 mb-2">How many branches per region will benefit from automation.</p>
+          <table class="min-w-full text-sm" id="execRegionTable"></table>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow">
+        <h3 class="text-md font-bold text-gray-800 mb-2">Executive Notes</h3>
+        <ul class="list-disc pl-5 space-y-1 text-sm text-gray-600" id="execSummaryList"></ul>
+      </div>
+    </div>
+    
+    <!-- Settings Tab -->
+    <div class="tab-content p-6" id="tab-settings">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">⚙️ System Settings</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="border rounded-lg p-4">
+          <h4 class="font-semibold text-gray-800 mb-3">🔑 API Tokens</h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Mapbox Token</label>
+              <input type="password" id="mapboxToken" class="w-full border rounded px-3 py-2 text-sm" placeholder="pk.xxx...">
+              <button onclick="saveApiToken('MAPBOX_TOKEN')" class="mt-2 text-sm text-blue-600 hover:text-blue-800">Save</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="border rounded-lg p-4">
+          <h4 class="font-semibold text-gray-800 mb-3">🌐 System Configuration</h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Default Branch</label>
+              <select id="defaultBranch" class="w-full border rounded px-3 py-2 text-sm">
+                <option value="HOUSTON">Houston</option>
+              </select>
+            </div>
+            <div>
+              <label class="flex items-center space-x-2">
+                <input type="checkbox" id="emailNotifications" class="rounded">
+                <span class="text-sm text-gray-700">Enable Email Notifications</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='addUserModal')closeAddUserModal()">
+  <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h3 class="text-xl font-semibold text-gray-900">Add New User</h3>
+      <button onclick="closeAddUserModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Name *</label>
+        <input type="text" id="newUserName" class="w-full border rounded px-3 py-2" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Email *</label>
+        <input type="email" id="newUserEmail" class="w-full border rounded px-3 py-2" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Role *</label>
+        <select id="newUserRole" class="w-full border rounded px-3 py-2" required>
+          <option value="">Select Role</option>
+          <option value="Account Executive">Account Executive</option>
+          <option value="Technician">Technician</option>
+          <option value="Operations Manager">Operations Manager</option>
+          <option value="Branch Manager">Branch Manager</option>
+          <option value="Regional Director">Regional Director</option>
+          <option value="Market Director">Market Director</option>
+          <option value="Executive">Executive</option>
+          <option value="Administrator">Administrator</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Branch</label>
+        <select id="newUserBranch" class="w-full border rounded px-3 py-2">
+          <option value="BRN-001">Houston (BRN-001)</option>
+        </select>
+      </div>
+      <div class="flex gap-3 pt-4">
+        <button onclick="closeAddUserModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+          Cancel
+        </button>
+        <button onclick="saveNewUser()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg">
+          Save User
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='editUserModal')closeEditUserModal()">
+  <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h3 class="text-xl font-semibold text-gray-900">Edit User</h3>
+      <button onclick="closeEditUserModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <input type="hidden" id="editUserID">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Name *</label>
+        <input type="text" id="editUserName" class="w-full border rounded px-3 py-2" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Email *</label>
+        <input type="email" id="editUserEmail" class="w-full border rounded px-3 py-2" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Role *</label>
+        <select id="editUserRole" class="w-full border rounded px-3 py-2" required>
+          <option value="">Select Role</option>
+          <option value="Account Executive">Account Executive</option>
+          <option value="Technician">Technician</option>
+          <option value="Operations Manager">Operations Manager</option>
+          <option value="Branch Manager">Branch Manager</option>
+          <option value="Regional Director">Regional Director</option>
+          <option value="Market Director">Market Director</option>
+          <option value="Executive">Executive</option>
+          <option value="Administrator">Administrator</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Branch</label>
+        <select id="editUserBranch" class="w-full border rounded px-3 py-2">
+          <option value="BRN-001">Houston (BRN-001)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Phone Number</label>
+        <input type="tel" id="editUserPhone" class="w-full border rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" id="editUserActive" class="rounded">
+          <span class="text-sm text-gray-700">Active</span>
+        </label>
+      </div>
+      <div class="flex gap-3 pt-4">
+        <button onclick="closeEditUserModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+          Cancel
+        </button>
+        <button onclick="saveUserChanges()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Territory Modal -->
+<div id="addTerritoryModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='addTerritoryModal')closeAddTerritoryModal()">
+  <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h3 class="text-xl font-semibold text-gray-900">Add New Territory</h3>
+      <button onclick="closeAddTerritoryModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Territory Name *</label>
+        <input type="text" id="newTerritoryName" class="w-full border rounded px-3 py-2" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Account Executive *</label>
+        <select id="newTerritoryAE" class="w-full border rounded px-3 py-2" required>
+          <option value="">Select AE</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Branch *</label>
+        <select id="newTerritoryBranch" class="w-full border rounded px-3 py-2" required>
+          <option value="BRN-001">Houston (BRN-001)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Zip Codes * (comma-separated)</label>
+        <textarea id="newTerritoryZips" class="w-full border rounded px-3 py-2" rows="4" placeholder="77001, 77002, 77003" required></textarea>
+        <p class="text-xs text-gray-500 mt-1">Enter zip codes separated by commas</p>
+      </div>
+      <div>
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" id="newTerritoryActive" class="rounded" checked>
+          <span class="text-sm text-gray-700">Active</span>
+        </label>
+      </div>
+      <div class="flex gap-3 pt-4">
+        <button onclick="closeAddTerritoryModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+          Cancel
+        </button>
+        <button onclick="saveNewTerritory()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg">
+          Save Territory
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Territory Modal -->
+<div id="editTerritoryModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='editTerritoryModal')closeEditTerritoryModal()">
+  <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h3 class="text-xl font-semibold text-gray-900">Edit Territory</h3>
+      <button onclick="closeEditTerritoryModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <input type="hidden" id="editTerritoryID">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Territory Name *</label>
+        <input type="text" id="editTerritoryName" class="w-full border rounded px-3 py-2" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Account Executive *</label>
+        <select id="editTerritoryAE" class="w-full border rounded px-3 py-2" required>
+          <option value="">Select AE</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Branch *</label>
+        <select id="editTerritoryBranch" class="w-full border rounded px-3 py-2" required>
+          <option value="BRN-001">Houston (BRN-001)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Zip Codes * (comma-separated)</label>
+        <textarea id="editTerritoryZips" class="w-full border rounded px-3 py-2" rows="4" placeholder="77001, 77002, 77003" required></textarea>
+        <p class="text-xs text-gray-500 mt-1">Enter zip codes separated by commas</p>
+      </div>
+      <div>
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" id="editTerritoryActive" class="rounded">
+          <span class="text-sm text-gray-700">Active</span>
+        </label>
+      </div>
+      <div class="flex gap-3 pt-4">
+        <button onclick="closeEditTerritoryModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+          Cancel
+        </button>
+        <button onclick="saveTerritoryChanges()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload CSV Modal -->
+<div id="uploadCSVModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='uploadCSVModal')closeUploadCSVModal()">
+  <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h3 class="text-xl font-semibold text-gray-900">Upload Territories CSV</h3>
+      <button onclick="closeUploadCSVModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <div class="bg-blue-50 border border-blue-200 rounded p-3">
+        <p class="text-sm font-semibold text-blue-900 mb-2">CSV Format:</p>
+        <p class="text-xs text-blue-800 font-mono">ZipCode,AE_Email,BranchID,TerritoryName</p>
+        <p class="text-xs text-blue-700 mt-2">Example:</p>
+        <p class="text-xs text-blue-800 font-mono">77001,blair.sloat@rentokil-terminix.com,BRN-001,Downtown Houston</p>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">CSV Data *</label>
+        <textarea id="csvDataInput" class="w-full border rounded px-3 py-2 font-mono text-sm" rows="10" placeholder="Paste CSV data here..."></textarea>
+      </div>
+      <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
+        <p class="text-xs text-yellow-800">
+          <strong>⚠️ Warning:</strong> This will replace all existing territories. Make sure to export current territories first if you want to keep them.
+        </p>
+      </div>
+      <div class="flex gap-3 pt-4">
+        <button onclick="closeUploadCSVModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+          Cancel
+        </button>
+        <button onclick="processCSVUpload()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg">
+          Upload CSV
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deployment Status Modal -->
+<div id="deploymentStatusModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='deploymentStatusModal')closeDeploymentModal()">
+  <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-gray-500">Deployment Info</p>
+        <h3 class="text-xl font-semibold text-gray-900">Apps Script Deployment Status</h3>
+      </div>
+      <button onclick="closeDeploymentModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    </div>
+    <div class="px-6 py-4 space-y-4" id="deploymentStatusContent">
+      <p class="text-gray-600">Loading deployment information...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentTab = 'users';
+  let allUsers = [];
+  let filteredUsers = [];
+  
+  // Initialize dashboard
+  function initAdminDashboard() {
+    // Check access, but allow demo mode for local development
+    checkAdminAccess();
+    loadAdminStats();
+    loadUsers();
+    loadTerritories();
+    loadAuditLog();
+    loadDatabaseStats();
+    checkGitHubStatus();
+    
+    // If running locally (no Apps Script), show a notice
+    if (!hasAppsScript()) {
+      console.log('Running in local/demo mode - admin features may be limited');
+    }
+  }
+  
+  // Check if user has admin access
+  function checkAdminAccess() {
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.getCurrentUser) {
+      runner
+        .withSuccessHandler(function(user) {
+          console.log('Admin access check - user object:', user);
+          // Check role more flexibly - handle case variations and whitespace
+          const userRole = (user.Role || user.role || '').toString().trim();
+          const isAdmin = userRole === 'Administrator' || userRole.toLowerCase() === 'administrator' || userRole === 'admin';
+          
+          if (!user || !isAdmin) {
+            console.warn('Access denied - user role:', userRole, 'isAdmin:', isAdmin);
+            alert('Access Denied: Administrator access required. Your current role is: ' + (userRole || 'Unknown'));
+            window.location.href = 'dashboard.html';
+            return;
+          }
+          document.getElementById('adminName').textContent = user.Name || user.name || 'Admin';
+          document.getElementById('adminEmail').textContent = user.Email || user.email || '';
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to check access:', error);
+          // Fall back to demo mode if access check fails
+          initializeDemoMode();
+        })
+        .getCurrentUser();
+    } else {
+      // No Apps Script runner, use demo mode
+      initializeDemoMode();
+    }
+  }
+  
+  // Initialize demo mode for admin dashboard
+  function initializeDemoMode() {
+    const demoAdmin = {
+      Name: 'Branch360 Admin',
+      name: 'Branch360 Admin',
+      Email: 'admin@branch360.demo',
+      email: 'admin@branch360.demo',
+      Role: 'Administrator',
+      role: 'Administrator',
+      UserID: 'admin-me',
+      userID: 'admin-me',
+      BranchID: 'BRN-001',
+      branchID: 'BRN-001'
+    };
+    
+    document.getElementById('adminName').textContent = demoAdmin.Name;
+    document.getElementById('adminEmail').textContent = demoAdmin.Email;
+    
+    // Load demo data for stats
+    loadDemoAdminStats();
+  }
+  
+  // Load demo admin statistics
+  function loadDemoAdminStats() {
+    document.getElementById('statTotalUsers').textContent = '12';
+    document.getElementById('statActiveUsers').textContent = '10';
+    document.getElementById('statTerritories').textContent = '3';
+  }
+  
+  // Tab switching
+  function switchTab(tab) {
+    currentTab = tab;
+    
+    // Update button states
+    document.querySelectorAll('.tab-button').forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+    document.getElementById('tab-btn-' + tab).classList.add('active');
+    
+    // Update content visibility
+    document.querySelectorAll('.tab-content').forEach(function(content) {
+      content.classList.remove('active');
+    });
+    document.getElementById('tab-' + tab).classList.add('active');
+    
+    // Load tab-specific data
+    if (tab === 'users') loadUsers();
+    if (tab === 'territories') loadTerritories();
+    if (tab === 'audit') loadAuditLog();
+    if (tab === 'database') loadDatabaseStats();
+    if (tab === 'github') checkGitHubStatus();
+    if (tab === 'roi') loadROIData();
+  }
+  
+  // Load admin statistics
+  function loadAdminStats() {
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.getAdminStats) {
+      runner
+        .withSuccessHandler(function(stats) {
+          document.getElementById('statTotalUsers').textContent = stats.totalUsers || 0;
+          document.getElementById('statActiveUsers').textContent = stats.activeUsers || 0;
+          document.getElementById('statTerritories').textContent = stats.territories || 0;
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load stats:', error);
+          // Fall back to demo stats
+          loadDemoAdminStats();
+        })
+        .getAdminStats();
+    } else {
+      // Demo mode - load demo stats
+      loadDemoAdminStats();
+    }
+  }
+  
+  // Load users
+  function loadUsers() {
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.getAllUsers) {
+      runner
+        .withSuccessHandler(function(users) {
+          allUsers = users || [];
+          applyUserFilters();
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load users:', error);
+          // Fall back to demo data
+          loadDemoUsers();
+        })
+        .getAllUsers();
+    } else {
+      // Demo data
+      loadDemoUsers();
+    }
+  }
+  
+  // Load demo users data
+  function loadDemoUsers() {
+    allUsers = [
+      { UserID: 'USR-001', Name: 'Blair Sloat', Email: 'blair.sloat@rentokil-terminix.com', Role: 'Account Executive', BranchID: 'BRN-001', Active: true },
+      { UserID: 'USR-002', Name: 'Bruce Hockless', Email: 'bruce.hockless@prestox.com', Role: 'Operations Manager', BranchID: 'BRN-001', Active: true },
+      { UserID: 'USR-003', Name: 'Brad Hudson', Email: 'brad.hudson@example.com', Role: 'Branch Manager', BranchID: 'BRN-001', Active: true },
+      { UserID: 'USR-004', Name: 'Demo Tech', Email: 'demo.tech@example.com', Role: 'Technician', BranchID: 'BRN-001', Active: true },
+      { UserID: 'USR-005', Name: 'Branch360 Admin', Email: 'admin@branch360.demo', Role: 'Administrator', BranchID: 'BRN-001', Active: true },
+      { UserID: 'USR-006', Name: 'John Doe', Email: 'john@company.com', Role: 'Account Executive', BranchID: 'BRN-001', Active: false }
+    ];
+    applyUserFilters();
+  }
+  
+  function applyUserFilters() {
+    const searchTerm = (document.getElementById('userSearch').value || '').toLowerCase();
+    const roleFilter = document.getElementById('userRoleFilter').value;
+    
+    filteredUsers = allUsers.filter(function(user) {
+      if (searchTerm && !user.Name.toLowerCase().includes(searchTerm) && !user.Email.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+      if (roleFilter && user.Role !== roleFilter) {
+        return false;
+      }
+      return true;
+    });
+    
+    renderUsersTable();
+  }
+  
+  function renderUsersTable() {
+    const tbody = document.getElementById('usersTableBody');
+    if (filteredUsers.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No users found</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = filteredUsers.map(function(user) {
+      return '<tr class="hover:bg-gray-50">' +
+        '<td class="px-4 py-3 text-sm font-medium text-gray-900">' + (user.Name || 'N/A') + '</td>' +
+        '<td class="px-4 py-3 text-sm text-gray-600">' + (user.Email || 'N/A') + '</td>' +
+        '<td class="px-4 py-3 text-sm text-gray-600">' + (user.Role || 'N/A') + '</td>' +
+        '<td class="px-4 py-3 text-sm text-gray-600">' + (user.BranchID || 'N/A') + '</td>' +
+        '<td class="px-4 py-3 text-sm"><span class="px-2 py-1 rounded-full text-xs ' + 
+          (user.Active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') + '">' + 
+          (user.Active ? 'Active' : 'Inactive') + '</span></td>' +
+        '<td class="px-4 py-3 text-sm"><button onclick="editUser(\'' + user.UserID + '\')" class="text-blue-600 hover:text-blue-800 font-semibold mr-2">Edit</button>' +
+        '<button onclick="toggleUserStatus(\'' + user.UserID + '\')" class="text-red-600 hover:text-red-800 font-semibold">' + 
+        (user.Active ? 'Deactivate' : 'Activate') + '</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+  
+  // Event listeners for filters
+  document.addEventListener('DOMContentLoaded', function() {
+    const userSearch = document.getElementById('userSearch');
+    const userRoleFilter = document.getElementById('userRoleFilter');
+    
+    if (userSearch) {
+      userSearch.addEventListener('input', applyUserFilters);
+    }
+    if (userRoleFilter) {
+      userRoleFilter.addEventListener('change', applyUserFilters);
+    }
+  });
+  
+  // User management functions
+  function openAddUserModal() {
+    document.getElementById('addUserModal').classList.remove('hidden');
+  }
+  
+  function closeAddUserModal() {
+    document.getElementById('addUserModal').classList.add('hidden');
+    document.getElementById('newUserName').value = '';
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserRole').value = '';
+    document.getElementById('newUserBranch').value = 'BRN-001';
+  }
+  
+  function saveNewUser() {
+    const userData = {
+      name: document.getElementById('newUserName').value.trim(),
+      email: document.getElementById('newUserEmail').value.trim(),
+      role: document.getElementById('newUserRole').value,
+      branchID: document.getElementById('newUserBranch').value
+    };
+    
+    if (!userData.name || !userData.email || !userData.role) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.createUser) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('User created successfully!');
+          closeAddUserModal();
+          loadUsers();
+          loadAdminStats();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to create user: ' + error.message);
+        })
+        .createUser(userData);
+    } else {
+      alert('User creation not available in demo mode');
+    }
+  }
+  
+  function editUser(userID) {
+    const user = allUsers.find(function(u) { return u.UserID === userID; });
+    if (!user) {
+      alert('User not found');
+      return;
+    }
+    
+    document.getElementById('editUserID').value = user.UserID;
+    document.getElementById('editUserName').value = user.Name || '';
+    document.getElementById('editUserEmail').value = user.Email || '';
+    document.getElementById('editUserRole').value = user.Role || '';
+    document.getElementById('editUserBranch').value = user.BranchID || 'BRN-001';
+    document.getElementById('editUserPhone').value = user.PhoneNumber || '';
+    document.getElementById('editUserActive').checked = user.Active !== false;
+    
+    document.getElementById('editUserModal').classList.remove('hidden');
+  }
+  
+  function closeEditUserModal() {
+    document.getElementById('editUserModal').classList.add('hidden');
+  }
+  
+  function saveUserChanges() {
+    const userID = document.getElementById('editUserID').value;
+    const userData = {
+      name: document.getElementById('editUserName').value.trim(),
+      email: document.getElementById('editUserEmail').value.trim(),
+      role: document.getElementById('editUserRole').value,
+      branchID: document.getElementById('editUserBranch').value,
+      phoneNumber: document.getElementById('editUserPhone').value.trim(),
+      active: document.getElementById('editUserActive').checked
+    };
+    
+    if (!userData.name || !userData.email || !userData.role) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.updateUser) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('User updated successfully!');
+          closeEditUserModal();
+          loadUsers();
+          loadAdminStats();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to update user: ' + error.message);
+        })
+        .updateUser(userID, userData);
+    } else {
+      // Demo mode - update locally
+      const user = allUsers.find(function(u) { return u.UserID === userID; });
+      if (user) {
+        Object.assign(user, userData);
+        applyUserFilters();
+        loadAdminStats();
+        alert('User updated (demo mode)');
+        closeEditUserModal();
+      }
+    }
+  }
+  
+  function toggleUserStatus(userID) {
+    if (!confirm('Are you sure you want to change this user\'s status?')) return;
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.toggleUserActive) {
+      runner
+        .withSuccessHandler(function() {
+          loadUsers();
+          loadAdminStats();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to update user: ' + error.message);
+        })
+        .toggleUserActive(userID);
+    } else {
+      // Demo mode - update locally
+      const user = allUsers.find(function(u) { return u.UserID === userID; });
+      if (user) {
+        user.Active = !user.Active;
+        applyUserFilters();
+        loadAdminStats();
+      }
+    }
+  }
+  
+  // Territory management
+  // Territory management state
+  let allTerritories = [];
+  let filteredTerritories = [];
+  let selectedTerritories = new Set();
+  let territoryViewMode = 'grid';
+  let territoryMap = null;
+  let mapboxToken = null;
+  let currentMapType = 'territories';
+  let mapMarkers = [];
+
+  function loadTerritories() {
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.getTerritories) {
+      runner
+        .withSuccessHandler(function(territories) {
+          allTerritories = territories || [];
+          updateTerritoryStats(allTerritories);
+          populateFilters(allTerritories);
+          populateAERouteSelector();
+          filterTerritories();
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load territories:', error);
+          // Fall back to demo data
+          loadDemoTerritories();
+        })
+        .getTerritories();
+    } else {
+      // Demo mode
+      loadDemoTerritories();
+    }
+  }
+  
+  // Load demo territories data
+  function loadDemoTerritories() {
+    const demoTerritories = [
+      { 
+        TerritoryID: 'TER-001', 
+        TerritoryName: 'Downtown Houston', 
+        AE_Email: 'blair.sloat@rentokil-terminix.com',
+        AE_Name: 'Blair Sloat',
+        BranchID: 'BRN-001',
+        ZipCodes: ['77001', '77002', '77003', '77004', '77005', '77006'],
+        zipCount: 6,
+        Active: true,
+        CreatedOn: new Date()
+      },
+      { 
+        TerritoryID: 'TER-002', 
+        TerritoryName: 'Midtown', 
+        AE_Email: 'demo.ae2@example.com',
+        AE_Name: 'Demo AE 2',
+        BranchID: 'BRN-001',
+        ZipCodes: ['77006', '77007', '77008', '77019', '77025'],
+        zipCount: 5,
+        Active: true,
+        CreatedOn: new Date()
+      },
+      { 
+        TerritoryID: 'TER-003', 
+        TerritoryName: 'Galleria / Uptown', 
+        AE_Email: 'cody@example.com',
+        AE_Name: 'Cody Lytle',
+        BranchID: 'BRN-001',
+        ZipCodes: ['77056', '77057', '77063', '77069', '77074', '77077', '77079'],
+        zipCount: 7,
+        Active: true,
+        CreatedOn: new Date()
+      }
+    ];
+    allTerritories = demoTerritories;
+    updateTerritoryStats(allTerritories);
+    populateFilters(allTerritories);
+    filterTerritories();
+  }
+
+  function updateTerritoryStats(territories) {
+    const totalTerritories = territories.length;
+    const totalZips = territories.reduce(function(sum, t) { return sum + (t.zipCount || 0); }, 0);
+    const uniqueAEs = new Set(territories.map(function(t) { return t.AE_Email || t.AE_UserID; })).size;
+    const avgZips = totalTerritories > 0 ? Math.round(totalZips / totalTerritories) : 0;
+
+    document.getElementById('territoryStatTotal').textContent = totalTerritories;
+    document.getElementById('territoryStatZips').textContent = totalZips;
+    document.getElementById('territoryStatAEs').textContent = uniqueAEs;
+    document.getElementById('territoryStatAvg').textContent = avgZips;
+  }
+
+  function populateFilters(territories) {
+    // Populate branch filter
+    const branchFilter = document.getElementById('territoryBranchFilter');
+    const branches = new Set();
+    territories.forEach(function(t) {
+      if (t.BranchID) branches.add(t.BranchID);
+    });
+    const currentBranchValue = branchFilter.value;
+    branchFilter.innerHTML = '<option value="">All Branches</option>';
+    Array.from(branches).sort().forEach(function(branch) {
+      const option = document.createElement('option');
+      option.value = branch;
+      option.textContent = branch;
+      branchFilter.appendChild(option);
+    });
+    if (currentBranchValue) branchFilter.value = currentBranchValue;
+
+    // Populate AE filter
+    const aeFilter = document.getElementById('territoryAEFilter');
+    const aes = new Set();
+    territories.forEach(function(t) {
+      const aeKey = t.AE_Email || t.AE_Name || t.AE_UserID;
+      if (aeKey) aes.add(aeKey);
+    });
+    const currentAEValue = aeFilter.value;
+    aeFilter.innerHTML = '<option value="">All AEs</option>';
+    Array.from(aes).sort().forEach(function(ae) {
+      const option = document.createElement('option');
+      option.value = ae;
+      option.textContent = ae;
+      aeFilter.appendChild(option);
+    });
+    if (currentAEValue) aeFilter.value = currentAEValue;
+  }
+
+  function filterTerritories() {
+    const searchTerm = (document.getElementById('territorySearch').value || '').toLowerCase();
+    const branchFilter = document.getElementById('territoryBranchFilter').value;
+    const aeFilter = document.getElementById('territoryAEFilter').value;
+    const statusFilter = document.getElementById('territoryStatusFilter').value;
+
+    filteredTerritories = allTerritories.filter(function(territory) {
+      // Search filter
+      if (searchTerm) {
+        const matchesName = (territory.TerritoryName || '').toLowerCase().includes(searchTerm);
+        const matchesAE = (territory.AE_Email || '').toLowerCase().includes(searchTerm) ||
+                         (territory.AE_Name || '').toLowerCase().includes(searchTerm);
+        const matchesZips = (territory.ZipCodes || []).some(function(zip) {
+          return zip.toLowerCase().includes(searchTerm);
+        });
+        if (!matchesName && !matchesAE && !matchesZips) return false;
+      }
+
+      // Branch filter
+      if (branchFilter && territory.BranchID !== branchFilter) return false;
+
+      // AE filter
+      if (aeFilter) {
+        const aeMatch = territory.AE_Email === aeFilter || 
+                       territory.AE_Name === aeFilter || 
+                       territory.AE_UserID === aeFilter;
+        if (!aeMatch) return false;
+      }
+
+      // Status filter
+      if (statusFilter === 'active' && !territory.Active) return false;
+      if (statusFilter === 'inactive' && territory.Active) return false;
+
+      return true;
+    });
+
+    sortTerritories();
+  }
+
+  function sortTerritories() {
+    const sortBy = document.getElementById('territorySortBy').value;
+    const sortOrder = document.getElementById('territorySortOrder').value;
+
+    filteredTerritories.sort(function(a, b) {
+      let aVal, bVal;
+
+      switch(sortBy) {
+        case 'name':
+          aVal = (a.TerritoryName || '').toLowerCase();
+          bVal = (b.TerritoryName || '').toLowerCase();
+          break;
+        case 'ae':
+          aVal = (a.AE_Name || a.AE_Email || '').toLowerCase();
+          bVal = (b.AE_Name || b.AE_Email || '').toLowerCase();
+          break;
+        case 'branch':
+          aVal = (a.BranchID || '').toLowerCase();
+          bVal = (b.BranchID || '').toLowerCase();
+          break;
+        case 'zips':
+          aVal = a.zipCount || 0;
+          bVal = b.zipCount || 0;
+          break;
+        case 'created':
+          aVal = new Date(a.CreatedOn || 0);
+          bVal = new Date(b.CreatedOn || 0);
+          break;
+        default:
+          aVal = a.TerritoryName || '';
+          bVal = b.TerritoryName || '';
+      }
+
+      if (typeof aVal === 'string') {
+        return sortOrder === 'asc' ? 
+          (aVal < bVal ? -1 : aVal > bVal ? 1 : 0) :
+          (aVal > bVal ? -1 : aVal < bVal ? 1 : 0);
+      } else {
+        return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+    });
+
+    renderTerritories();
+  }
+
+  function changeTerritoryView() {
+    territoryViewMode = document.getElementById('territoryViewMode').value;
+    renderTerritories();
+  }
+
+  function renderTerritories() {
+    const container = document.getElementById('territoriesList');
+    const totalEl = document.getElementById('territoryTotal');
+    const countEl = document.getElementById('territoryCount');
+
+    totalEl.textContent = allTerritories.length;
+    countEl.textContent = filteredTerritories.length;
+
+    if (filteredTerritories.length === 0) {
+      container.innerHTML = '<div class="text-center py-12"><p class="text-gray-500 text-lg">No territories found matching your filters.</p></div>';
+      return;
+    }
+
+    if (territoryViewMode === 'table') {
+      renderTerritoriesTable();
+    } else if (territoryViewMode === 'list') {
+      renderTerritoriesList();
+    } else {
+      renderTerritoriesGrid();
+    }
+  }
+
+  function renderTerritoriesGrid() {
+    const container = document.getElementById('territoriesList');
+    container.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+    
+    container.innerHTML = filteredTerritories.map(function(territory) {
+      const isSelected = selectedTerritories.has(territory.TerritoryID);
+      const gradientColors = [
+        ['#5f72ff', '#9921e8'],
+        ['#38b6ff', '#3a47d5'],
+        ['#ff6cab', '#7366ff'],
+        ['#f7971e', '#ffd200'],
+        ['#00c6ff', '#0072ff']
+      ];
+      const colorIndex = Math.abs([...(territory.TerritoryName || '')].reduce(function(acc, char) {
+        return acc + char.charCodeAt(0);
+      }, 0)) % gradientColors.length;
+      const gradient = `linear-gradient(135deg, ${gradientColors[colorIndex][0]}, ${gradientColors[colorIndex][1]})`;
+      const previewZips = (territory.ZipCodes || []).slice(0, 10);
+
+      return '<div class="border rounded-lg overflow-hidden bg-white shadow hover:shadow-lg transition-shadow ' + (isSelected ? 'ring-2 ring-blue-500' : '') + '">' +
+        '<div class="p-4 text-white font-bold" style="background: ' + gradient + '">' +
+        '<div class="flex items-center justify-between">' +
+        '<h4 class="text-lg">' + escapeHtml(territory.TerritoryName || 'Unnamed') + '</h4>' +
+        '<input type="checkbox" class="w-5 h-5 rounded" onchange="toggleTerritorySelection(\'' + territory.TerritoryID + '\')" ' + (isSelected ? 'checked' : '') + '>' +
+        '</div></div>' +
+        '<div class="p-4 space-y-3">' +
+        '<div><p class="text-sm text-gray-600">Account Executive</p><p class="font-semibold">' + escapeHtml(territory.AE_Name || territory.AE_Email || 'N/A') + '</p></div>' +
+        '<div><p class="text-sm text-gray-600">Branch</p><p class="font-semibold">' + escapeHtml(territory.BranchID || 'N/A') + '</p></div>' +
+        '<div class="flex justify-between items-center pt-2 border-t">' +
+        '<span class="text-sm text-gray-600">Zip Codes</span>' +
+        '<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">' + (territory.zipCount || 0) + '</span>' +
+        '</div>' +
+        (previewZips.length > 0 ? '<div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto pt-2">' +
+          previewZips.map(function(zip) {
+            return '<span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">' + escapeHtml(zip) + '</span>';
+          }).join('') +
+          ((territory.ZipCodes || []).length > 10 ? '<span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">+' + ((territory.ZipCodes || []).length - 10) + ' more</span>' : '') +
+          '</div>' : '') +
+        '<div class="flex gap-2 pt-2 border-t">' +
+        '<button onclick="editTerritory(\'' + territory.TerritoryID + '\')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-3 rounded">✏️ Edit</button>' +
+        '<button onclick="deleteTerritory(\'' + territory.TerritoryID + '\')" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2 px-3 rounded">🗑️ Delete</button>' +
+        '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function renderTerritoriesList() {
+    const container = document.getElementById('territoriesList');
+    container.className = 'space-y-3';
+    
+    container.innerHTML = filteredTerritories.map(function(territory) {
+      const isSelected = selectedTerritories.has(territory.TerritoryID);
+      return '<div class="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between ' + (isSelected ? 'ring-2 ring-blue-500' : '') + '">' +
+        '<div class="flex items-center gap-4 flex-1">' +
+        '<input type="checkbox" class="w-5 h-5 rounded" onchange="toggleTerritorySelection(\'' + territory.TerritoryID + '\')" ' + (isSelected ? 'checked' : '') + '>' +
+        '<div class="flex-1">' +
+        '<h4 class="font-semibold text-gray-800">' + escapeHtml(territory.TerritoryName || 'Unnamed') + '</h4>' +
+        '<p class="text-sm text-gray-600">' + escapeHtml(territory.AE_Name || territory.AE_Email || 'N/A') + ' • ' + escapeHtml(territory.BranchID || 'N/A') + '</p>' +
+        '</div>' +
+        '<div class="text-right">' +
+        '<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm font-semibold">' + (territory.zipCount || 0) + ' zip codes</span>' +
+        '</div>' +
+        '<div class="flex gap-2 ml-4">' +
+        '<button onclick="editTerritory(\'' + territory.TerritoryID + '\')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded">Edit</button>' +
+        '<button onclick="deleteTerritory(\'' + territory.TerritoryID + '\')" class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2 px-4 rounded">Delete</button>' +
+        '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function renderTerritoriesTable() {
+    const container = document.getElementById('territoriesList');
+    container.className = 'overflow-x-auto';
+    
+    container.innerHTML = '<table class="min-w-full bg-white border rounded-lg">' +
+      '<thead class="bg-gray-50">' +
+      '<tr>' +
+      '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase"><input type="checkbox" onchange="toggleAllTerritories(this.checked)"></th>' +
+      '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Territory</th>' +
+      '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">AE</th>' +
+      '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Branch</th>' +
+      '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Zip Codes</th>' +
+      '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>' +
+      '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>' +
+      '</tr></thead>' +
+      '<tbody class="divide-y divide-gray-200">' +
+      filteredTerritories.map(function(territory) {
+        const isSelected = selectedTerritories.has(territory.TerritoryID);
+        return '<tr class="hover:bg-gray-50 ' + (isSelected ? 'bg-blue-50' : '') + '">' +
+          '<td class="px-4 py-3"><input type="checkbox" class="w-4 h-4 rounded" onchange="toggleTerritorySelection(\'' + territory.TerritoryID + '\')" ' + (isSelected ? 'checked' : '') + '></td>' +
+          '<td class="px-4 py-3"><div class="font-semibold text-gray-800">' + escapeHtml(territory.TerritoryName || 'Unnamed') + '</div></td>' +
+          '<td class="px-4 py-3"><div class="text-sm text-gray-600">' + escapeHtml(territory.AE_Name || territory.AE_Email || 'N/A') + '</div></td>' +
+          '<td class="px-4 py-3"><div class="text-sm text-gray-600">' + escapeHtml(territory.BranchID || 'N/A') + '</div></td>' +
+          '<td class="px-4 py-3"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">' + (territory.zipCount || 0) + '</span></td>' +
+          '<td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-semibold ' + (territory.Active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800') + '">' + (territory.Active ? 'Active' : 'Inactive') + '</span></td>' +
+          '<td class="px-4 py-3"><div class="flex gap-2">' +
+          '<button onclick="editTerritory(\'' + territory.TerritoryID + '\')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">Edit</button>' +
+          '<button onclick="deleteTerritory(\'' + territory.TerritoryID + '\')" class="text-red-600 hover:text-red-800 text-sm font-semibold">Delete</button>' +
+          '</div></td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  function toggleTerritorySelection(territoryID) {
+    if (selectedTerritories.has(territoryID)) {
+      selectedTerritories.delete(territoryID);
+    } else {
+      selectedTerritories.add(territoryID);
+    }
+    updateBulkDeleteButton();
+  }
+
+  function toggleAllTerritories(checked) {
+    if (checked) {
+      filteredTerritories.forEach(function(t) {
+        selectedTerritories.add(t.TerritoryID);
+      });
+    } else {
+      filteredTerritories.forEach(function(t) {
+        selectedTerritories.delete(t.TerritoryID);
+      });
+    }
+    renderTerritories();
+    updateBulkDeleteButton();
+  }
+
+  function updateBulkDeleteButton() {
+    const btn = document.getElementById('bulkDeleteBtn');
+    if (selectedTerritories.size > 0) {
+      btn.classList.remove('hidden');
+      btn.textContent = '🗑️ Delete Selected (' + selectedTerritories.size + ')';
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function openAddTerritoryModal() {
+    // Ensure users are loaded
+    if (allUsers.length === 0) {
+      loadUsers();
+      setTimeout(function() {
+        openAddTerritoryModal();
+      }, 500);
+      return;
+    }
+    
+    // Populate AE dropdown
+    const aeSelect = document.getElementById('newTerritoryAE');
+    aeSelect.innerHTML = '<option value="">Select AE</option>';
+    const aes = allUsers.filter(function(u) {
+      const role = (u.Role || '').toLowerCase();
+      return role.includes('account executive') || role.includes('ae');
+    });
+    aes.forEach(function(ae) {
+      const option = document.createElement('option');
+      option.value = ae.UserID;
+      option.textContent = ae.Name + ' (' + ae.Email + ')';
+      aeSelect.appendChild(option);
+    });
+    
+    // Reset form
+    document.getElementById('newTerritoryName').value = '';
+    document.getElementById('newTerritoryZips').value = '';
+    document.getElementById('newTerritoryActive').checked = true;
+    
+    document.getElementById('addTerritoryModal').classList.remove('hidden');
+  }
+  
+  function closeAddTerritoryModal() {
+    document.getElementById('addTerritoryModal').classList.add('hidden');
+  }
+  
+  function saveNewTerritory() {
+    const territoryData = {
+      territoryName: document.getElementById('newTerritoryName').value.trim(),
+      aeUserID: document.getElementById('newTerritoryAE').value,
+      branchID: document.getElementById('newTerritoryBranch').value,
+      zipCodes: document.getElementById('newTerritoryZips').value.split(',').map(function(z) {
+        return z.trim();
+      }).filter(function(z) {
+        return z.length > 0;
+      }),
+      active: document.getElementById('newTerritoryActive').checked
+    };
+    
+    if (!territoryData.territoryName || !territoryData.aeUserID || !territoryData.zipCodes.length) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.createTerritory) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('Territory created successfully!');
+          closeAddTerritoryModal();
+          loadTerritories();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to create territory: ' + error.message);
+        })
+        .createTerritory(territoryData);
+    } else {
+      alert('Territory creation not available in demo mode');
+    }
+  }
+  
+  function openUploadTerritoriesModal() {
+    document.getElementById('csvDataInput').value = '';
+    document.getElementById('uploadCSVModal').classList.remove('hidden');
+  }
+  
+  function closeUploadCSVModal() {
+    document.getElementById('uploadCSVModal').classList.add('hidden');
+  }
+  
+  function processCSVUpload() {
+    const csvData = document.getElementById('csvDataInput').value.trim();
+    if (!csvData) {
+      alert('Please paste CSV data');
+      return;
+    }
+    
+    if (!confirm('This will replace all existing territories. Are you sure?')) {
+      return;
+    }
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.uploadTerritories) {
+      runner
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            alert('Territories uploaded successfully!\n\n' +
+              'Zip Codes Processed: ' + (result.zipCodesProcessed || 0) + '\n' +
+              'Territories Created: ' + (result.territoriesCreated || 0));
+            closeUploadCSVModal();
+            loadTerritories();
+          } else {
+            alert('Upload failed: ' + result.message);
+          }
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to upload territories: ' + error.message);
+        })
+        .uploadTerritories({ csvData: csvData });
+    } else {
+      alert('CSV upload not available in demo mode');
+    }
+  }
+  
+  function exportTerritoriesCSV() {
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.exportTerritoriesCSV) {
+      runner
+        .withSuccessHandler(function(csvData) {
+          // Create download link
+          const blob = new Blob([csvData], { type: 'text/csv' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'territories_' + new Date().toISOString().split('T')[0] + '.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to export territories: ' + error.message);
+        })
+        .exportTerritoriesCSV();
+    } else {
+      // Demo mode - create CSV from current data
+      let csv = 'ZipCode,AE_Email,BranchID,TerritoryName\n';
+      allTerritories.forEach(function(territory) {
+        (territory.ZipCodes || []).forEach(function(zip) {
+          csv += zip + ',' + (territory.AE_Email || '') + ',' + (territory.BranchID || '') + ',' + (territory.TerritoryName || '') + '\n';
+        });
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'territories_' + new Date().toISOString().split('T')[0] + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
+  }
+  
+  function editTerritory(territoryID) {
+    // Ensure users and territories are loaded
+    if (allUsers.length === 0 || allTerritories.length === 0) {
+      loadUsers();
+      loadTerritories();
+      setTimeout(function() {
+        editTerritory(territoryID);
+      }, 500);
+      return;
+    }
+    
+    const territory = allTerritories.find(function(t) { return t.TerritoryID === territoryID; });
+    if (!territory) {
+      alert('Territory not found');
+      return;
+    }
+    
+    document.getElementById('editTerritoryID').value = territory.TerritoryID;
+    document.getElementById('editTerritoryName').value = territory.TerritoryName || '';
+    document.getElementById('editTerritoryBranch').value = territory.BranchID || 'BRN-001';
+    document.getElementById('editTerritoryZips').value = (territory.ZipCodes || []).join(', ');
+    document.getElementById('editTerritoryActive').checked = territory.Active !== false;
+    
+    // Populate AE dropdown
+    const aeSelect = document.getElementById('editTerritoryAE');
+    aeSelect.innerHTML = '<option value="">Select AE</option>';
+    const aes = allUsers.filter(function(u) {
+      const role = (u.Role || '').toLowerCase();
+      return role.includes('account executive') || role.includes('ae');
+    });
+    aes.forEach(function(ae) {
+      const option = document.createElement('option');
+      option.value = ae.UserID;
+      option.textContent = ae.Name + ' (' + ae.Email + ')';
+      if (ae.UserID === territory.AE_UserID) {
+        option.selected = true;
+      }
+      aeSelect.appendChild(option);
+    });
+    
+    document.getElementById('editTerritoryModal').classList.remove('hidden');
+  }
+  
+  function closeEditTerritoryModal() {
+    document.getElementById('editTerritoryModal').classList.add('hidden');
+  }
+  
+  function saveTerritoryChanges() {
+    const territoryID = document.getElementById('editTerritoryID').value;
+    const territoryData = {
+      territoryName: document.getElementById('editTerritoryName').value.trim(),
+      aeUserID: document.getElementById('editTerritoryAE').value,
+      branchID: document.getElementById('editTerritoryBranch').value,
+      zipCodes: document.getElementById('editTerritoryZips').value.split(',').map(function(z) {
+        return z.trim();
+      }).filter(function(z) {
+        return z.length > 0;
+      }),
+      active: document.getElementById('editTerritoryActive').checked
+    };
+    
+    if (!territoryData.territoryName || !territoryData.aeUserID || !territoryData.zipCodes.length) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.updateTerritory) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('Territory updated successfully!');
+          closeEditTerritoryModal();
+          loadTerritories();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to update territory: ' + error.message);
+        })
+        .updateTerritory(territoryID, territoryData);
+    } else {
+      alert('Territory update not available in demo mode');
+    }
+  }
+  
+  function deleteTerritory(territoryID) {
+    if (!confirm('Are you sure you want to delete this territory? This action cannot be undone.')) return;
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.deleteTerritory) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('Territory deleted successfully!');
+          loadTerritories();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to delete territory: ' + error.message);
+        })
+        .deleteTerritory(territoryID);
+    } else {
+      alert('Territory deletion not available in demo mode');
+    }
+  }
+  
+  function bulkDeleteTerritories() {
+    if (selectedTerritories.size === 0) {
+      alert('Please select territories to delete');
+      return;
+    }
+    if (!confirm('Are you sure you want to delete ' + selectedTerritories.size + ' selected territories? This action cannot be undone.')) return;
+    
+    const territoryIDs = Array.from(selectedTerritories);
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.bulkDeleteTerritories) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('Deleted ' + result.deletedCount + ' of ' + result.totalRequested + ' territories');
+          selectedTerritories.clear();
+          loadTerritories();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to delete territories: ' + error.message);
+        })
+        .bulkDeleteTerritories(territoryIDs);
+    } else {
+      alert('Bulk delete not available in demo mode');
+    }
+  }
+
+  // Map functionality
+  function changeTerritoryView() {
+    territoryViewMode = document.getElementById('territoryViewMode').value;
+    const mapContainer = document.getElementById('territoryMapContainer');
+    const mapControls = document.getElementById('mapViewControls');
+    const listContainer = document.getElementById('territoriesList');
+    
+    if (territoryViewMode === 'map') {
+      mapContainer.classList.remove('hidden');
+      mapControls.classList.remove('hidden');
+      listContainer.classList.add('hidden');
+      initializeMap();
+    } else {
+      mapContainer.classList.add('hidden');
+      mapControls.classList.add('hidden');
+      listContainer.classList.remove('hidden');
+      renderTerritories();
+    }
+  }
+
+  function initializeMap() {
+    if (territoryMap) {
+      if (currentMapType === 'territories') {
+        renderTerritoriesMap();
+      } else {
+        loadAERoutes();
+      }
+      return;
+    }
+
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.getMapboxToken) {
+      runner
+        .withSuccessHandler(function(token) {
+          mapboxToken = token;
+          createMap();
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to get Mapbox token:', error);
+          mapboxToken = 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA';
+          createMap();
+        })
+        .getMapboxToken();
+    } else {
+      mapboxToken = 'pk.eyJ1IjoiY2xhc2FrIiwiYSI6ImNtaHduMzF4bTAxZjgya3BxMjMzYXNzM2kifQ.Ervu02B9hyFoRYmuQgodIA';
+      createMap();
+    }
+  }
+
+  function createMap() {
+    if (!mapboxToken) {
+      alert('Mapbox token not available');
+      return;
+    }
+
+    mapboxgl.accessToken = mapboxToken;
+    territoryMap = new mapboxgl.Map({
+      container: 'territoryMap',
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: [-95.3698, 29.7604],
+      zoom: 10
+    });
+
+    territoryMap.on('load', function() {
+      if (currentMapType === 'territories') {
+        renderTerritoriesMap();
+      } else {
+        loadAERoutes();
+      }
+    });
+  }
+
+  function switchMapType() {
+    currentMapType = document.getElementById('mapTypeSelector').value;
+    const aeControls = document.getElementById('aeRouteDateSelector');
+    const aeAESelector = document.getElementById('aeRouteAESelector');
+    
+    if (currentMapType === 'ae-routes') {
+      aeControls.classList.remove('hidden');
+      aeAESelector.classList.remove('hidden');
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('aeRouteDate').value = today;
+      populateAERouteSelector();
+      loadAERoutes();
+    } else {
+      aeControls.classList.add('hidden');
+      aeAESelector.classList.add('hidden');
+      renderTerritoriesMap();
+    }
+  }
+
+  function populateAERouteSelector() {
+    const selector = document.getElementById('aeRouteAE');
+    const aes = new Set();
+    allTerritories.forEach(function(t) {
+      if (t.AE_Email) aes.add(t.AE_Email);
+      if (t.AE_Name) aes.add(t.AE_Name);
+    });
+    selector.innerHTML = '<option value="">All AEs</option>';
+    Array.from(aes).sort().forEach(function(ae) {
+      const option = document.createElement('option');
+      option.value = ae;
+      option.textContent = ae;
+      selector.appendChild(option);
+    });
+  }
+
+  function renderTerritoriesMap() {
+    if (!territoryMap) return;
+
+    mapMarkers.forEach(function(marker) { marker.remove(); });
+    mapMarkers = [];
+
+    const zipTerritoryMap = {};
+    filteredTerritories.forEach(function(territory) {
+      (territory.ZipCodes || []).forEach(function(zip) {
+        if (!zipTerritoryMap[zip]) zipTerritoryMap[zip] = [];
+        zipTerritoryMap[zip].push(territory);
+      });
+    });
+
+    const zipCodes = Object.keys(zipTerritoryMap);
+    let geocodedCount = 0;
+    const bounds = new mapboxgl.LngLatBounds();
+    const territoryColors = {};
+
+    filteredTerritories.forEach(function(territory, index) {
+      const colors = [['#5f72ff', '#9921e8'], ['#38b6ff', '#3a47d5'], ['#ff6cab', '#7366ff'], ['#f7971e', '#ffd200'], ['#00c6ff', '#0072ff']];
+      territoryColors[territory.TerritoryID] = colors[index % colors.length][0];
+    });
+
+    const legendEl = document.getElementById('mapLegend');
+    if (zipCodes.length === 0) {
+      legendEl.innerHTML = '<p class="text-gray-500">No territories to display</p>';
+      return;
+    }
+
+    zipCodes.slice(0, 100).forEach(function(zip) {
+      geocodeZipCode(zip, function(coords) {
+        if (coords) {
+          const territories = zipTerritoryMap[zip];
+          const color = territoryColors[territories[0].TerritoryID] || '#5f72ff';
+          
+          const popup = new mapboxgl.Popup({ offset: 25 })
+            .setHTML('<div class="p-2"><h4 class="font-semibold text-sm mb-1">Zip Code: ' + zip + '</h4>' +
+              territories.map(function(t) {
+                return '<p class="text-xs text-gray-600">' + escapeHtml(t.TerritoryName) + ' - ' + escapeHtml(t.AE_Name || t.AE_Email || 'N/A') + '</p>';
+              }).join('') + '</div>');
+
+          const el = document.createElement('div');
+          el.className = 'marker';
+          el.style.width = '12px';
+          el.style.height = '12px';
+          el.style.borderRadius = '50%';
+          el.style.backgroundColor = color;
+          el.style.border = '2px solid white';
+          el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+
+          const marker = new mapboxgl.Marker(el).setLngLat([coords.lng, coords.lat]).setPopup(popup).addTo(territoryMap);
+          mapMarkers.push(marker);
+          bounds.extend([coords.lng, coords.lat]);
+          geocodedCount++;
+
+          if (geocodedCount === Math.min(zipCodes.length, 100)) {
+            if (bounds.isEmpty() === false) {
+              territoryMap.fitBounds(bounds, { padding: 50, maxZoom: 12 });
+            }
+          }
+        }
+      });
+    });
+
+    legendEl.innerHTML = '<div class="font-semibold mb-2">Territories:</div>' +
+      filteredTerritories.slice(0, 10).map(function(t) {
+        const color = territoryColors[t.TerritoryID] || '#5f72ff';
+        return '<div class="flex items-center gap-2"><span style="width: 12px; height: 12px; background: ' + color + '; border-radius: 50%; display: inline-block;"></span><span class="text-xs">' + escapeHtml(t.TerritoryName) + '</span></div>';
+      }).join('');
+  }
+
+  function geocodeZipCode(zipCode, callback) {
+    if (!mapboxToken) { callback(null); return; }
+    const url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/' + encodeURIComponent(zipCode + ', US') + '.json?access_token=' + mapboxToken + '&types=postcode';
+    fetch(url).then(function(response) { return response.json(); }).then(function(data) {
+      if (data.features && data.features.length > 0) {
+        const center = data.features[0].center;
+        callback({ lng: center[0], lat: center[1] });
+      } else { callback(null); }
+    }).catch(function(error) { console.error('Geocoding error:', error); callback(null); });
+  }
+
+  function loadAERoutes() {
+    if (!territoryMap) { initializeMap(); return; }
+    const date = document.getElementById('aeRouteDate').value || new Date().toISOString().split('T')[0];
+    const selectedAE = document.getElementById('aeRouteAE').value;
+
+    mapMarkers.forEach(function(marker) { marker.remove(); });
+    mapMarkers = [];
+
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.getAECalendarEvents) {
+      runner.withSuccessHandler(function(events) {
+        renderAERoutesOnMap(events || []);
+      }).withFailureHandler(function(error) {
+        console.error('Failed to load AE routes:', error);
+        renderAERoutesOnMap(getDemoAEEvents());
+      }).getAECalendarEvents({ startDate: date, endDate: date, aeEmail: selectedAE || null });
+    } else {
+      renderAERoutesOnMap(getDemoAEEvents());
+    }
+  }
+
+  function getDemoAEEvents() {
+    return [
+      { title: 'Customer Visit - Bayou Coffee', location: '1818 Commerce St, Houston, TX 77002', startTime: new Date(), aeEmail: 'blair.sloat@rentokil-terminix.com', aeName: 'Blair Sloat' },
+      { title: 'Proposal Presentation', location: '1500 Navigation Blvd, Houston, TX 77003', startTime: new Date(), aeEmail: 'blair.sloat@rentokil-terminix.com', aeName: 'Blair Sloat' }
+    ];
+  }
+
+  function renderAERoutesOnMap(events) {
+    if (!territoryMap) return;
+    const legendEl = document.getElementById('mapLegend');
+    const aeColors = {};
+    const uniqueAEs = new Set();
+    events.forEach(function(event) { if (event.aeEmail) uniqueAEs.add(event.aeEmail); });
+    Array.from(uniqueAEs).forEach(function(aeEmail, index) {
+      const colors = ['#5f72ff', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+      aeColors[aeEmail] = colors[index % colors.length];
+    });
+
+    let geocodedCount = 0;
+    const bounds = new mapboxgl.LngLatBounds();
+
+    events.forEach(function(event) {
+      if (!event.location) return;
+      geocodeAddress(event.location, function(coords) {
+        if (coords) {
+          const color = aeColors[event.aeEmail] || '#5f72ff';
+          const timeStr = event.startTime ? new Date(event.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+          const popup = new mapboxgl.Popup({ offset: 25 }).setHTML('<div class="p-2"><h4 class="font-semibold text-sm mb-1">' + escapeHtml(event.title || 'Appointment') + '</h4><p class="text-xs text-gray-600 mb-1">' + escapeHtml(event.aeName || event.aeEmail || 'N/A') + '</p>' + (timeStr ? '<p class="text-xs text-gray-500">' + timeStr + '</p>' : '') + '<p class="text-xs text-gray-500 mt-1">' + escapeHtml(event.location) + '</p></div>');
+          const el = document.createElement('div');
+          el.className = 'marker';
+          el.style.width = '16px';
+          el.style.height = '16px';
+          el.style.borderRadius = '50%';
+          el.style.backgroundColor = color;
+          el.style.border = '2px solid white';
+          el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+          const marker = new mapboxgl.Marker(el).setLngLat([coords.lng, coords.lat]).setPopup(popup).addTo(territoryMap);
+          mapMarkers.push(marker);
+          bounds.extend([coords.lng, coords.lat]);
+          geocodedCount++;
+          if (geocodedCount === events.filter(function(e) { return e.location; }).length) {
+            if (bounds.isEmpty() === false) {
+              territoryMap.fitBounds(bounds, { padding: 50, maxZoom: 14 });
+            }
+          }
+        }
+      });
+    });
+
+    legendEl.innerHTML = '<div class="font-semibold mb-2">Account Executives:</div>' + Array.from(uniqueAEs).map(function(aeEmail) {
+      const color = aeColors[aeEmail] || '#5f72ff';
+      const event = events.find(function(e) { return e.aeEmail === aeEmail; });
+      return '<div class="flex items-center gap-2"><span style="width: 16px; height: 16px; background: ' + color + '; border-radius: 50%; display: inline-block;"></span><span class="text-xs">' + escapeHtml(event ? (event.aeName || aeEmail) : aeEmail) + '</span></div>';
+    }).join('');
+  }
+
+  function geocodeAddress(address, callback) {
+    if (!mapboxToken) { callback(null); return; }
+    const url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/' + encodeURIComponent(address) + '.json?access_token=' + mapboxToken;
+    fetch(url).then(function(response) { return response.json(); }).then(function(data) {
+      if (data.features && data.features.length > 0) {
+        const center = data.features[0].center;
+        callback({ lng: center[0], lat: center[1] });
+      } else { callback(null); }
+    }).catch(function(error) { console.error('Geocoding error:', error); callback(null); });
+  }
+
+  function fitMapBounds() {
+    if (!territoryMap || mapMarkers.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    mapMarkers.forEach(function(marker) { bounds.extend(marker.getLngLat()); });
+    if (bounds.isEmpty() === false) {
+      territoryMap.fitBounds(bounds, { padding: 50 });
+    }
+  }
+  
+  // Deployment functions
+  function copyCommand(commandId, feedbackId) {
+    const commandElement = document.getElementById(commandId);
+    const feedbackElement = document.getElementById(feedbackId);
+    const commandText = commandElement.textContent.trim();
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(commandText).then(function() {
+        feedbackElement.classList.remove('hidden');
+        setTimeout(function() {
+          feedbackElement.classList.add('hidden');
+        }, 2000);
+      }).catch(function(err) {
+        fallbackCopyTextToClipboard(commandText, feedbackElement);
+      });
+    } else {
+      fallbackCopyTextToClipboard(commandText, feedbackElement);
+    }
+  }
+  
+  function fallbackCopyTextToClipboard(text, feedbackElement) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      if (document.execCommand('copy')) {
+        feedbackElement.classList.remove('hidden');
+        setTimeout(function() {
+          feedbackElement.classList.add('hidden');
+        }, 2000);
+      } else {
+        alert('Please copy manually:\n\n' + text);
+      }
+    } catch (err) {
+      alert('Please copy manually:\n\n' + text);
+    }
+    
+    document.body.removeChild(textArea);
+  }
+  
+  function showDeploymentStatus() {
+    const modal = document.getElementById('deploymentStatusModal');
+    const content = document.getElementById('deploymentStatusContent');
+    
+    modal.classList.remove('hidden');
+    
+    content.innerHTML = `
+      <div class="space-y-3">
+        <div>
+          <p class="text-xs font-semibold text-gray-600 mb-1">Project Directory:</p>
+          <p class="text-sm font-mono bg-gray-100 p-2 rounded">/Users/codylytle/Documents/Branch360</p>
+        </div>
+        
+        <div>
+          <p class="text-xs font-semibold text-gray-600 mb-1">Script ID:</p>
+          <p class="text-sm font-mono bg-gray-100 p-2 rounded">12vzYyfq9ooUhKbpbE5jvnvRvwIiF2CBWsRVYzDVjs8tnOWffDNC1Y1Rg</p>
+        </div>
+        
+        <div>
+          <p class="text-xs font-semibold text-gray-600 mb-1">Available Commands:</p>
+          <div class="text-sm font-mono bg-gray-900 text-green-400 p-3 rounded space-y-1">
+            <div>npm run clasp:push</div>
+            <div>npm run clasp:watch</div>
+            <div>npm run clasp:status</div>
+            <div>npm run clasp:pull</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  function closeDeploymentModal() {
+    document.getElementById('deploymentStatusModal').classList.add('hidden');
+  }
+  
+  // GitHub functions
+  function checkGitHubStatus() {
+    const statusDiv = document.getElementById('githubStatus');
+    statusDiv.innerHTML = '<p class="text-gray-600">Repository: Branch360</p>' +
+      '<p class="text-xs text-gray-500 mt-1">Use commands below to manage repository</p>';
+  }
+  
+  function showGitHubCommand(action) {
+    let command = '';
+    switch(action) {
+      case 'status':
+        command = 'cd /Users/codylytle/Documents/Branch360 && git status';
+        break;
+      case 'add':
+        command = 'cd /Users/codylytle/Documents/Branch360 && git add .';
+        break;
+      case 'commit':
+        const msg = document.getElementById('commitMessage').value || 'Update Branch360 CRM';
+        command = 'cd /Users/codylytle/Documents/Branch360 && git commit -m "' + msg + '"';
+        break;
+      case 'push':
+        command = 'cd /Users/codylytle/Documents/Branch360 && git push';
+        break;
+    }
+    
+    if (command) {
+      navigator.clipboard.writeText(command).then(function() {
+        alert('Command copied to clipboard!');
+      });
+    }
+  }
+  
+  function updateCommitCommand() {
+    const message = document.getElementById('commitMessage').value || 'Update Branch360 CRM';
+    document.getElementById('gitCommitCommand').textContent = 
+      'cd /Users/codylytle/Documents/Branch360 && git commit -m "' + message + '"';
+    document.getElementById('gitQuickPushCommand').textContent = 
+      'cd /Users/codylytle/Documents/Branch360 && git add . && git commit -m "' + message + '" && git push';
+  }
+  
+  // Database functions
+  function setupDatabase() {
+    if (!confirm('This will initialize/reset the database. Continue?')) return;
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.setupDatabase) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('Database setup completed!');
+          loadDatabaseStats();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to setup database: ' + error.message);
+        })
+        .setupDatabase();
+    } else {
+      alert('Database setup not available in demo mode');
+    }
+  }
+  
+  function loadDemoData() {
+    if (!confirm('Load demo/test data? This will add sample records.')) return;
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.loadDemoData) {
+      runner
+        .withSuccessHandler(function(result) {
+          alert('Demo data loaded successfully!');
+          loadDatabaseStats();
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to load demo data: ' + error.message);
+        })
+        .loadDemoData();
+    } else {
+      // Demo mode - demo data is already available
+      alert('Demo mode: Demo data is already loaded and available. The dashboard is displaying sample data automatically.');
+      loadDatabaseStats(); // Refresh stats to show demo data
+    }
+  }
+  
+  function loadDatabaseStats() {
+    const statsDiv = document.getElementById('databaseStats');
+    statsDiv.innerHTML = '<p class="text-gray-600">Loading statistics...</p>';
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.getDatabaseStats) {
+      runner
+        .withSuccessHandler(function(stats) {
+          statsDiv.innerHTML = Object.keys(stats || {}).map(function(key) {
+            return '<div class="flex justify-between"><span class="text-gray-700">' + key + ':</span>' +
+              '<span class="font-semibold">' + (stats[key] || 0) + '</span></div>';
+          }).join('');
+        })
+        .withFailureHandler(function(error) {
+          // Fall back to demo data
+          loadDemoDatabaseStats();
+        })
+        .getDatabaseStats();
+    } else {
+      // Demo mode
+      loadDemoDatabaseStats();
+    }
+  }
+  
+  // Load demo database statistics
+  function loadDemoDatabaseStats() {
+    const statsDiv = document.getElementById('databaseStats');
+    const demoStats = {
+      'Users': 12,
+      'Leads': 45,
+      'Territories': 3,
+      'Quotes': 34,
+      'Installs': 18,
+      'Audit Log Entries': 156
+    };
+    statsDiv.innerHTML = Object.keys(demoStats).map(function(key) {
+      return '<div class="flex justify-between"><span class="text-gray-700">' + key + ':</span>' +
+        '<span class="font-semibold">' + demoStats[key] + '</span></div>';
+    }).join('');
+  }
+  
+  // Audit log
+  function loadAuditLog() {
+    const runner = hasAppsScript() ? google.script.run : null;
+    const dateFilter = document.getElementById('auditDateFilter')?.value;
+    const actionFilter = document.getElementById('auditActionFilter')?.value;
+    
+    if (runner && runner.getAuditLog) {
+      runner
+        .withSuccessHandler(function(logs) {
+          renderAuditLog(logs || []);
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load audit log:', error);
+          // Fall back to demo data
+          loadDemoAuditLog(dateFilter, actionFilter);
+        })
+        .getAuditLog({ date: dateFilter, action: actionFilter });
+    } else {
+      // Demo mode
+      loadDemoAuditLog(dateFilter, actionFilter);
+    }
+  }
+  
+  // Load demo audit log data
+  function loadDemoAuditLog(dateFilter, actionFilter) {
+    const demoLogs = [
+      { Timestamp: new Date().toISOString(), Action: 'CREATE', UserEmail: 'blair.sloat@rentokil-terminix.com', Table: 'Leads', Details: 'Created new lead: Bayou Coffee Roasters' },
+      { Timestamp: new Date(Date.now() - 3600000).toISOString(), Action: 'UPDATE', UserEmail: 'bruce.hockless@prestox.com', Table: 'Installs', Details: 'Updated install status: Completed' },
+      { Timestamp: new Date(Date.now() - 7200000).toISOString(), Action: 'CREATE', UserEmail: 'admin@branch360.demo', Table: 'Users', Details: 'Created new user: Demo Tech' },
+      { Timestamp: new Date(Date.now() - 86400000).toISOString(), Action: 'UPDATE', UserEmail: 'brad.hudson@example.com', Table: 'Territories', Details: 'Updated territory assignment' }
+    ];
+    
+    let filtered = demoLogs;
+    if (actionFilter) {
+      filtered = filtered.filter(function(log) {
+        return log.Action === actionFilter;
+      });
+    }
+    
+    renderAuditLog(filtered);
+  }
+  
+  function renderAuditLog(logs) {
+    const tbody = document.getElementById('auditLogBody');
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No audit log entries</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = logs.map(function(log) {
+      return '<tr class="hover:bg-gray-50">' +
+        '<td class="px-4 py-3 text-sm text-gray-600">' + (log.Timestamp || log.timestamp || 'N/A') + '</td>' +
+        '<td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">' + (log.Action || log.action || 'N/A') + '</span></td>' +
+        '<td class="px-4 py-3 text-sm text-gray-600">' + (log.UserEmail || log.userEmail || 'N/A') + '</td>' +
+        '<td class="px-4 py-3 text-sm text-gray-600">' + (log.Table || log.table || 'N/A') + '</td>' +
+        '<td class="px-4 py-3 text-sm text-gray-600">' + (log.Details || log.details || 'N/A') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+  
+  // Settings
+  function saveApiToken(tokenKey) {
+    const tokenInput = document.getElementById('mapboxToken');
+    const token = tokenInput.value.trim();
+    
+    if (!token) {
+      alert('Please enter a token');
+      return;
+    }
+    
+    const runner = hasAppsScript() ? google.script.run : null;
+    if (runner && runner.saveApiToken) {
+      runner
+        .withSuccessHandler(function() {
+          alert('Token saved successfully!');
+          tokenInput.type = 'password';
+        })
+        .withFailureHandler(function(error) {
+          alert('Failed to save token: ' + error.message);
+        })
+        .saveApiToken(tokenKey, token);
+    } else {
+      alert('Token saving not available in demo mode');
+    }
+  }
+  
+  function hasAppsScript() {
+    return !!(window.google && window.google.script && window.google.script.run);
+  }
+  
+  // ROI Constants
+  const PILOT_TEAM_TARGETS = {
+    aes: 4,
+    opsManagers: 5,
+    technicians: 25,
+    branchManagers: 1
+  };
+  const REGION_BRANCH_COUNTS = [
+    { region: 'Region 16', branches: 18 },
+    { region: 'Region 17', branches: 12 },
+    { region: 'Region 18', branches: 13 },
+    { region: 'Region 19', branches: 14 },
+    { region: 'Region 22', branches: 16 },
+    { region: 'Region 23', branches: 12 },
+    { region: 'Region 24', branches: 13 },
+    { region: 'Region 50', branches: 13 },
+    { region: 'Region 52', branches: 9 },
+    { region: 'Region 54', branches: 13 },
+    { region: 'Region 75', branches: 8 }
+  ];
+  
+  // ROI Helper Functions
+  function cardTemplate(label, value, sub) {
+    return `<div class="bg-white rounded-xl p-4 shadow"><p class="text-sm text-gray-500">${label}</p><p class="text-2xl font-bold">${value}</p>${sub ? `<span class="block text-xs text-gray-500 mt-1">${sub}</span>` : ''}</div>`;
+  }
+  
+  function tableTemplate(headers, rows) {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const thead = `<thead><tr>${headers.map(h => `<th class="text-left text-xs uppercase tracking-wide text-gray-500 px-3 py-2">${h}</th>`).join('')}</tr></thead>`;
+    const tbody = `<tbody>${safeRows.map(row => {
+      const cols = Array.isArray(row) ? row : [row];
+      return `<tr class="border-t">${cols.map(cell => `<td class="px-3 py-2 text-sm">${cell}</td>`).join('')}</tr>`;
+    }).join('')}</tbody>`;
+    return `${thead}${tbody}`;
+  }
+  
+  function formatCurrency(value) {
+    return '$' + (Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  
+  function getQuoteTrackerCount() {
+    if (!window.localStorage) return 0;
+    try {
+      const stored = JSON.parse(window.localStorage.getItem('branch360_quote_tracker') || '[]');
+      return Array.isArray(stored) ? stored.length : 0;
+    } catch (err) {
+      return 0;
+    }
+  }
+  
+  // ROI Data Variables
+  let latestTimeAnalytics = null;
+  let latestBranchKPIs = null;
+  
+  // ROI Rendering Functions
+  function renderExecutivePanel() {
+    const cards = document.getElementById('execKpiCards');
+    if (!cards) return;
+    const hours = latestTimeAnalytics && latestTimeAnalytics.totals ? (latestTimeAnalytics.totals.hoursSaved || 0) : 0;
+    const dollars = latestTimeAnalytics && latestTimeAnalytics.totals ? (latestTimeAnalytics.totals.dollarsSaved || 0) : 0;
+    const starts = latestBranchKPIs ? (latestBranchKPIs.branchCards.starts || 0) : 0;
+    const conversion = latestBranchKPIs ? (latestBranchKPIs.branchCards.conversion || 0) : 0;
+    const proposals = getQuoteTrackerCount();
+    const cardsData = [
+      { label: 'Hours Saved', value: hours.toFixed(1), sub: 'Pilot period' },
+      { label: 'Labor Value', value: formatCurrency(dollars), sub: 'Loaded hourly impact' },
+      { label: 'New Starts (Houston)', value: starts, sub: conversion.toFixed ? conversion.toFixed(1) + '% conversion' : '--' },
+      { label: 'Salesforce Proposals', value: proposals, sub: 'Quotes imported' }
+    ];
+    cards.innerHTML = cardsData.map(function(card) {
+      return cardTemplate(card.label, card.value, card.sub);
+    }).join('');
+    const hoursBadge = document.getElementById('execHoursBadge');
+    const dollarsBadge = document.getElementById('execDollarsBadge');
+    if (hoursBadge) hoursBadge.textContent = hours.toFixed(1) + ' hrs saved';
+    if (dollarsBadge) dollarsBadge.textContent = formatCurrency(dollars) + ' value';
+    renderExecAdoption();
+    renderExecRegionTable();
+    renderExecSummary(hours, dollars, starts);
+  }
+  
+  function renderExecAdoption() {
+    const table = document.getElementById('execAdoptionTable');
+    if (!table) return;
+    const aeCount = latestBranchKPIs && latestBranchKPIs.aeTable ? latestBranchKPIs.aeTable.length : 0;
+    const opsCount = latestBranchKPIs && latestBranchKPIs.opsTable ? latestBranchKPIs.opsTable.length : 0;
+    const rows = [
+      { role: 'Account Executives', target: PILOT_TEAM_TARGETS.aes, active: aeCount },
+      { role: 'Operations Managers', target: PILOT_TEAM_TARGETS.opsManagers, active: opsCount },
+      { role: 'Technicians', target: PILOT_TEAM_TARGETS.technicians, active: PILOT_TEAM_TARGETS.technicians },
+      { role: 'Branch Manager', target: PILOT_TEAM_TARGETS.branchManagers, active: 1 }
+    ];
+    table.innerHTML = tableTemplate(['Role', 'Active', 'Target', 'Adoption %'], rows.map(function(row) {
+      const pct = row.target ? Math.min(100, (row.active / row.target) * 100).toFixed(0) : 0;
+      return [
+        row.role,
+        row.active,
+        row.target,
+        pct + '%'
+      ];
+    }));
+  }
+  
+  function renderExecRegionTable() {
+    const table = document.getElementById('execRegionTable');
+    if (!table) return;
+    const totalBranches = REGION_BRANCH_COUNTS.reduce(function(sum, region) { return sum + region.branches; }, 0);
+    const rows = REGION_BRANCH_COUNTS.map(function(region) {
+      return [
+        region.region,
+        region.branches,
+        ((region.branches / totalBranches) * 100).toFixed(1) + '%'
+      ];
+    });
+    table.innerHTML = tableTemplate(['Region', '# Branches', '% of Footprint'], rows);
+  }
+  
+  function renderExecSummary(hours, dollars, starts) {
+    const list = document.getElementById('execSummaryList');
+    if (!list) return;
+    const bullets = [
+      `${hours.toFixed(1)} hours saved this period = direct leverage for 4 AEs, 5 Ops managers, and 25 techs in Houston.`,
+      `${formatCurrency(dollars)} in loaded labor value captured within the pilot branch.`,
+      `${starts} new starts logged via Branch360 this period with auto-generated Ops packets.`,
+      `${REGION_BRANCH_COUNTS.length} regions / ${REGION_BRANCH_COUNTS.reduce((sum, r) => sum + r.branches, 0)} total branches ready for rollout once Houston ROI is proven.`
+    ];
+    list.innerHTML = bullets.map(function(line) {
+      return `<li>${line}</li>`;
+    }).join('');
+  }
+  
+  // Load ROI Data
+  function loadROIData() {
+    const runner = hasAppsScript() ? google.script.run : null;
+    
+    // Load Time Analytics
+    if (runner && runner.getTimeSavedSummary) {
+      runner
+        .withSuccessHandler(function(data) {
+          latestTimeAnalytics = data;
+          renderExecutivePanel();
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load time analytics:', error);
+          // Use demo data
+          latestTimeAnalytics = {
+            totals: {
+              hoursSaved: 0,
+              dollarsSaved: 0
+            }
+          };
+          renderExecutivePanel();
+        })
+        .getTimeSavedSummary({});
+    } else {
+      // Demo mode
+      latestTimeAnalytics = {
+        totals: {
+          hoursSaved: 0,
+          dollarsSaved: 0
+        }
+      };
+    }
+    
+    // Load Branch KPIs
+    if (runner && runner.getBranchKPIs) {
+      runner
+        .withSuccessHandler(function(data) {
+          latestBranchKPIs = data;
+          renderExecutivePanel();
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load branch KPIs:', error);
+          // Use demo data
+          latestBranchKPIs = {
+            branchCards: {
+              starts: 0,
+              conversion: 0
+            },
+            aeTable: [],
+            opsTable: []
+          };
+          renderExecutivePanel();
+        })
+        .getBranchKPIs({ branchId: 'BRN-001' });
+    } else {
+      // Demo mode
+      latestBranchKPIs = {
+        branchCards: {
+          starts: 0,
+          conversion: 0
+        },
+        aeTable: [],
+        opsTable: []
+      };
+      renderExecutivePanel();
+    }
+  }
+  
+  // Initialize on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminDashboard);
+  } else {
+    initAdminDashboard();
+  }
+</script>
+
+</body>
+</html>
+
