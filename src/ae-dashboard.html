@@ -4158,14 +4158,15 @@
   }
 
   document.addEventListener('DOMContentLoaded', initAeDashboardPage);
-  
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(function() { console.log('ServiceWorker registration successful'); })
-        .catch(function(error) { console.log('ServiceWorker registration failed:', error); });
-    });
-  }
+
+  // Service worker disabled temporarily to prevent caching during development
+  // if ('serviceWorker' in navigator) {
+  //   window.addEventListener('load', function() {
+  //     navigator.serviceWorker.register('service-worker.js')
+  //       .then(function() { console.log('ServiceWorker registration successful'); })
+  //       .catch(function(error) { console.log('ServiceWorker registration failed:', error); });
+  //   });
+  // }
 
   window.addEventListener('message', function(event) {
     if (event && event.data && event.data.type === 'OPEN_START_PACKET') {
