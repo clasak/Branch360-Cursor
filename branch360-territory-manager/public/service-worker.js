@@ -1,10 +1,15 @@
 /**
  * Branch360 - Service Worker for PWA
  * Enables offline functionality and app-like experience
+ *
+ * VERSION: Update this timestamp to force all clients to reload assets
  */
 
-const CACHE_NAME = 'branch360-v1';
+const VERSION = '20251121-002'; // Update this to force cache refresh
+const CACHE_NAME = 'branch360-v' + VERSION;
 const OFFLINE_URL = '/offline.html';
+
+console.log('[ServiceWorker] Version:', VERSION);
 
 // Assets to cache on install
 const urlsToCache = [
@@ -71,48 +76,61 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-
-        // Clone the request
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest)
+    // Network-first strategy for HTML files to ensure fresh content
+    (event.request.url.endsWith('.html') || event.request.mode === 'navigate'
+      ? fetch(event.request)
           .then((response) => {
-            // Check if valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
+            // Clone and cache the fresh response
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+            return response;
+          })
+          .catch(() => caches.match(event.request)) // Fallback to cache if offline
+      : caches.match(event.request)
+          .then((response) => {
+            // Cache hit - return response
+            if (response) {
               return response;
             }
 
-            // Clone the response
-            const responseToCache = response.clone();
+            // Clone the request
+            const fetchRequest = event.request.clone();
 
-            // Cache the fetched response
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
+            return fetch(fetchRequest)
+              .then((response) => {
+                // Check if valid response
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                  return response;
+                }
+
+                // Clone the response
+                const responseToCache = response.clone();
+
+                // Cache the fetched response
+                caches.open(CACHE_NAME)
+                  .then((cache) => {
+                    cache.put(event.request, responseToCache);
+                  });
+
+                return response;
+              })
+              .catch((error) => {
+                console.error('[ServiceWorker] Fetch failed:', error);
+
+                // Return offline page for navigation requests
+                if (event.request.mode === 'navigate') {
+                  return caches.match(OFFLINE_URL);
+                }
+
+                return new Response('Network error occurred', {
+                  status: 408,
+                  headers: { 'Content-Type': 'text/plain' }
+                });
               });
-
-            return response;
           })
-          .catch((error) => {
-            console.error('[ServiceWorker] Fetch failed:', error);
-
-            // Return offline page for navigation requests
-            if (event.request.mode === 'navigate') {
-              return caches.match(OFFLINE_URL);
-            }
-
-            return new Response('Network error occurred', {
-              status: 408,
-              headers: { 'Content-Type': 'text/plain' }
-            });
-          });
-      })
+    )
   );
 });
 
