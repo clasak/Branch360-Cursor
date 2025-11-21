@@ -2936,42 +2936,101 @@
     function extractPricing(lines) {
       // 1. Find Investment Summary
       var startIdx = findFirstIndex(lines, l => /investment\s+summary/i.test(l) && !/^\d+/.test(l));
-      
+
       if (startIdx === -1) {
          startIdx = findFirstIndex(lines, l => /initial\s+investment/i.test(l) || /monthly\s+investment/i.test(l));
          if (startIdx !== -1) startIdx = Math.max(0, startIdx - 5);
       }
 
+      // Enhanced: Also search for "Total Investment" as a fallback
+      if (startIdx === -1) {
+         startIdx = findFirstIndex(lines, l => /total\s+investment/i.test(l) && !/^\d+/.test(l));
+         if (startIdx !== -1) startIdx = Math.max(0, startIdx - 5);
+      }
+
       if (startIdx === -1) return { oneTimeCost: null, initialSvcCost: null, avgMonthlyCost: null };
 
-      var endIdx = findFirstIndexFrom(lines, startIdx + 1, l => 
-         /^(documentation|additional services|terms|page)/i.test(l)
+      var endIdx = findFirstIndexFrom(lines, startIdx + 1, l =>
+         /^(documentation|additional services|terms|page|timeline|covered pests|scope)/i.test(l)
       );
-      if (endIdx === -1) endIdx = Math.min(lines.length, startIdx + 25);
+      if (endIdx === -1) endIdx = Math.min(lines.length, startIdx + 30);
       var block = lines.slice(startIdx, endIdx);
+
+      console.log('[Pricing] Block:', block.slice(0, 10));
 
       var oneTime = null, initial = null, monthly = null;
 
-      // 3. Strategy A: Table Row with 3 distinct currency values
-      // Expected: One-Time | Initial Svc | Monthly
-      for (var i = 0; i < block.length; i++) {
-          var line = block[i];
-          // Match numbers like 3,455.60 or 3455.60
-          var matches = line.match(/(?:\$\s*)?([0-9,]+\.[0-9]{2})/g);
-          if (matches && matches.length >= 3) {
-             var nums = matches.map(v => parseFloat(v.replace(/[$,\s]/g, '')));
-             oneTime = nums[0];
-             initial = nums[1];
-             monthly = nums[2];
-             break; 
+      // Strategy A: Find header row with column names, then find data row
+      var headerIdx = -1;
+      for (var h = 0; h < block.length; h++) {
+          if (/one[-\s]?time.*cost/i.test(block[h]) &&
+              /initial.*(?:svc|service).*cost/i.test(block[h]) &&
+              /avg.*monthly.*cost/i.test(block[h])) {
+              headerIdx = h;
+              console.log('[Pricing] Found header row at index', h, ':', block[h]);
+              break;
           }
       }
 
-      // 4. Fallback Strategy B: Keyword search
-      if (oneTime === null) oneTime = findCurrencyInBlock(block, /(?:one[-\s]?time|initial)\s+(?:cost|investment)/i);
-      if (initial === null) initial = findCurrencyInBlock(block, /(?:initial\s+(?:svc|service)|start[-\s]?up)\s+(?:cost|investment)/i);
-      if (monthly === null) monthly = findCurrencyInBlock(block, /(?:avg|average|monthly)\s+(?:monthly\s+)?(?:cost|investment)/i);
+      // If we found a header, look for data on next 1-3 lines
+      if (headerIdx !== -1) {
+          for (var d = headerIdx + 1; d < Math.min(headerIdx + 4, block.length); d++) {
+              var line = block[d];
+              // Skip lines that look like location names without prices
+              if (!/\$/.test(line) && /[a-z]/i.test(line)) continue;
 
+              var matches = line.match(/\$?\s*([0-9,]+(?:\.[0-9]{2})?)/g);
+              if (matches && matches.length >= 3) {
+                  var nums = matches.map(v => parseFloat(v.replace(/[$,\s]/g, '')));
+                  oneTime = nums[0];
+                  initial = nums[1];
+                  monthly = nums[2];
+                  console.log('[Pricing] Found values from table:', {oneTime, initial, monthly});
+                  break;
+              }
+          }
+      }
+
+      // Strategy B: Look for "Total Investment" line with 3 values
+      if (oneTime === null) {
+          for (var i = 0; i < block.length; i++) {
+              var line = block[i];
+              if (/total\s+investment/i.test(line)) {
+                  var matches = line.match(/\$?\s*([0-9,]+(?:\.[0-9]{2})?)/g);
+                  if (matches && matches.length >= 3) {
+                      var nums = matches.map(v => parseFloat(v.replace(/[$,\s]/g, '')));
+                      oneTime = nums[0];
+                      initial = nums[1];
+                      monthly = nums[2];
+                      console.log('[Pricing] Found values from Total Investment line:', {oneTime, initial, monthly});
+                      break;
+                  }
+              }
+          }
+      }
+
+      // Strategy C: Any line with 3 currency values (original logic)
+      if (oneTime === null) {
+          for (var i = 0; i < block.length; i++) {
+              var line = block[i];
+              var matches = line.match(/\$\s*([0-9,]+(?:\.[0-9]{2})?)/g);
+              if (matches && matches.length >= 3) {
+                  var nums = matches.map(v => parseFloat(v.replace(/[$,\s]/g, '')));
+                  oneTime = nums[0];
+                  initial = nums[1];
+                  monthly = nums[2];
+                  console.log('[Pricing] Found values from any 3-value line:', {oneTime, initial, monthly});
+                  break;
+              }
+          }
+      }
+
+      // Strategy D: Keyword search (fallback)
+      if (oneTime === null) oneTime = findCurrencyInBlock(block, /one[-\s]?time\s+cost/i);
+      if (initial === null) initial = findCurrencyInBlock(block, /initial\s+(?:svc|service)\s+cost/i);
+      if (monthly === null) monthly = findCurrencyInBlock(block, /(?:avg|average)\s+monthly\s+cost/i);
+
+      console.log('[Pricing] Final result:', {oneTimeCost: oneTime, initialSvcCost: initial, avgMonthlyCost: monthly});
       return { oneTimeCost: oneTime, initialSvcCost: initial, avgMonthlyCost: monthly };
     }
     
@@ -3060,11 +3119,25 @@
       for (var i = startIdx + 1; i < endIdx; i++) {
         var row = lines[i];
         if (!row || isHeaderBlockStop(row)) continue;
-        
+
         if (/^(documentation|additional services|terms|acceptance|timeline|corporate|innovation|memberships|our solutions|page)\s+\d+$/i.test(row)) {
             continue;
         }
-        
+
+        // Handle "Qty of Existing..." format (e.g., "Qty of Existing Interior Devices to Monitor - 06")
+        var existingMatch = row.match(/qty\s+of\s+existing\s+(interior|exterior)\s+devices.*?[-–]\s*(\d+)/i);
+        if (existingMatch) {
+            var type = existingMatch[1].toLowerCase();
+            var qty = parseFloat(existingMatch[2]);
+            if (type === 'interior') {
+                equipment.multCatchQty += qty;
+            } else if (type === 'exterior') {
+                equipment.rbsQty += qty;
+            }
+            console.log('[Equipment] Found existing devices:', type, qty);
+            continue;
+        }
+
         var startMatch = row.match(/^(\d+)\s+(.*)/);
         if (startMatch) {
             var qty = parseFloat(startMatch[1]);
@@ -3096,7 +3169,20 @@
     }
 
     // --- UTILS ---
-    function expandLines(l){var r=[];l.forEach(x=>{if(/PREPARED|TAILORED/.test(x)){x.split(/(PREPARED|TAILORED)/).forEach(p=>p.trim()&&r.push(p.trim()))}else{r.push(x)}});return r}
+    function expandLines(l){
+      var r=[];
+      l.forEach(x=>{
+        // Don't split on PREPARED/TAILORED if followed by FOR: or BY: (keep those together)
+        if((/PREPARED\s+BY/i.test(x) || /TAILORED\s+FOR/i.test(x)) && x.length < 200){
+          r.push(x); // Keep the whole line intact
+        } else if(/PREPARED|TAILORED/.test(x)){
+          x.split(/(PREPARED|TAILORED)/).forEach(p=>p.trim()&&r.push(p.trim()))
+        } else{
+          r.push(x)
+        }
+      });
+      return r;
+    }
     function findFirstIndex(l,p){for(var i=0;i<l.length;i++)if(p(l[i]))return i;return -1}
     function findFirstIndexFrom(l,s,p){for(var i=s;i<l.length;i++)if(p(l[i]))return i;return -1}
     function isHeaderBlockStop(l){return HEADER_BLOCK_TERMINATORS.some(t=>l.toLowerCase().indexOf(t)===0)}
@@ -3159,71 +3245,134 @@
 
     function extractPreparedForFields(lines) {
       var d={accountName:null,contactName:null,contactEmail:null,serviceAddressLine1:null,serviceCity:null,serviceState:null,serviceZip:null};
-      var idx=findFirstIndex(lines,l=>/tailored|prepared|account\s+name/i.test(l));
+
+      // PRIORITY 1: Look for "TAILORED FOR:" explicitly (customer info, not AE info)
+      var idx=findFirstIndex(lines,l=>/tailored\s+for/i.test(l));
+
+      // FALLBACK: Look for other headers
+      if(idx===-1) idx=findFirstIndex(lines,l=>/account\s+name/i.test(l));
+      if(idx===-1) idx=findFirstIndex(lines,l=>/customer\s+name/i.test(l));
+      if(idx===-1) idx=findFirstIndex(lines,l=>/prepared\s+for/i.test(l)); // Different from PREPARED BY
+
       if(idx===-1)return d;
-      var b=gatherBlock(lines,idx,isHeaderBlockStop,15);
-      
-      // SPECIFIC LOGIC FOR "TAILORED FOR"
-      // 1. TAILORED FOR
-      // 2. Account Name
-      // 3. POC Name
-      // 4. Address Line 1
-      // 5. Address Line 2 (City, State, Zip)
-      // 6. (Phone usually)
-      // 7. Email
-      
+
+      var b=gatherBlock(lines,idx,isHeaderBlockStop,20);
+
+      // SPECIFIC LOGIC FOR "TAILORED FOR:"
+      // Expected format:
+      // Line 0: TAILORED FOR: [or just on next lines]
+      // Line 1: Account Name
+      // Line 2: Contact Name
+      // Line 3: Address Line 1
+      // Line 4: City, State Zip
+      // Line 5-8: Phone and/or Email
+
       var tailoredIdx = b.findIndex(l => /tailored\s+for/i.test(l));
       if (tailoredIdx !== -1) {
-          // Offset relative to the block `b`
           var offset = tailoredIdx;
-          
-          // Line +1: Account Name
-          if (b[offset+1]) d.accountName = b[offset+1].trim();
-          
+
+          // Check if account name is on same line as "TAILORED FOR:"
+          var firstLine = b[offset].replace(/tailored\s+for:?\s*/i, '').trim();
+          if (firstLine && firstLine.length > 2 && !/^(by|for|prepared)/i.test(firstLine)) {
+              d.accountName = firstLine;
+              offset--; // Shift offset back since account was on line 0
+          }
+
+          // Line +1: Account Name (if not already captured)
+          if (!d.accountName && b[offset+1]) {
+              var acctLine = b[offset+1].trim();
+              if (acctLine && acctLine.length > 2 && !/^(by|for|prepared)/i.test(acctLine)) {
+                  d.accountName = acctLine;
+              }
+          }
+
           // Line +2: Contact Name
-          if (b[offset+2]) d.contactName = b[offset+2].trim();
-          
+          if (b[offset+2]) {
+              var contactLine = b[offset+2].trim();
+              // Validate it looks like a name (2-4 words, no numbers)
+              if (contactLine && contactLine.split(/\s+/).length >= 2 && contactLine.split(/\s+/).length <= 4 && !/\d/.test(contactLine)) {
+                  d.contactName = contactLine;
+              }
+          }
+
           // Line +3: Address 1
-          if (b[offset+3]) d.serviceAddressLine1 = b[offset+3].trim();
-          
-          // Line +4: Address 2 (City, State, Zip)
+          if (b[offset+3] && ADDRESS_LINE_REGEX.test(b[offset+3])) {
+              d.serviceAddressLine1 = b[offset+3].trim();
+          }
+
+          // Line +4: City, State Zip
           if (b[offset+4]) {
               var addr2 = b[offset+4].trim();
-              d.serviceAddressLine1 = (d.serviceAddressLine1 ? d.serviceAddressLine1 + ", " + addr2 : addr2);
-              
-              // Try parsing city/state/zip
-              var parts = addr2.split(',');
-              if (parts.length > 0) d.serviceCity = parts[0].trim();
-              if (parts.length > 1) {
-                  var stateZip = parts[parts.length-1].trim().split(/\s+/);
-                  if (stateZip.length >= 2) {
-                      d.serviceZip = stateZip.pop();
-                      d.serviceState = stateZip.join(' ');
+              // Parse city/state/zip
+              var cityStateZip = addr2.match(/^(.+?),\s*([A-Z]{2})[,\s]+(\d{5})(-\d{4})?/);
+              if (cityStateZip) {
+                  d.serviceCity = cityStateZip[1].trim();
+                  d.serviceState = cityStateZip[2];
+                  d.serviceZip = cityStateZip[3];
+              } else {
+                  // Fallback: split by comma
+                  var parts = addr2.split(',');
+                  if (parts.length >= 2) {
+                      d.serviceCity = parts[0].trim();
+                      var stateZip = parts[parts.length-1].trim().split(/\s+/);
+                      if (stateZip.length >= 2) {
+                          d.serviceZip = stateZip.pop();
+                          d.serviceState = stateZip.join(' ');
+                      }
                   }
               }
           }
-          
-          // Scan ahead for Email (Lines +5, +6, +7...)
-          for(var k=offset+5; k<Math.min(offset+10, b.length); k++) {
-              if (EMAIL_REGEX.test(b[k])) {
-                  d.contactEmail = b[k].match(EMAIL_REGEX)[1];
-                  break; 
+
+          // Scan for Email and Phone (Lines +5 to +10)
+          for(var k=offset+1; k<Math.min(offset+12, b.length); k++) {
+              if (!d.contactEmail && EMAIL_REGEX.test(b[k])) {
+                  var emailMatch = b[k].match(EMAIL_REGEX);
+                  d.contactEmail = emailMatch[1];
               }
           }
       } else {
-          // Fallback to standard regex search if "TAILORED FOR" not found
+          // Fallback to standard regex search if "TAILORED FOR:" not found
           var email=b.find(l=>EMAIL_REGEX.test(l));
           if(email)d.contactEmail=email.match(EMAIL_REGEX)[1];
-          
+
           var addr=b.find(l=>ADDRESS_LINE_REGEX.test(l));
           if(addr)d.serviceAddressLine1=addr;
-          
-          d.accountName=b.find(l=>l.length<50 && !/[@\d]/.test(l) && !/prepared|tailored/i.test(l));
+
+          // Improved fallback account name logic - skip short strings like "BY:"
+          d.accountName=b.find(l=>l.length>=3 && l.length<80 && !/[@\d]/.test(l) && !/prepared|tailored|by:/i.test(l));
       }
-      
+
       return d;
     }
-    function extractPreparedBySection(l){return{aeName:null,aeEmail:null}}
+    function extractPreparedBySection(lines){
+      var d={aeName:null,aeEmail:null};
+      var idx=findFirstIndex(lines,l=>/prepared\s+by/i.test(l));
+      if(idx===-1)return d;
+
+      var b=gatherBlock(lines,idx,isHeaderBlockStop,8);
+
+      // Check if name/email are on the same line as "PREPARED BY:"
+      var firstLine = b[0].replace(/prepared\s+by:?\s*/i, '').trim();
+      if (firstLine && EMAIL_REGEX.test(firstLine)) {
+          var emailMatch = firstLine.match(EMAIL_REGEX);
+          d.aeEmail = emailMatch[1];
+          d.aeName = firstLine.replace(EMAIL_REGEX, '').trim();
+      } else if (firstLine && firstLine.length > 2) {
+          d.aeName = firstLine;
+      }
+
+      // Scan next lines for missing info
+      for(var i=1; i<Math.min(5, b.length); i++) {
+          if (!d.aeEmail && EMAIL_REGEX.test(b[i])) {
+              d.aeEmail = b[i].match(EMAIL_REGEX)[1];
+          }
+          if (!d.aeName && b[i] && b[i].length > 2 && !/[@\d]/.test(b[i])) {
+              d.aeName = b[i].trim();
+          }
+      }
+
+      return d;
+    }
 
     return parseSalesforceQuoteTextToStartPacketDraft;
   })();
