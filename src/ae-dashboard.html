@@ -2990,9 +2990,12 @@
       var d={accountName:null,contactName:null,contactEmail:null,serviceAddressLine1:null,serviceCity:null,serviceState:null,serviceZip:null};
       // Prioritize "TAILORED FOR" over "PREPARED BY"
       var idx=findFirstIndex(lines,l=>/tailored\s+for/i.test(l));
+      console.log('[PARSER DEBUG] TAILORED FOR idx:', idx);
       if(idx===-1) idx=findFirstIndex(lines,l=>/prepared|account\s+name/i.test(l));
+      console.log('[PARSER DEBUG] Final idx (prepared/account):', idx);
       if(idx===-1)return d;
       var b=gatherBlock(lines,idx,isHeaderBlockStop,15);
+      console.log('[PARSER DEBUG] Block b:', b.slice(0, 10));
       
       // SPECIFIC LOGIC FOR "TAILORED FOR"
       // 1. TAILORED FOR
@@ -3004,6 +3007,7 @@
       // 7. Email
       
       var tailoredIdx = b.findIndex(l => /tailored\s+for/i.test(l));
+      console.log('[PARSER DEBUG] tailoredIdx in block:', tailoredIdx);
       if (tailoredIdx !== -1) {
           // Offset relative to the block `b`
           var offset = tailoredIdx;
