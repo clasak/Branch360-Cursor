@@ -103,6 +103,9 @@
         <a class="cta-button" href="/territories" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);">
           <span>Territory Manager Only</span>
         </a>
+        <a class="cta-button" href="/cache-clear.html" style="background: rgba(255, 107, 129, 0.2); border: 1px solid rgba(255, 107, 129, 0.4);">
+          <span>🧹 Clear Cache</span>
+        </a>
       </div>
       <section class="status-grid" aria-live="polite">
         <article class="status-card">
@@ -121,6 +124,31 @@
     </main>
 
     <script>
+      // Service Worker Registration with Cache Busting
+      const SW_VERSION = '1.0.0';
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register(`/service-worker.js?v=${SW_VERSION}`)
+            .then((registration) => {
+              console.log('[SW] Registered successfully:', registration.scope);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[SW] New version available - reloading...');
+                    window.location.reload();
+                  }
+                });
+              });
+            })
+            .catch((err) => {
+              console.log('[SW] Registration failed:', err);
+            });
+        });
+      }
+
       async function hydrateStatus() {
         const serverEl = document.getElementById('status-server');
         const envEl = document.getElementById('status-env');
@@ -128,7 +156,7 @@
 
         try {
           serverEl.textContent = 'Connecting...';
-          const response = await fetch('/api/territories');
+          const response = await fetch('/api/territories?_=' + Date.now());
           if (!response.ok) {
             throw new Error('Server response not OK');
           }

@@ -391,7 +391,7 @@
         <div>
           <p>Branch360 Platform</p>
           <h1>🗺️ Territory Management</h1>
-          <p>Upload, search, and manage Houston territories with instant feedback.</p>
+          <p>Upload, search, and manage Houston territories with instant feedback. | <a href="/cache-clear.html" style="color: var(--danger); text-decoration: none;">🧹 Clear Cache</a></p>
         </div>
         <div class="environment-badge" id="envBadge">🧪 TEST MODE</div>
       </header>
@@ -487,6 +487,31 @@
     </div>
 
     <script>
+      // Service Worker Registration with Cache Busting
+      const SW_VERSION = '1.0.0';
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register(`/service-worker.js?v=${SW_VERSION}`)
+            .then((registration) => {
+              console.log('[SW] Registered successfully:', registration.scope);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[SW] New version available - reloading...');
+                    window.location.reload();
+                  }
+                });
+              });
+            })
+            .catch((err) => {
+              console.log('[SW] Registration failed:', err);
+            });
+        });
+      }
+
       const state = {
         environment: 'TEST',
         territories: [],
@@ -563,7 +588,7 @@
 
       async function refreshDashboard(showToast = false) {
         try {
-          const response = await fetch('/api/territories');
+          const response = await fetch('/api/territories?_=' + Date.now());
           if (!response.ok) throw new Error('Failed to load territories');
           const payload = await response.json();
           state.environment = payload.environment;
