@@ -733,17 +733,14 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
 
   loadDashboard();
   setInterval(loadDashboard, 300000); // Refresh every 5 minutes
-  
-  // Register service worker for PWA
+
+  // DISABLED: Service Worker caching broken JavaScript files
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(function(registration) {
-          console.log('ServiceWorker registration successful');
-        })
-        .catch(function(error) {
-          console.log('ServiceWorker registration failed:', error);
-        });
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for(let registration of registrations) {
+        registration.unregister();
+        console.log('ServiceWorker unregistered to clear cache');
+      }
     });
   }
 </script>

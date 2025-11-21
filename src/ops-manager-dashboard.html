@@ -824,16 +824,14 @@
 
   loadDashboard();
   setInterval(loadDashboard, 120000);
-  
+
+  // DISABLED: Service Worker caching broken JavaScript files
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(function(registration) {
-          console.log('ServiceWorker registration successful');
-        })
-        .catch(function(error) {
-          console.log('ServiceWorker registration failed:', error);
-        });
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for(let registration of registrations) {
+        registration.unregister();
+        console.log('ServiceWorker unregistered to clear cache');
+      }
     });
   }
 </script>
