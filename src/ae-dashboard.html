@@ -2988,51 +2988,46 @@
 
     function extractPreparedForFields(lines) {
       var d={accountName:null,contactName:null,contactEmail:null,serviceAddressLine1:null,serviceCity:null,serviceState:null,serviceZip:null};
-      // Prioritize "TAILORED FOR" over "PREPARED BY"
-      var idx=findFirstIndex(lines,l=>/tailored\s+for/i.test(l));
-      console.log('[PARSER DEBUG] TAILORED FOR idx:', idx);
-      if(idx===-1) idx=findFirstIndex(lines,l=>/prepared|account\s+name/i.test(l));
-      console.log('[PARSER DEBUG] Final idx (prepared/account):', idx);
+
+      // More flexible search: look for "TAILORED" (may have weird spacing with "FOR")
+      var idx=findFirstIndex(lines,l=>/tailored/i.test(l));
+
+      // If not found, fall back to "PREPARED" or "ACCOUNT NAME"
+      if(idx===-1) idx=findFirstIndex(lines,l=>/prepared\s+by|account\s+name/i.test(l));
+
       if(idx===-1)return d;
+
       var b=gatherBlock(lines,idx,isHeaderBlockStop,15);
-      console.log('[PARSER DEBUG] Block b:', b.slice(0, 10));
-      
-      // SPECIFIC LOGIC FOR "TAILORED FOR"
-      // 1. TAILORED FOR
-      // 2. Account Name
-      // 3. POC Name
-      // 4. Address Line 1
-      // 5. Address Line 2 (City, State, Zip)
-      // 6. (Phone usually)
-      // 7. Email
-      
-      var tailoredIdx = b.findIndex(l => /tailored\s+for/i.test(l));
-      console.log('[PARSER DEBUG] tailoredIdx in block:', tailoredIdx);
+
+      // Check if this block contains "TAILORED" (customer info)
+      var tailoredIdx = b.findIndex(l => /tailored/i.test(l));
+
       if (tailoredIdx !== -1) {
-          // Offset relative to the block `b`
+          // Found "TAILORED FOR" section - extract customer info
           var offset = tailoredIdx;
 
           // Check if account name is on the same line after "TAILORED FOR:"
           var tailoredLine = b[offset];
-          var sameLineMatch = tailoredLine.match(/tailored\s+for\s*:?\s*(.+)/i);
-          if (sameLineMatch && sameLineMatch[1].trim().length > 0) {
+          var sameLineMatch = tailoredLine.match(/tailored.*?:?\s*(.+)/i);
+          if (sameLineMatch && sameLineMatch[1].trim().length > 0 && !/for/i.test(sameLineMatch[1])) {
+              // Account name is on same line (after the colon)
               d.accountName = sameLineMatch[1].trim();
           } else if (b[offset+1]) {
               // Line +1: Account Name
               d.accountName = b[offset+1].trim();
           }
-          
+
           // Line +2: Contact Name
           if (b[offset+2]) d.contactName = b[offset+2].trim();
-          
+
           // Line +3: Address 1
           if (b[offset+3]) d.serviceAddressLine1 = b[offset+3].trim();
-          
+
           // Line +4: Address 2 (City, State, Zip)
           if (b[offset+4]) {
               var addr2 = b[offset+4].trim();
               d.serviceAddressLine1 = (d.serviceAddressLine1 ? d.serviceAddressLine1 + ", " + addr2 : addr2);
-              
+
               // Try parsing city/state/zip
               var parts = addr2.split(',');
               if (parts.length > 0) d.serviceCity = parts[0].trim();
@@ -3044,58 +3039,27 @@
                   }
               }
           }
-          
-          // Scan ahead for Email (Lines +4, +5, +6, +7...)
-          // Start from offset+4 to capture email closer to address
-          for(var k=offset+4; k<Math.min(offset+10, b.length); k++) {
+
+          // Scan ahead for Email (Lines +2 through +10)
+          // Start scanning from offset+2 to catch email near contact name
+          for(var k=offset+2; k<Math.min(offset+10, b.length); k++) {
               if (EMAIL_REGEX.test(b[k])) {
                   d.contactEmail = b[k].match(EMAIL_REGEX)[1];
                   break;
               }
           }
       } else {
-          // Fallback to standard regex search if "TAILORED FOR" not found
+          // Fallback: no "TAILORED" found - use generic extraction
           var email=b.find(l=>EMAIL_REGEX.test(l));
           if(email)d.contactEmail=email.match(EMAIL_REGEX)[1];
-          
+
           var addr=b.find(l=>ADDRESS_LINE_REGEX.test(l));
           if(addr)d.serviceAddressLine1=addr;
-          
-          d.accountName=b.find(l=>l.length<50 && !/[@\d]/.test(l) && !/prepared|tailored/i.test(l));
-      }
-      
-      return d;
-    }
-    function extractPreparedBySection(lines) {
-      var d={aeName:null,aeEmail:null};
-      var idx=findFirstIndex(lines,l=>/prepared\s+by/i.test(l));
-      if(idx===-1)return d;
-      var b=gatherBlock(lines,idx,isHeaderBlockStop,10);
 
-      // PREPARED BY:
-      // Line +1: AE Name
-      // Line +2: AE Email
-      var preparedIdx = b.findIndex(l => /prepared\s+by/i.test(l));
-      if (preparedIdx !== -1) {
-          if (b[preparedIdx+1]) d.aeName = b[preparedIdx+1].trim();
-          for(var k=preparedIdx+1; k<Math.min(preparedIdx+5, b.length); k++) {
-              if (EMAIL_REGEX.test(b[k])) {
-                  d.aeEmail = b[k].match(EMAIL_REGEX)[1];
-                  break;
-              }
-          }
+          // Find account name: short line without email/numbers, and NOT containing "PREPARED" or "BY"
+          d.accountName=b.find(l=>l.length<50 && l.length>2 && !/[@\d]/.test(l) && !/prepared|by:|tailored/i.test(l));
       }
 
-      return d;
-    }
-
-    return parseSalesforceQuoteTextToStartPacketDraft;
-  })();
-      var addr=b.find(l=>ADDRESS_LINE_REGEX.test(l));
-      if(addr)d.serviceAddressLine1=addr;
-      
-      d.accountName=b.find(l=>l.length<50 && !/[@\d]/.test(l) && !/prepared|tailored/i.test(l));
-      
       return d;
     }
     function extractPreparedBySection(lines) {
