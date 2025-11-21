@@ -20,6 +20,40 @@ const CACHE_CONFIG = {
 };
 
 /**
+ * Generate a simple hash for cache keys to avoid collisions
+ * @param {string} str - String to hash
+ * @return {string} Hash string
+ */
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+/**
+ * Register a cache key in the registry
+ * @param {string} key - Cache key to register
+ */
+function registerCacheKey(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const registry = cache.get('CACHE_REGISTRY');
+    let keys = registry ? JSON.parse(registry) : [];
+
+    if (keys.indexOf(key) === -1) {
+      keys.push(key);
+      cache.put('CACHE_REGISTRY', JSON.stringify(keys), 86400); // 24 hours
+    }
+  } catch (e) {
+    Logger.log('⚠️ Could not register cache key: ' + e.message);
+  }
+}
+
+/**
  * Get cached data or compute and cache it
  * @param {string} key - Cache key
  * @param {function} computeFn - Function to compute data if cache miss
@@ -28,11 +62,11 @@ const CACHE_CONFIG = {
  */
 function getCached(key, computeFn, ttl) {
   const cache = CacheService.getScriptCache();
-  
+
   try {
     // Try to get from cache
     const cached = cache.get(key);
-    
+
     if (cached !== null) {
       Logger.log('✅ Cache HIT: ' + key);
       try {
@@ -42,11 +76,11 @@ function getCached(key, computeFn, ttl) {
         return cached;
       }
     }
-    
+
     // Cache miss - compute value
     Logger.log('⚠️ Cache MISS: ' + key + ' - Computing...');
     const value = computeFn();
-    
+
     // Store in cache
     try {
       const serialized = JSON.stringify(value);
@@ -57,13 +91,14 @@ function getCached(key, computeFn, ttl) {
         return value;
       }
       cache.put(key, serialized, ttl || 3600);
+      registerCacheKey(key); // Register the key in the registry
       Logger.log('✅ Cached: ' + key + ' (TTL: ' + (ttl || 3600) + 's)');
     } catch (e) {
       Logger.log('⚠️ Could not cache: ' + key + ' - ' + e.message);
     }
-    
+
     return value;
-    
+
   } catch (e) {
     Logger.log('❌ Cache error for ' + key + ': ' + e.message);
     // Fallback: compute without caching
@@ -146,10 +181,10 @@ function getBranchHierarchyCached(branchID) {
  * @param {Object} filters - Filters
  */
 function getUnifiedSalesCached(filters) {
-  // Create cache key from filters
+  // Create cache key from filters using hash to avoid collisions
   const filterKey = JSON.stringify(filters || {});
-  const cacheKey = 'UNIFIED_SALES_' + Utilities.base64Encode(filterKey).substring(0, 50);
-  
+  const cacheKey = 'UNIFIED_SALES_' + simpleHash(filterKey);
+
   return getCached(cacheKey, function() {
     return getUnifiedSales(filters);
   }, CACHE_CONFIG.UNIFIED_SALES);
@@ -161,8 +196,8 @@ function getUnifiedSalesCached(filters) {
  */
 function getOpsQueueCached(filters) {
   const filterKey = JSON.stringify(filters || {});
-  const cacheKey = 'OPS_QUEUE_' + Utilities.base64Encode(filterKey).substring(0, 50);
-  
+  const cacheKey = 'OPS_QUEUE_' + simpleHash(filterKey);
+
   return getCached(cacheKey, function() {
     return getOpsQueue(filters);
   }, CACHE_CONFIG.OPS_QUEUE);
@@ -174,8 +209,8 @@ function getOpsQueueCached(filters) {
  */
 function getActivityAnalyticsCached(filters) {
   const filterKey = JSON.stringify(filters || {});
-  const cacheKey = 'ACTIVITY_ANALYTICS_' + Utilities.base64Encode(filterKey).substring(0, 50);
-  
+  const cacheKey = 'ACTIVITY_ANALYTICS_' + simpleHash(filterKey);
+
   return getCached(cacheKey, function() {
     return getActivityAnalytics(filters);
   }, CACHE_CONFIG.ACTIVITY_ANALYTICS);

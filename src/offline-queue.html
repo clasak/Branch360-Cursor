@@ -409,7 +409,7 @@
        * Generate unique queue ID
        */
       generateQueueId: function() {
-        return 'Q-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        return 'Q-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
       },
       
       /**

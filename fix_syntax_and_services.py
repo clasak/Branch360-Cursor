@@ -73,9 +73,60 @@ new_code = r"""    function extractPricing(lines) {
       var idx = findFirstIndex(lines, l => /routine\s+management\s+services/i.test(l));
       if (idx === -1) return { services: [], signals: createServiceSignals() };
 
-      var endIdx = findFirstIndexFrom(lines, idx + 1, l => 
+      var endIdx = findFirstIndexFrom(lines, idx + 1, l =>
         ROUTINE_SECTION_TERMINATORS.some(t => l.toLowerCase().indexOf(t) === 0)
-      );"""
+      );
+      if (endIdx === -1) endIdx = lines.length;
+
+      var block = lines.slice(idx + 1, endIdx);
+      var services = [];
+      var signals = createServiceSignals();
+
+      block.forEach(function(line) {
+        if (!line) return;
+
+        var parts = [line];
+        if (/interior.*monthly.*exterior.*monthly/i.test(line)) {
+            var split = line.match(/(.*?monthly)(.*)/i);
+            if (split) parts = [split[1], split[2]];
+        }
+
+        parts.forEach(function(part) {
+            var cleanLine = part.replace(/\$[\d,\.]+/g, "").trim();
+            var freqMatch = cleanLine.match(/(.+?)\s+(?:service|svc)?\s*frequency\s*[-:]*\s*([A-Za-z0-9\-\(\)\s]+)/i);
+
+            if (!freqMatch) {
+                if (/exterior\s+monitoring/i.test(cleanLine) && /monthly/i.test(cleanLine)) freqMatch = [cleanLine, "Exterior Rodent Monitoring", "Monthly"];
+                else if (/interior\s+monitoring/i.test(cleanLine) && /semi/i.test(cleanLine)) freqMatch = [cleanLine, "Interior Rodent Monitoring", "Semi-Monthly"];
+                else if (/general\s+pest/i.test(cleanLine) && /monthly/i.test(cleanLine)) freqMatch = [cleanLine, "General Pest Control", "Monthly"];
+                else if (/insect\s+light\s+trap\s+maintenance/i.test(cleanLine)) freqMatch = ["Insect Light Trap Maintenance", "Monthly"];
+            }
+
+            if (freqMatch) {
+                var label = freqMatch[1] ? freqMatch[1].trim() : freqMatch[0];
+                var freqLabel = extractFrequencyLabel(freqMatch[2] || freqMatch[1]);
+                var service = buildServiceFromLabel(label, freqLabel, null, signals);
+
+                if (service) {
+                    if (/after\s+hours\s+service\??\s*(yes|- yes)/i.test(cleanLine)) service.afterHours = true;
+                    upsertService(services, service);
+                }
+            }
+        });
+      });
+
+      if (!services.some(s => s.serviceCode === 'MRT') && equipment.multCatchQty > 0)
+         upsertService(services, createService('Interior Rodent Monitoring', 'MRT', 'Rodent', 'Interior', 'Semi-Monthly', 24));
+      if (!services.some(s => s.serviceCode === 'RBS') && equipment.rbsQty > 0)
+         upsertService(services, createService('Exterior Rodent Monitoring', 'RBS', 'Rodent', 'Exterior', 'Monthly', 12));
+      if (!services.some(s => s.serviceCode === 'ILT') && equipment.iltQty > 0)
+         upsertService(services, createService('Insect Light Trap', 'ILT', 'Fly', 'ILT', 'Monthly', 12));
+      if (!services.some(s => s.serviceCode === 'GPC'))
+         upsertService(services, createService('General Pest Control', 'GPC', 'GPC', 'GPC', 'Monthly', 12));
+
+      services.sort((a, b) => serviceOrder(a.serviceCode) - serviceOrder(b.serviceCode));
+      return { services: services, signals: signals };
+    }"""
 
 replace_block('src/ae-dashboard.html', 2707, 2754, new_code)
 

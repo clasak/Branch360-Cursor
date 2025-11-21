@@ -4,6 +4,17 @@
  */
 
 /**
+ * Generate unique ID with prefix
+ * @param {string} prefix - Prefix for the ID (e.g., 'NOT', 'USR', 'TRK')
+ * @return {string} Unique ID
+ */
+function generateUniqueID(prefix) {
+  const timestamp = new Date().getTime();
+  const random = Math.floor(Math.random() * 1000000);
+  return prefix + '-' + timestamp + '-' + random;
+}
+
+/**
  * Notification configuration
  */
 const NOTIFICATION_CONFIG = {

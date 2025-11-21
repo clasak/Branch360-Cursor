@@ -195,7 +195,8 @@ function parseSalesforcePDFWithMappings(pdfText) {
             value = parseCurrency(value);
             break;
           case 'number':
-            value = parseInt(value, 10);
+            const num = parseInt(value, 10);
+            value = isNaN(num) ? null : num;
             break;
           case 'date':
             value = parseDate(value);
@@ -247,28 +248,100 @@ function parseCurrency(value) {
  */
 function parseDate(value) {
   if (!value) return null;
-  
+
   try {
-    // Handle MM/DD/YYYY, M/D/YYYY, MM-DD-YYYY, etc.
-    const parts = value.split(/[\/\-]/);
+    const trimmedValue = String(value).trim();
+
+    // Try to parse delimited dates (MM/DD/YYYY, DD/MM/YYYY, MM-DD-YYYY, etc.)
+    const parts = trimmedValue.split(/[\/\-\.]/);
     if (parts.length === 3) {
-      const month = parseInt(parts[0], 10) - 1; // 0-indexed
-      const day = parseInt(parts[1], 10);
-      let year = parseInt(parts[2], 10);
-      
+      let month, day, year;
+
+      // Determine format by checking which part is likely the year
+      const part1 = parseInt(parts[0], 10);
+      const part2 = parseInt(parts[1], 10);
+      const part3 = parseInt(parts[2], 10);
+
+      // If third part is > 31, it's likely the year (YYYY format)
+      // If first part is > 31 or all 4 digits, it's likely YYYY-MM-DD
+      if (part3 > 31 || parts[2].length === 4) {
+        // Format: MM/DD/YYYY or DD/MM/YYYY
+        year = part3;
+
+        // Disambiguate MM/DD vs DD/MM by checking if first part > 12
+        if (part1 > 12) {
+          // Must be DD/MM/YYYY
+          day = part1;
+          month = part2 - 1;
+        } else if (part2 > 12) {
+          // Must be MM/DD/YYYY
+          month = part1 - 1;
+          day = part2;
+        } else {
+          // Ambiguous - default to MM/DD/YYYY (US format)
+          month = part1 - 1;
+          day = part2;
+        }
+      } else if (part1 > 31 || parts[0].length === 4) {
+        // Format: YYYY-MM-DD or YYYY/MM/DD
+        year = part1;
+        month = part2 - 1;
+        day = part3;
+      } else {
+        // Assume MM/DD/YY or DD/MM/YY
+        if (part1 > 12) {
+          // Must be DD/MM/YY
+          day = part1;
+          month = part2 - 1;
+        } else {
+          // Default to MM/DD/YY
+          month = part1 - 1;
+          day = part2;
+        }
+        year = part3;
+      }
+
       // Handle 2-digit years
       if (year < 100) {
-        year += 2000;
+        year += year < 50 ? 2000 : 1900; // 00-49 = 2000-2049, 50-99 = 1950-1999
       }
-      
-      return new Date(year, month, day);
+
+      // Validate date components
+      if (month < 0 || month > 11 || day < 1 || day > 31) {
+        Logger.log('⚠️ Invalid date components: ' + value);
+        return null;
+      }
+
+      const date = new Date(year, month, day);
+
+      // Verify the date is valid (catches invalid dates like Feb 30)
+      if (date.getMonth() !== month || date.getDate() !== day) {
+        Logger.log('⚠️ Invalid date: ' + value);
+        return null;
+      }
+
+      return date;
     }
-    
+
+    // Try ISO 8601 format (YYYY-MM-DDTHH:mm:ss)
+    if (trimmedValue.includes('T')) {
+      const date = new Date(trimmedValue);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+
     // Fallback: try JavaScript date parser
-    return new Date(value);
-    
-  } catch (e) {
+    const fallbackDate = new Date(trimmedValue);
+    if (!isNaN(fallbackDate.getTime())) {
+      return fallbackDate;
+    }
+
     Logger.log('⚠️ Could not parse date: ' + value);
+    return null;
+
+  } catch (e) {
+    Logger.log('⚠️ Error parsing date "' + value + '": ' + e.message);
     return null;
   }
 }
@@ -327,7 +400,8 @@ function searchByKeyword(text, keyword, type) {
           case 'currency':
             return parseCurrency(value);
           case 'number':
-            return parseInt(value, 10);
+            const num = parseInt(value, 10);
+            return isNaN(num) ? null : num;
           case 'date':
             return parseDate(value);
           case 'phone':
