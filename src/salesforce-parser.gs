@@ -172,10 +172,11 @@ function parseSalesforceQuoteTextToStartPacketDraft(text) {
     requestedStartDate: schedule.requestedStartDate,
     startMonth: schedule.startMonth,
     coveredPests: derivedPests,
-    leadType: null,
+    leadType: 'Inbound',
     serviceType: null,
     initialServiceDescription: autoInitialDesc,
-    maintenanceScopeDescription: autoMaintenanceDesc
+    maintenanceScopeDescription: autoMaintenanceDesc,
+    logBookNeeded: true
   };
 
   logDebug(JSON.stringify(draft, null, 2));
@@ -342,6 +343,10 @@ function splitMergedHeaderLine(line) {
   if (!line) return [];
   var trimmed = line.trim();
   if (!trimmed) return [];
+  // Don't split obvious address or city/state/zip lines; doing so drops the street for Tailored/Prepared blocks
+  if (ADDRESS_LINE_REGEX.test(trimmed) || (typeof CITY_STATE_ZIP_REGEX !== 'undefined' && CITY_STATE_ZIP_REGEX.test(trimmed))) {
+    return [trimmed];
+  }
   var results = [];
   var firstDigit = trimmed.search(/\d/);
   if (firstDigit > 0) {
@@ -367,6 +372,10 @@ function splitMergedHeaderLine(line) {
 function splitAccountAndContact(text) {
   if (!text) return [];
   var tokens = text.trim().split(/\s+/);
+  // Avoid splitting address-like strings (start with a digit or match City, ST ZIP)
+  if ((/^\d/.test(text) && ADDRESS_LINE_REGEX.test(text)) || (typeof CITY_STATE_ZIP_REGEX !== 'undefined' && CITY_STATE_ZIP_REGEX.test(text))) {
+    return [text];
+  }
   if (tokens.length < 3) return [text];
   for (var split = 1; split <= tokens.length - 2; split++) {
     var accountCandidate = tokens.slice(0, split).join(' ');
@@ -407,7 +416,7 @@ function findFirstEmail(lines) {
 function extractPreparedBySection(lines) {
   var result = { aeName: null, aeEmail: null };
   var idx = findFirstIndex(lines, function(line) {
-    return /prepared\s+by[:\s]/i.test(line);
+    return /prepared\s+by\b/i.test(line);
   });
   if (idx === -1) {
     return result;
@@ -468,23 +477,33 @@ function extractEquipmentSection(lines) {
   };
   var totalCost = null;
 
-  var startIdx = findFirstIndex(lines, function(line) {
-    return /^equipment\b/i.test(line);
+  // Anchor to "Total Cost of Equipment" to avoid TOC rows
+  var totalIdx = findFirstIndex(lines, function(line) {
+    return /^total\s+cost\s+of\s+equipment/i.test(line);
   });
+  if (totalIdx === -1) {
+    return { equipment: equipment, totalCost: totalCost };
+  }
+  var startIdx = -1;
+  for (var back = totalIdx - 1; back >= Math.max(0, totalIdx - 30); back--) {
+    var line = lines[back] || '';
+    if (/equipment\s+summary/i.test(line)) continue;
+    if (/^equipment\b/i.test(line) || /equipment\s+quantity/i.test(line) || /\bequipment\b/i.test(line)) {
+      startIdx = back;
+      break;
+    }
+  }
   if (startIdx === -1) {
     return { equipment: equipment, totalCost: totalCost };
   }
 
-  var endIdx = findFirstIndexFrom(lines, startIdx + 1, function(line) {
-    return /^total\s+cost\s+of\s+equipment/i.test(line);
-  });
-  if (endIdx === -1) {
-    return { equipment: equipment, totalCost: totalCost };
-  }
+  var endIdx = totalIdx;
 
   for (var i = startIdx + 1; i < endIdx; i++) {
     var row = lines[i];
     if (!row || isHeaderBlockStop(row)) continue;
+    if (/routine\s+management\s+services/i.test(row)) break;
+    if (/service\s+frequency/i.test(row)) continue;
     
     // Check 1: Number at END of line (Standard)
     var qtyMatch = row.match(/([0-9]+(?:\.[0-9]+)?)\s*$/);
@@ -961,7 +980,7 @@ function extractRoutineServices(lines, equipment) {
     { code: 'GPC', keywords: ['general pest'], serviceName: 'General Pest Control', category: 'GPC', programType: 'General Pest Control', defaultFreq: 'Monthly', defaultPerYear: 12, signal: 'hasGpc' },
     { code: 'MRT', keywords: ['interior monitoring'], serviceName: 'Interior Rodent Monitoring', category: 'Rodent Monitoring', programType: 'Interior Monitoring', defaultFreq: 'Semi-Monthly', defaultPerYear: 24, signal: 'hasRodent' },
     { code: 'RBS', keywords: ['exterior monitoring'], serviceName: 'Exterior Rodent Monitoring', category: 'Rodent Monitoring', programType: 'Exterior Monitoring', defaultFreq: 'Monthly', defaultPerYear: 12, signal: 'hasRodent' },
-    { code: 'ILT', keywords: ['insect light trap', 'ilt maintenance', 'light trap maintenance'], serviceName: 'Insect Light Trap Maintenance', category: 'Fly / ILT', programType: 'Insect Light Trap Maintenance', defaultFreq: 'Monthly', defaultPerYear: 12, signal: 'hasIlt' }
+    { code: 'ILT', keywords: ['insect light trap', 'ilt maintenance', 'light trap maintenance'], serviceName: 'Insect Light Trap Maintenance', category: 'Fly / ILT', programType: 'Insect Light Trap Maintenance', defaultFreq: 'Semi-Monthly', defaultPerYear: 24, signal: 'hasIlt' }
   ];
 
   var servicesByCode = {};
@@ -976,9 +995,12 @@ function extractRoutineServices(lines, equipment) {
     if (template.signal === 'hasIlt') signals.hasIlt = true;
   }
 
+  var iltSemi = false;
+
   block.forEach(function(line) {
     if (!line) return;
     var lower = line.toLowerCase();
+    if (/insect\s+light|ilt/.test(lower) && /semi/.test(lower)) iltSemi = true;
     for (var t = 0; t < serviceTemplates.length; t++) {
       var template = serviceTemplates[t];
       var matched = template.keywords.some(function(keyword) {
@@ -1003,6 +1025,15 @@ function extractRoutineServices(lines, equipment) {
   var services = Object.keys(servicesByCode).map(function(code) {
     return servicesByCode[code];
   });
+
+  if (iltSemi) {
+    services.forEach(function(svc){
+      if (svc.serviceCode === 'ILT') {
+        svc.frequencyLabel = 'Semi-Monthly';
+        svc.servicesPerYear = 24;
+      }
+    });
+  }
 
   if (!services.length) {
     return buildFallbackServicesFromEquipment(equipment);
@@ -1031,7 +1062,7 @@ function buildFallbackServicesFromEquipment(equipment) {
     signals.hasRodent = true;
   }
   if (equipment && equipment.iltQty > 0) {
-    services.push(createService('Insect Light Trap Maintenance', 'ILT', 'Fly / ILT', 'Insect Light Trap Maintenance', 'Monthly', 12));
+    services.push(createService('Insect Light Trap Maintenance', 'ILT', 'Fly / ILT', 'Insect Light Trap Maintenance', 'Semi-Monthly', 24));
     signals.hasIlt = true;
   }
   return { services: services, signals: signals };
@@ -1304,20 +1335,52 @@ function toTitleCase(value) {
 
 function buildInitialDescription(equipment, initialCost) {
   var parts = [];
-  if (equipment.multCatchQty > 0) parts.push("Install " + equipment.multCatchQty + " MRTs");
-  if (equipment.rbsQty > 0) parts.push("Install " + equipment.rbsQty + " RBSs");
-  if (equipment.iltQty > 0) parts.push("Install " + equipment.iltQty + " ILTs");
-  if (initialCost > 0) parts.push("Perform Initial Service");
-  return parts.length > 0 ? parts.join(", ") : "Standard Initial Setup";
+  if (equipment.multCatchQty > 0) parts.push(equipment.multCatchQty + " MRT");
+  if (equipment.rbsQty > 0) parts.push(equipment.rbsQty + " RBS");
+  if (equipment.iltQty > 0) parts.push(equipment.iltQty + " ILT");
+  if (!parts.length && initialCost > 0) return "Initial service";
+  if (!parts.length) return "Standard Initial Setup";
+  var equipmentList = parts.length > 1 ? parts.slice(0, -1).join(", ") + ", & " + parts.slice(-1) : parts[0];
+  return "Initial service and install " + equipmentList;
 }
 
 function buildMaintenanceDescription(services) {
-  if (!services || services.length === 0) return "General Pest Control Maintenance";
-  return services.map(function(svc) {
-    var freq = svc.frequencyLabel || "Monthly";
-    var name = svc.serviceName || svc.programType || "Service";
-    name = name.replace("CORE SERVICES", "").replace("MAINTENANCE", "").trim();
-    return freq + " " + name;
-  }).join("; ");
+  if (!services || services.length === 0) return "Monthly GPC";
+  var hasAfterHours = false;
+  var normalized = services.map(function(svc) {
+    var rawName = (svc.serviceName || svc.programType || "").toLowerCase();
+    if (/after\s+hours.*yes/i.test(rawName) || svc.afterHours) hasAfterHours = true;
+    var code = (svc.serviceCode || '').toUpperCase();
+    var label = (function(){
+      if (code === 'GPC') return 'GPC';
+      if (code === 'RBS') return 'Exterior Rodent Monitoring';
+      if (code === 'MRT') return 'Interior Rodent Monitoring';
+      if (code === 'ILT') return 'ILT Maintenance';
+      var name = svc.serviceName || svc.programType || "Service";
+      return name.replace(/maintenance/i, '').trim() || 'Service';
+    })();
+    var freq = svc.frequencyLabel || null;
+    if (!freq && svc.servicesPerYear) {
+      freq = svc.servicesPerYear >= 24 ? 'Semi-Monthly' : svc.servicesPerYear >= 12 ? 'Monthly' : null;
+    }
+    if (code === 'ILT' && svc.servicesPerYear >= 24) freq = 'Semi-Monthly';
+    if (!freq) freq = 'Monthly';
+    return { code: code, label: label, text: freq + " " + label };
+  }).filter(function(entry){
+    return ['GPC','RBS','MRT','ILT'].indexOf(entry.code) !== -1;
+  });
+  var order = { 'GPC':0,'RBS':1,'MRT':2,'ILT':3 };
+  normalized.sort(function(a,b){
+    var ao = order.hasOwnProperty(a.code)?order[a.code]:9;
+    var bo = order.hasOwnProperty(b.code)?order[b.code]:9;
+    if (ao === bo) return a.text.localeCompare(b.text);
+    return ao - bo;
+  });
+  var dedup = [];
+  normalized.forEach(function(entry){
+    if (!dedup.some(function(d){ return d.code === entry.code && d.label === entry.label; })) dedup.push(entry);
+  });
+  var joined = dedup.length > 1 ? dedup.slice(0,-1).map(function(e){return e.text;}).join(", ") + " & " + dedup.slice(-1)[0].text : dedup[0].text;
+  if (hasAfterHours) joined += " (Includes After Hours Service)";
+  return joined;
 }
-

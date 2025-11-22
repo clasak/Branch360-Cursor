@@ -440,7 +440,7 @@
   </div>
 </div>
 
-<div id="unifiedSaleModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onclick="if(event.target.id==='unifiedSaleModal')closeUnifiedSaleForm()">
+<div id="unifiedSaleModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[90]" onclick="if(event.target.id==='unifiedSaleModal')closeUnifiedSaleForm()">
   <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <div>
@@ -1586,13 +1586,47 @@
 
   function buildServiceDescriptions(services) {
     if (!Array.isArray(services) || !services.length) return '';
-    return services.map(function(service) {
-      if (!service) return '';
-      const name = service.serviceName || service.programType || 'Service';
-      const freq = service.frequencyLabel ? (' (' + service.frequencyLabel + ')') : '';
-      const desc = service.descriptionText || service.programType || '';
-      return (name + freq + ': ' + desc).trim();
-    }).filter(Boolean).join('\n');
+    var order = { 'GPC':0,'RBS':1,'MRT':2,'ILT':3 };
+    var lines = services.map(function(service) {
+      if (!service) return null;
+      var code = (service.serviceCode || '').toUpperCase();
+      var displayLabel = (function(){
+        if (code === 'GPC') return 'General Pest Control';
+        if (code === 'RBS') return 'Exterior Monitoring';
+        if (code === 'MRT') return 'Interior Monitoring';
+        if (code === 'ILT') return 'Insect Light Trap';
+        return service.serviceName || service.programType || 'Service';
+      })();
+      var freq = service.frequencyLabel || null;
+      if (!freq && service.servicesPerYear) {
+        freq = service.servicesPerYear >= 24 ? 'Semi-Monthly' : service.servicesPerYear >= 12 ? 'Monthly' : (service.servicesPerYear + 'x/Year');
+      }
+      if (code === 'ILT' && service.servicesPerYear >= 24) freq = 'Semi-Monthly';
+      if (!freq) freq = 'Monthly';
+      var rightLabel = (function(){
+        if (code === 'GPC') return 'GPC';
+        if (code === 'RBS') return 'Exterior Monitoring';
+        if (code === 'MRT') return 'Interior Monitoring';
+        if (code === 'ILT') return 'ILT';
+        return service.programType || service.serviceName || displayLabel;
+      })();
+      return { code: code, text: displayLabel + ' (' + freq + '): ' + rightLabel };
+    }).filter(Boolean);
+
+    lines.sort(function(a,b){
+      var ao = order.hasOwnProperty(a.code)?order[a.code]:9;
+      var bo = order.hasOwnProperty(b.code)?order[b.code]:9;
+      if (ao === bo) return a.text.localeCompare(b.text);
+      return ao - bo;
+    });
+
+    // Deduplicate by code+text to avoid dup rows
+    var dedup = [];
+    lines.forEach(function(entry){
+      if (!dedup.some(function(e){ return e.code === entry.code && e.text === entry.text; })) dedup.push(entry);
+    });
+
+    return dedup.map(e => e.text).join('\n');
   }
 
   function inferServicesPerYear(label) {
@@ -2326,11 +2360,13 @@
     resetUnifiedSaleForm();
     const modal = document.getElementById('unifiedSaleModal');
     modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
     setupModalEscKey(modal, closeUnifiedSaleForm);
   }
 
   function closeUnifiedSaleForm() {
     document.getElementById('unifiedSaleModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
   }
 
   function resetUnifiedSaleForm() {
@@ -2525,26 +2561,47 @@
     }
   }
 
+  // ==========================================
+  // 1. SMART PDF TEXT EXTRACTOR (Universal Fix for "Blob" Text)
+  // ==========================================
   async function extractTextFromPdfFile(file) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let text = '';
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      // Only join items with a space if they are on the same line (approx Y coordinate)
-      // Otherwise add a newline.
-      // Simple improvement: Add newline after every item.str unless it's clearly part of a sentence?
-      // Better: Check Y transform.
-      
-      // Simplified approach that often works better for table/form data:
-      // Join with newlines to preserve structure, then let parser handle cleanup.
-      // The previous code joined with space ' ' which merged lines together too aggressively.
-      
-      // Let's try a hybrid: items often come in reading order.
-      // If we just join with newline, we get more lines but safer parsing.
-      const pageText = content.items.map(function(item) { return item.str; }).join('\n');
-      text += pageText + '\n';
+      if (content.items.length === 0) continue;
+
+      // Sort by Y (vertical) then X (horizontal) to enforce visual reading order
+      // This fixes the issue where columns or headers get merged into body text
+      const items = content.items.map(item => ({
+        str: item.str,
+        x: item.transform[4],
+        y: item.transform[5],
+        h: item.height || item.transform[3]
+      })).sort((a, b) => {
+        // If Y difference is > 5, consider it a new line (PDF coordinates start at bottom-left)
+        if (Math.abs(a.y - b.y) > 5) return b.y - a.y; 
+        return a.x - b.x; 
+      });
+
+      let pageText = '';
+      let lastY = items[0].y;
+
+      for (let j = 0; j < items.length; j++) {
+        const item = items[j];
+        // Insert New Line if Y changes significantly
+        if (Math.abs(item.y - lastY) > 5) {
+          pageText += '\n';
+        } else if (j > 0) {
+          pageText += ' '; // Add space between words on same line
+        }
+        pageText += item.str;
+        lastY = item.y;
+      }
+      text += pageText + '\n\n';
     }
     return text;
   }
@@ -2553,113 +2610,135 @@
     return clientParseSalesforceQuote(text);
   }
 
+  // ==========================================
+  // 2. UNIVERSAL SALESFORCE PARSER (Truth BBQ / Grimaldi / CKS Support)
+  // ==========================================
   var StrictSalesforceParser = (function() {
-
-    // --- CONFIGURATION ---
-
     var HEADER_BLOCK_TERMINATORS = ['prepared by', 'equipment', 'total cost of equipment', 'investment summary', 'covered pests', 'scope of service', 'service specifications', 'table of contents'];
     var ROUTINE_SECTION_TERMINATORS = ['investment summary', 'plan limitations', 'scope of service', 'equipment summary', 'covered pests', 'timeline'];
     var ADDRESS_LINE_REGEX = /^[0-9].*(?:\b(?:st|street|rd|road|dr|drive|ln|lane|blvd|boulevard|ave|avenue|hwy|highway|way|trail|trl|terrace|ter|pkwy|parkway|court|ct|cir|circle|loop|suite|ste|unit)\b)/i;
     var EMAIL_REGEX = /([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i;
     var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    // --- DESCRIPTION BUILDERS ---
+    // Comprehensive Mapping based on analyzing multiple Start Packets
+    const SERVICE_MAP = [
+      { key: 'drain fly', label: 'Drain line service' },
+      { key: 'small fly', label: 'Small fly service' },
+      { key: 'ecocatch', label: 'EcoCatch fly baiting' },
+      { key: 'general pest', label: 'GPC' },
+      { key: 'insect light', label: 'ILT service' },
+      { key: 'interior', label: 'Interior rodent' },
+      { key: 'exterior', label: 'Exterior rodent' },
+      { key: 'knockdown', label: 'Focal treatment' },
+      { key: 'cleanout', label: 'Cleanout' },
+      { key: 'bed bug', label: 'Bed Bug service' },
+      { key: 'mosquito', label: 'Mosquito service' }
+    ];
 
-    function buildInitialDescription(equipment, initialCost) {
+    // --- DESCRIPTION BUILDERS ---
+    function buildInitialDescription(equipment, initialCost, oneTimeServices) {
       var parts = [];
-      // Correct Equipment Formatter: "Installation of [qty] [Type]"
       if (equipment.multCatchQty > 0) parts.push(equipment.multCatchQty + " MRT");
       if (equipment.rbsQty > 0) parts.push(equipment.rbsQty + " RBS");
       if (equipment.iltQty > 0) parts.push(equipment.iltQty + " ILT");
-      
-      var desc = "Initial service";
-      if (parts.length > 0) {
-          var last = parts.pop();
-          var equipmentList = parts.length > 0 ? parts.join(", ") + ", and " + last : last;
-          desc += " and Installation of " + equipmentList;
-      } else if (initialCost > 0) {
-          desc = "Standard Initial Setup";
+
+      if (oneTimeServices && oneTimeServices.length > 0) {
+          oneTimeServices.forEach(svc => parts.push(svc.name));
       }
-      return desc;
+
+      if (!parts.length && initialCost > 0) return "Initial service";
+      if (!parts.length) return "Standard Initial Setup";
+
+      var equipmentList = parts.length > 1 ? parts.slice(0,-1).join(", ") + ", & " + parts.slice(-1) : parts[0];
+      return "Initial service and install " + equipmentList;
     }
 
     function buildMaintenanceDescription(services) {
-      if (!services || services.length === 0) return "Monthly General Pest Control";
+      if (!services || services.length === 0) return "Monthly GPC";
 
-      var groups = {};
       var hasAfterHours = false;
+      var normalized = services.map(function(svc) {
+        var rawName = (svc.serviceName || svc.programType || "").toLowerCase();
+        if (/after\s+hours.*yes/i.test(rawName) || svc.afterHours) hasAfterHours = true;
 
-      services.forEach(function(svc) {
-        var freq = svc.frequencyLabel || "Monthly";
-        var name = svc.serviceName || svc.programType || "Service";
-        
-        freq = freq.replace(/service frequency -/i, "").trim();
-        
-        if (/after\s+hours\s+service\??\s*(yes|- yes)/i.test(name) || svc.afterHours) {
-            hasAfterHours = true;
+        var code = (svc.serviceCode || '').toUpperCase();
+        var label = (function(){
+          if (code === 'GPC') return 'GPC';
+          if (code === 'RBS') return 'Exterior Rodent Monitoring';
+          if (code === 'MRT') return 'Interior Rodent Monitoring';
+          if (code === 'ILT') return 'ILT Maintenance';
+          var mapping = SERVICE_MAP.find(m => rawName.includes(m.key));
+          if (mapping) return mapping.label;
+          var clean = rawName.replace(/maintenance|service|core services/gi, "").trim();
+          return clean || 'Service';
+        })();
+
+        // Normalize frequency labels using servicesPerYear where possible
+        var freq = svc.frequencyLabel || null;
+        if (!freq && svc.servicesPerYear) {
+          freq = svc.servicesPerYear >= 24 ? 'Semi-Monthly' : svc.servicesPerYear >= 12 ? 'Monthly' : null;
         }
-        name = name.replace(/after\s+hours\s+service\??\s*[-]?\s*(no|yes)/gi, "").trim();
-        
-        name = name.replace(/maintenance|service|core services|general pest control/gi, "").trim();
-        name = name.replace(/[-:;,\.]+$/, "").trim();
-        name = name.replace(/\s{2,}/g, " "); 
-        
-        if (/interior/i.test(name) && /rodent|monitor/i.test(name)) name = "Interior Rodent Monitoring";
-        else if (/exterior/i.test(name) && /rodent|monitor/i.test(name)) name = "Exterior Rodent Monitoring";
-        else if (/insect\s+light|ilt/i.test(name)) name = "Insect Light Trap";
-        else if (name === "" || /general/i.test(svc.programType)) name = "General Pest Control";
+        if (code === 'ILT' && svc.servicesPerYear >= 24) freq = 'Semi-Monthly';
+        if (!freq) freq = 'Monthly';
 
-        if (!groups[freq]) groups[freq] = [];
-        if (groups[freq].indexOf(name) === -1) groups[freq].push(name);
+        return { code: code, freq: freq, label: label, text: `${freq} ${label}` };
+      }).filter(function(entry){
+        // Only keep the mapped core codes to avoid stray "Semi-Monthly Service" rows
+        return ['GPC','RBS','MRT','ILT'].indexOf(entry.code) !== -1;
       });
 
-      var parts = [];
-      Object.keys(groups).forEach(function(freq) {
-        parts.push(freq + " " + groups[freq].join("; "));
+      // Order explicitly: GPC -> RBS -> MRT -> ILT -> others
+      var order = { 'GPC':0,'RBS':1,'MRT':2,'ILT':3 };
+      normalized.sort(function(a,b){
+        var ao = order.hasOwnProperty(a.code)?order[a.code]:9;
+        var bo = order.hasOwnProperty(b.code)?order[b.code]:9;
+        if (ao === bo) return a.text.localeCompare(b.text);
+        return ao - bo;
       });
 
-      if (hasAfterHours) parts.push("Includes After Hours Service");
+      // Deduplicate by code+label so we don't get both monthly and semi-monthly ILT rows
+      var deduped = [];
+      normalized.forEach(function(entry){
+        if (!deduped.some(function(d){ return d.code === entry.code && d.label === entry.label; })) {
+          deduped.push(entry);
+        }
+      });
 
-      return parts.join(". ");
+      var joined = deduped.length > 1 ? deduped.slice(0,-1).map(e=>e.text).join(", ") + " & " + deduped.slice(-1)[0].text : deduped[0].text;
+      if (hasAfterHours) joined += " (Includes After Hours Service)";
+      return joined;
     }
 
-    // --- MAIN PARSER ---
-
+    // --- MAIN PARSE LOGIC ---
     function parseSalesforceQuoteTextToStartPacketDraft(text) {
       if (!text) throw new Error('No text to parse.');
       
-      console.log("[SF Parser v2] Starting parse... (Rev 5 - Fixed Syntax & Account Logic)"); 
-
+      // Normalize
       var rawLines = text.replace(/\r\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      var lines = expandLines(rawLines);
-
-      console.log("[SF Parser] Lines after expansion:", lines.length);
+      var lines = expandLines(rawLines); 
 
       var header = extractPreparedForFields(lines);
       var preparedBy = extractPreparedBySection(lines);
       var equipmentInfo = extractEquipmentSection(lines);
       var pricing = extractPricing(lines);
       var schedule = extractRequestedStart(lines);
-      var routine = extractRoutineServices(lines, equipmentInfo.equipment);
-      var derivedPests = extractCoveredPestsSection(lines); 
-      if (!derivedPests.length) derivedPests = deriveCoveredPests(derivedPests, routine.signals, equipmentInfo.equipment);
+      
+      // Extract both Routine AND Corrective (One-Time) services
+      var routine = extractRoutineServices(lines, equipmentInfo.equipment); 
+      var corrective = extractCorrectiveServices(lines);
 
-      console.log("[SF Parser] Equipment found:", JSON.stringify(equipmentInfo.equipment));
-      console.log("[SF Parser] Routine Services found:", JSON.stringify(routine.services));
-      console.log("[SF Parser] Pricing found:", JSON.stringify(pricing));
+      var derivedPests = deriveCoveredPests(extractCoveredPestsSection(lines), routine.signals, equipmentInfo.equipment);
 
-      var oneTimeCost = pricing.oneTimeCost;
+      // Financials
+      var oneTimeCost = pricing.oneTimeCost !== null ? pricing.oneTimeCost : equipmentInfo.totalCost;
       var initialSvcCost = pricing.initialSvcCost;
       var monthlyCost = pricing.avgMonthlyCost;
+      var annualCost = monthlyCost !== null ? Math.round(monthlyCost * 12 * 100)/100 : null;
       
-      // Fallback if explicit equipment cost is present and extracted oneTime is null
-      if (oneTimeCost === null && equipmentInfo.totalCost > 0) oneTimeCost = equipmentInfo.totalCost;
-
-      var annualCost = monthlyCost !== null ? roundCurrency(monthlyCost * 12) : null;
-      
+      // Combined Initial = Equipment + Initial Service
       var combinedInitial = null;
       if (oneTimeCost !== null || initialSvcCost !== null) {
-          combinedInitial = roundCurrency((oneTimeCost || 0) + (initialSvcCost || 0));
+          combinedInitial = Math.round(((oneTimeCost || 0) + (initialSvcCost || 0)) * 100) / 100;
       }
 
       var draft = {
@@ -2673,7 +2752,7 @@
         aeName: preparedBy.aeName,
         aeEmail: preparedBy.aeEmail,
         branchId: 'BRN-001',
-        jobType: (monthlyCost !== null) ? 'Contract' : null,
+        jobType: (monthlyCost > 0) ? 'Contract' : null,
         services: routine.services,
         equipment: equipmentInfo.equipment,
         equipmentOneTimeTotal: oneTimeCost,
@@ -2688,14 +2767,13 @@
         requestedStartDate: schedule.requestedStartDate,
         startMonth: schedule.startMonth,
         coveredPests: derivedPests,
-        initialServiceDescription: buildInitialDescription(equipmentInfo.equipment, initialSvcCost),
+        // Use the enhanced builders
+        initialServiceDescription: buildInitialDescription(equipmentInfo.equipment, combinedInitial, corrective),
         maintenanceScopeDescription: buildMaintenanceDescription(routine.services),
-        leadType: null,
+        leadType: 'Inbound',
         serviceType: null,
-        safeToProceed: true
+        logBookNeeded: true
       };
-      
-      console.log("[SF Parser] Draft result:", JSON.stringify(draft));
       return draft;
     }
 
@@ -2739,6 +2817,24 @@
       if (oneTime === null) oneTime = findCurrencyInBlock(block, /(?:one[-\s]?time|initial)\s+(?:cost|investment)/i);
       if (initial === null) initial = findCurrencyInBlock(block, /(?:initial\s+(?:svc|service)|start[-\s]?up)\s+(?:cost|investment)/i);
       if (monthly === null) monthly = findCurrencyInBlock(block, /(?:avg|average|monthly)\s+(?:monthly\s+)?(?:cost|investment)/i);
+
+      // 5. Ultimate fallback: scan entire document for a line with 3+ currency values
+      if (oneTime === null || initial === null || monthly === null) {
+        var currencyRegex = /\$([0-9][0-9,]*(?:\.[0-9]{2})?)/g;
+        for (var j = 0; j < lines.length; j++) {
+          var vals = [];
+          var m;
+          while ((m = currencyRegex.exec(lines[j])) !== null) {
+            vals.push(parseFloat(m[1].replace(/,/g, '')));
+          }
+          if (vals.length >= 3) {
+            if (oneTime === null) oneTime = vals[0];
+            if (initial === null) initial = vals[1];
+            if (monthly === null) monthly = vals[2];
+            break;
+          }
+        }
+      }
 
       return { oneTimeCost: oneTime, initialSvcCost: initial, avgMonthlyCost: monthly };
     }
@@ -2784,7 +2880,10 @@
                 if (/exterior\s+monitoring/i.test(cleanLine) && /monthly/i.test(cleanLine)) freqMatch = [cleanLine, "Exterior Rodent Monitoring", "Monthly"];
                 else if (/interior\s+monitoring/i.test(cleanLine) && /semi/i.test(cleanLine)) freqMatch = [cleanLine, "Interior Rodent Monitoring", "Semi-Monthly"];
                 else if (/general\s+pest/i.test(cleanLine) && /monthly/i.test(cleanLine)) freqMatch = [cleanLine, "General Pest Control", "Monthly"];
-                else if (/insect\s+light\s+trap\s+maintenance/i.test(cleanLine)) freqMatch = ["Insect Light Trap Maintenance", "Monthly"];
+                else if (/insect\s+light\s+trap\s+maintenance/i.test(cleanLine)) {
+                    var iltFreq = /semi/i.test(cleanLine) ? "Semi-Monthly" : "Monthly";
+                    freqMatch = ["Insect Light Trap Maintenance", iltFreq];
+                }
             }
 
             if (freqMatch) {
@@ -2800,14 +2899,26 @@
         });
       });
       
+      // If the block mentions semi-monthly ILT anywhere, force ILT to semi-monthly/24
+      var iltSemi = block.some(function(line){ return /insect\s+light|ilt/i.test(line) && /semi/i.test(line); });
+      
       if (!services.some(s => s.serviceCode === 'MRT') && equipment.multCatchQty > 0) 
          upsertService(services, createService('Interior Rodent Monitoring', 'MRT', 'Rodent', 'Interior', 'Semi-Monthly', 24));
       if (!services.some(s => s.serviceCode === 'RBS') && equipment.rbsQty > 0) 
          upsertService(services, createService('Exterior Rodent Monitoring', 'RBS', 'Rodent', 'Exterior', 'Monthly', 12));
       if (!services.some(s => s.serviceCode === 'ILT') && equipment.iltQty > 0) 
-         upsertService(services, createService('Insect Light Trap', 'ILT', 'Fly', 'ILT', 'Monthly', 12));
+         upsertService(services, createService('Insect Light Trap', 'ILT', 'Fly', 'ILT', 'Semi-Monthly', 24));
       if (!services.some(s => s.serviceCode === 'GPC')) 
          upsertService(services, createService('General Pest Control', 'GPC', 'GPC', 'GPC', 'Monthly', 12));
+
+      services.forEach(function(svc){
+        if (svc.serviceCode === 'ILT') {
+          if (iltSemi || svc.servicesPerYear >= 24 || (svc.frequencyLabel && /semi/i.test(svc.frequencyLabel))) {
+            svc.frequencyLabel = 'Semi-Monthly';
+            svc.servicesPerYear = 24;
+          }
+        }
+      });
 
       services.sort((a, b) => serviceOrder(a.serviceCode) - serviceOrder(b.serviceCode));
       return { services: services, signals: signals };
@@ -2815,38 +2926,34 @@
 
     function extractEquipmentSection(lines) {
       var equipment = { rbsQty: 0, multCatchQty: 0, iltQty: 0, otherEquipment: [], summary: '' };
-      var startIdx = findFirstIndex(lines, l => /^equipment\b/i.test(l));
+      // Anchor on the actual equipment table tied to "Total Cost of Equipment"
+      var totalIdx = findFirstIndex(lines, l => /^total\s+cost\s+of\s+equipment/i.test(l));
+      if (totalIdx === -1) return { equipment: equipment, totalCost: null };
+
+      // Walk backward to find any line that contains "Equipment" but not "Summary"
+      var startIdx = -1;
+      for (var back = totalIdx - 1; back >= Math.max(0, totalIdx - 30); back--) {
+        var line = lines[back] || '';
+        if (/equipment\s+summary/i.test(line)) continue;
+        if (/^equipment\b/i.test(line) || /equipment\s+quantity/i.test(line) || /\bequipment\b/i.test(line)) {
+          startIdx = back;
+          break;
+        }
+      }
       if (startIdx === -1) return { equipment: equipment, totalCost: null };
-      
-      var endIdx = findFirstIndexFrom(lines, startIdx + 1, l => 
-        /^total\s+cost/i.test(l) || 
-        /^investment\s+summary/i.test(l) || 
-        /^table\s+of\s+contents/i.test(l)
-      );
-      if (endIdx === -1) endIdx = Math.min(lines.length, startIdx + 30);
+      var endIdx = totalIdx;
 
       for (var i = startIdx + 1; i < endIdx; i++) {
         var row = lines[i];
         if (!row || isHeaderBlockStop(row)) continue;
+        if (/routine\s+management\s+services/i.test(row)) break;
+        if (/service\s+frequency/i.test(row)) continue;
         
-        if (/^(documentation|additional services|terms|acceptance|timeline|corporate|innovation|memberships|our solutions|page)\s+\d+$/i.test(row)) {
-            continue;
-        }
-        
-        var startMatch = row.match(/^(\d+)\s+(.*)/);
-        if (startMatch) {
-            var qty = parseFloat(startMatch[1]);
-            var name = startMatch[2].trim();
-            if (name && !/^(page|table of contents)/i.test(name)) {
-                 categorizeEquipment(equipment, name, qty);
-                 continue;
-            }
-        }
-
+        // Fix for orphan quantities (e.g., "22.00" on new line)
         if (/^\s*[0-9]+(\.[0-9]+)?\s*$/.test(row)) {
              var qty = parseFloat(row);
              var prevRow = lines[i-1];
-             if (prevRow && !/^\s*[0-9.]+\s*$/.test(prevRow) && !/^equipment/i.test(prevRow) && !/page/i.test(prevRow)) {
+             if (prevRow && !/^\s*[0-9.]+\s*$/.test(prevRow) && !/^equipment/i.test(prevRow)) {
                  categorizeEquipment(equipment, prevRow.trim(), qty);
                  continue; 
              }
@@ -2855,16 +2962,63 @@
         if (qtyMatch) {
             var qty = parseFloat(qtyMatch[1]);
             var name = row.slice(0, row.length - qtyMatch[0].length).trim();
-            if (name && !/^(page|table of contents)/i.test(name)) {
-                categorizeEquipment(equipment, name, qty);
-            }
+            if (name) categorizeEquipment(equipment, name, qty);
         }
       }
       return { equipment: equipment, totalCost: null };
     }
 
+    function extractCorrectiveServices(lines) {
+      var start = findFirstIndex(lines, l => /corrective\s+services/i.test(l));
+      if (start === -1) return [];
+      var end = findFirstIndexFrom(lines, start + 1, l => /total\s+cost/i.test(l));
+      if (end === -1) end = Math.min(lines.length, start + 10);
+      
+      var correctives = [];
+      for(var i = start+1; i < end; i++) {
+          var line = lines[i];
+          if(/knockdown|cleanout|treatment/i.test(line)) {
+              // Clean up price
+              correctives.push({ name: line.replace(/\$[\d,\.]+/g, "").trim() });
+          }
+      }
+      return correctives;
+    }
+
+
     // --- UTILS ---
-    function expandLines(l){var r=[];l.forEach(x=>{if(/PREPARED|TAILORED/.test(x)){x.split(/(PREPARED|TAILORED)/).forEach(p=>p.trim()&&r.push(p.trim()))}else{r.push(x)}});return r}
+    function expandLines(inputLines) {
+      var result = [];
+      inputLines.forEach(function(line) {
+        if (!line) return;
+        var splitPattern = /(PREPARED\s+BY:|TAILORED\s+FOR:)/i;
+        if (splitPattern.test(line)) {
+          var parts = line.split(splitPattern);
+          var current = '';
+          for (var i = 0; i < parts.length; i++) {
+            if (splitPattern.test(parts[i])) {
+              if (current.trim()) {
+                result.push(current.trim());
+              }
+              current = parts[i];
+            } else {
+              current += parts[i];
+            }
+          }
+          if (current.trim()) {
+            result.push(current.trim());
+          }
+        } else if (line.length > 140 && /\s{2,}/.test(line)) {
+          line.split(/\s{2,}/).forEach(function(part) {
+            part = part.trim();
+            if (part.length) result.push(part);
+          });
+        } else {
+          result.push(line);
+        }
+      });
+      return result;
+    }
     function findFirstIndex(l,p){for(var i=0;i<l.length;i++)if(p(l[i]))return i;return -1}
     function findFirstIndexFrom(l,s,p){for(var i=s;i<l.length;i++)if(p(l[i]))return i;return -1}
     function isHeaderBlockStop(l){return HEADER_BLOCK_TERMINATORS.some(t=>l.toLowerCase().indexOf(t)===0)}
@@ -2991,34 +3145,165 @@
       
       return d;
     }
-    function extractPreparedBySection(l){return{aeName:null,aeEmail:null}}
-
-    return parseSalesforceQuoteTextToStartPacketDraft;
-  })();
-      var addr=b.find(l=>ADDRESS_LINE_REGEX.test(l));
-      if(addr)d.serviceAddressLine1=addr;
-      
-      d.accountName=b.find(l=>l.length<50 && !/[@\d]/.test(l) && !/prepared|tailored/i.test(l));
-      
-      return d;
+    function extractPreparedBySection(lines){
+      var result={aeName:null,aeEmail:null};
+      var idx=findFirstIndex(lines,l=>/prepared\s+by\b/i.test(l));
+      if(idx===-1)return result;
+      var block=gatherBlock(lines,idx,isHeaderBlockStop,8);
+      block.forEach(function(line){
+        if(!line)return;
+        var emailMatch=line.match(EMAIL_REGEX);
+        if(emailMatch)result.aeEmail=emailMatch[1];
+        var cleaned=line.replace(EMAIL_REGEX,'').replace(/prepared\s+by[:\s-]*/i,'').trim();
+        if(cleaned && cleaned.indexOf('@')===-1 && !result.aeName && !/prepared\s+for/i.test(cleaned)){
+          result.aeName=cleaned;
+        }
+      });
+      return result;
     }
-    function extractPreparedBySection(l){return{aeName:null,aeEmail:null}}
 
     return parseSalesforceQuoteTextToStartPacketDraft;
   })();
-
-
-
 
   function clientParseSalesforceQuote(rawText) {
     try {
-      return StrictSalesforceParser(rawText);
+      var parsed = StrictSalesforceParser(rawText);
+      // If core fields are missing, run minimal fallback to avoid empty preview
+      if (!parsed || (!parsed.accountName && !parsed.serviceAddressLine1 && (!parsed.services || !parsed.services.length))) {
+        console.warn('[SF Parser] Strict parser returned empty, running minimal fallback');
+        var minimal = minimalFallbackParse(rawText);
+        parsed = Object.assign(parsed || {}, minimal);
+      }
+      return parsed;
     } catch (parseError) {
       console.error('Strict Salesforce parser failed', parseError);
-      return buildEmptyDraft();
+      return minimalFallbackParse(rawText);
     }
   }
 
+  function minimalFallbackParse(text) {
+    if (!text) return buildEmptyDraft();
+    var draft = buildEmptyDraft();
+    var lines = text.replace(/\r\n/g, '\n').split('\n').map(function(l){return l.trim();}).filter(Boolean);
+
+    function getAfterLabel(label) {
+      var idx = lines.findIndex(function(l){ return l.toLowerCase().indexOf(label.toLowerCase()) !== -1; });
+      if (idx !== -1) {
+        var inline = lines[idx].replace(new RegExp(label, 'i'), '').trim();
+        if (inline) return inline;
+        if (lines[idx+1]) return lines[idx+1].trim();
+      }
+      return null;
+    }
+
+    draft.accountName = getAfterLabel('Customer Name') || draft.accountName;
+    var svcAddr = getAfterLabel('Service Address');
+    if (svcAddr) {
+      draft.serviceAddressLine1 = svcAddr.replace(/\s+USA$/i,'').trim();
+      var partsA = draft.serviceAddressLine1.split(',');
+      if (partsA.length >= 3) {
+        draft.serviceCity = partsA[1].trim();
+        var stateZipA = partsA[2].trim().split(/\s+/);
+        draft.serviceState = stateZipA.shift();
+        draft.serviceZip = stateZipA.join(' ');
+      }
+    }
+    var pocLine = getAfterLabel('Point of Contact') || getAfterLabel('POC');
+    if (pocLine) {
+      var emailMatchPoc = pocLine.match(/([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i);
+      if (emailMatchPoc) draft.contactEmail = emailMatchPoc[1];
+      var nameOnly = pocLine.replace(/\/.*$/,'').replace(/[,|]/g,'').trim();
+      if (nameOnly) draft.contactName = nameOnly;
+    }
+    var pestsLineIdx = lines.findIndex(function(l){ return /covered\s+pests/i.test(l); });
+    if (pestsLineIdx !== -1 && lines[pestsLineIdx+1]) {
+      draft.coveredPests = lines[pestsLineIdx+1].split(/[,|]/).map(function(p){return p.trim();}).filter(Boolean);
+    }
+
+    // Address and account line: first line with street + city + state + zip
+    var addrMatch = text.match(/([0-9][^\n]+?,\s*[A-Za-z\s]+?,\s*[A-Z]{2},?\s*\d{5}(?:-\d{4})?)/);
+    if (addrMatch && !draft.serviceAddressLine1) {
+      draft.serviceAddressLine1 = addrMatch[1].trim();
+      var parts = draft.serviceAddressLine1.split(',');
+      if (parts.length >= 3) {
+        draft.serviceCity = parts[1].trim();
+        var stateZip = parts[2].trim().split(/\s+/);
+        draft.serviceState = stateZip.shift();
+        draft.serviceZip = stateZip.join(' ');
+      }
+    }
+    // Contact phone: first phone-like pattern in the doc
+    var phoneMatch = text.match(/(\+?1[\s\-\.])?\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4}/);
+    if (phoneMatch && phoneMatch[0]) {
+      draft.contactPhone = phoneMatch[0].trim();
+    }
+    // Contact email
+    var email = text.match(/([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i);
+    if (email) draft.contactEmail = email[1];
+    // Account/POC: look for TAILORED/PREPARED block
+    var headerIdx = lines.findIndex(function(l){return /tailored|prepared\s+for/i.test(l);});
+    if (headerIdx !== -1) {
+      draft.accountName = lines[headerIdx+1] || draft.accountName;
+      draft.contactName = lines[headerIdx+2] || draft.contactName;
+    }
+    // Pricing: grab first three currency values
+    var money = [];
+    var moneyRe = /\$[0-9][0-9,]*(?:\.[0-9]{2})?/g;
+    var m;
+    while ((m = moneyRe.exec(text)) !== null) {
+      money.push(parseFloat(m[0].replace(/[$,]/g,'')));
+      if (money.length >= 3) break;
+    }
+    if (money.length >= 3) {
+      draft.equipmentOneTimeTotal = money[0];
+      draft.servicesInitialTotal = money[1];
+      draft.combinedInitialTotal = money[0] + money[1];
+      draft.servicesMonthlyTotal = money[2];
+      draft.combinedMonthlyTotal = money[2];
+    }
+    // Equipment counts from plain text lines
+    var mrt = text.match(/(Multicatch|Mouse Trap)[^0-9]*([0-9]{1,3}(?:\.[0-9]+)?)/i);
+    var rbs = text.match(/(Rodent Bait Station|RBS)[^0-9]*([0-9]{1,3}(?:\.[0-9]+)?)/i);
+    var ilt = text.match(/(Insect Light Trap|Lumnia)[^0-9]*([0-9]{1,3}(?:\.[0-9]+)?)/i);
+    draft.equipment = draft.equipment || { multCatchQty:0,rbsQty:0,iltQty:0,otherEquipment:[] };
+    if (mrt) draft.equipment.multCatchQty = parseFloat(mrt[2]);
+    if (rbs) draft.equipment.rbsQty = parseFloat(rbs[2]);
+    if (ilt) draft.equipment.iltQty = parseFloat(ilt[2]);
+    draft.equipment.summary = buildEquipmentSummary(draft.equipment);
+    // Services fallback: at least GPC + rodent + ILT if counts exist
+    var makeService = function(name, code, category, programType, freq, perYear) {
+      return {
+        serviceName: name,
+        serviceCode: code,
+        category: category,
+        programType: programType,
+        frequencyLabel: freq,
+        servicesPerYear: perYear,
+        descriptionText: 'Imported from PDF',
+        afterHours: false,
+        initialAmount: null,
+        pricePerService: null
+      };
+    };
+    var fallbackServices = [];
+    if (draft.equipment.multCatchQty || draft.equipment.rbsQty || draft.equipment.iltQty) {
+      if (draft.equipment.multCatchQty) fallbackServices.push(makeService('Interior Rodent Monitoring','MRT','Rodent Monitoring','Interior Monitoring','Semi-Monthly',24));
+      if (draft.equipment.rbsQty) fallbackServices.push(makeService('Exterior Rodent Monitoring','RBS','Rodent Monitoring','Exterior Monitoring','Monthly',12));
+      if (draft.equipment.iltQty) fallbackServices.push(makeService('Insect Light Trap Maintenance','ILT','Fly / ILT','Insect Light Trap Maintenance','Semi-Monthly',24));
+    }
+    fallbackServices.push(makeService('General Pest Control','GPC','GPC','General Pest Control','Monthly',12));
+    draft.services = fallbackServices;
+    // Local maintenance description builder (avoid relying on Strict parser helpers)
+    draft.maintenanceScopeDescription = fallbackServices.map(function(svc){
+      var freq = svc.frequencyLabel || 'Monthly';
+      var name = svc.serviceName || 'Service';
+      return freq + ' ' + name;
+    }).join(', ');
+    draft.initialServiceDescription = draft.initialServiceDescription || 'Initial service' + (draft.equipment.summary ? ' and install ' + draft.equipment.summary : '');
+    draft.leadType = draft.leadType || 'Inbound';
+    draft.logBookNeeded = true;
+    return draft;
+  }
 
 
   function buildEmptyDraft() {
@@ -3127,12 +3412,17 @@
     var pocEmailInput = document.getElementById('unifiedPOCEmail');
     if (pocEmailInput) pocEmailInput.value = draft.contactEmail || '';
     var pocPhoneInput = document.getElementById('unifiedPOCPhone');
-    if (pocPhoneInput) pocPhoneInput.value = '';
+    if (pocPhoneInput) pocPhoneInput.value = draft.contactPhone || '';
 
     const addressPieces = [draft.serviceAddressLine1, draft.serviceCity, draft.serviceState, draft.serviceZip].filter(Boolean);
     var serviceAddressInput = document.getElementById('unifiedServiceAddress');
     if (serviceAddressInput) {
-      serviceAddressInput.value = addressPieces.join(', ');
+      var joined = addressPieces.join(', ');
+      // If line1 already contains city/state/zip, don't append them again
+      if (draft.serviceAddressLine1 && draft.serviceCity && draft.serviceAddressLine1.toLowerCase().includes(draft.serviceCity.toLowerCase())) {
+        joined = draft.serviceAddressLine1;
+      }
+      serviceAddressInput.value = joined;
     }
 
     if (draft.startMonth) {
@@ -3177,6 +3467,17 @@
     if (draft.branchId) {
       const branchSelect = document.getElementById('unifiedBranch');
       if (branchSelect) branchSelect.value = draft.branchId;
+    } else if (draft.serviceCity) {
+      const branchSelect = document.getElementById('unifiedBranch');
+      if (branchSelect) {
+        for (let i = 0; i < branchSelect.options.length; i++) {
+          const opt = branchSelect.options[i];
+          if (opt.text && opt.text.toLowerCase().includes(draft.serviceCity.toLowerCase())) {
+            branchSelect.value = opt.value;
+            break;
+          }
+        }
+      }
     }
 
     const primaryService = currentImportedServices.length ? currentImportedServices[0] : null;
@@ -3200,7 +3501,7 @@
       const typeCandidate = draft.serviceType || (primaryService ? (primaryService.category || primaryService.serviceName) : '');
       setSelectValueByElement(serviceTypeSelect, typeCandidate);
     }
-    setSelectValueById('unifiedLeadType', draft.leadType || (draft.tapLeadFlag ? 'TAP' : ''));
+    setSelectValueById('unifiedLeadType', draft.leadType || (draft.tapLeadFlag ? 'TAP' : 'Inbound'));
     // Set job type to "Contract" if there's a recurring monthly cost
     const hasRecurringCost = (draft.combinedMonthlyTotal || draft.servicesMonthlyTotal || 0) > 0;
     setSelectValueById('unifiedJobType', draft.jobType || (hasRecurringCost ? 'Contract' : ''));
@@ -3258,6 +3559,12 @@
       if (billingAddressDifferentCheckbox) billingAddressDifferentCheckbox.checked = true;
       if (billingAddressContainer) billingAddressContainer.classList.remove('hidden');
       if (billingAddressInput) billingAddressInput.value = draft.billingAddress;
+    }
+
+    // Log book required default from parser
+    const logBookCheckbox = document.getElementById('unifiedLogBook');
+    if (logBookCheckbox && (draft.logBookNeeded === true || draft.logBookNeeded === 'Yes')) {
+      logBookCheckbox.checked = true;
     }
     
     // Equipment counts
@@ -3446,6 +3753,9 @@
     return payload;
   }
 
+  // ==========================================
+  // 4. SUBMIT HANDLER
+  // ==========================================
   function submitUnifiedSaleForm(event) {
     event.preventDefault();
     const payload = collectUnifiedSalePayload(event);
@@ -3453,41 +3763,28 @@
       alert('Account name and service address are required.');
       return;
     }
-    const contextKey = payload.accountName + '|' + Date.now();
-    const activityToken = window.ActivityClient ? ActivityClient.start('AE_CREATE_UNIFIED_SALE', contextKey, { role: 'AE', branch: payload.branchID }) : null;
     function handleSuccess(result) {
-      if (activityToken) ActivityClient.finish(activityToken, { status: 'success', recordID: result && result.recordID });
+      if (payload.status === 'Sold' || payload.status === 'New Sale') {
+         simulateOperationsEmail(payload);
+      }
       generateStartPacketAfterSave(result, payload);
       markQuoteTrackerSold(payload.quoteTrackerId || currentQuoteTrackerId, result && result.recordID);
       currentQuoteTrackerId = null;
     }
-    function handleFailure(error) {
-      if (activityToken) ActivityClient.finish(activityToken, { status: 'error', message: error && error.message ? error.message : error });
-      alert('Failed to save sale: ' + (error && error.message ? error.message : error));
-    }
     if (hasAppsScript() && google.script.run.saveUnifiedSale) {
-      google.script.run
-        .withSuccessHandler(handleSuccess)
-        .withFailureHandler(handleFailure)
-        .saveUnifiedSale(payload);
+      google.script.run.withSuccessHandler(handleSuccess).saveUnifiedSale(payload);
     } else {
-      // DEMO MODE
       const recordID = saveDemoUnifiedSale(payload);
-      
-      // SIMULATE EMAIL IF SOLD
-      if (payload.status === 'Sold' || payload.status === 'New Sale') {
-         simulateOperationsEmail(payload);
-      }
-      
       handleSuccess({ success: true, recordID: recordID });
     }
   }
 
+  // ==========================================
+  // 3. EMAIL & PREVIEW (Visuals)
+  // ==========================================
   function simulateOperationsEmail(payload) {
-      // Demo Recipients
-      const recipients = "midwestmarketsalesentry@rentokil.com, brad.hudson@prestox.com, bruce.hockless@prestox.com...";
+      const recipients = "midwestmarketsalesentry@rentokil.com, brad.hudson@prestox.com...";
       const subject = `Re: Onboarding Report - ${payload.accountName} -- ${payload.pocName}`;
-      
       const body = `Team,\n\nPlease find the attached start packet for the location below.\n\n` +
         `Service Details\n` +
         `• Frequency: ${payload.frequency || '12'}\n` +
@@ -3502,130 +3799,143 @@
         `• Service Address: ${payload.serviceAddress}\n` +
         `• Billing Email: ${payload.billingEmail || 'N/A'}\n` +
         `• POC: ${payload.pocName} (${payload.pocPhone})`;
-      // Show as an alert to prove it "sent"
       alert(`📧 [DEMO] Email Sent to Operations!\n\nTo: ${recipients}\nSubject: ${subject}\n\n${body}`);
-    }
+  }
+
+  function getActiveBrandLogo() {
+    const presets = {
+      PRESTOX: 'https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819',
+      BUGOUT: 'https://ik.imagekit.io/9cyexhymf/BugOut%20Logo.png?updatedAt=1762651397528',
+      RENTOKIL: 'https://ik.imagekit.io/9cyexhymf/Rentokil%20Logo.png?updatedAt=1762651397519'
+    };
+    var key = (window.dashboardData && dashboardData.brandKey) || localStorage.getItem('branch360BrandKey') || 'PRESTOX';
+    key = (key || '').toUpperCase();
+    return presets[key] || presets.PRESTOX;
+  }
 
   function previewStartPacket() {
-    try {
-      // 1. Gather Data from Form
-      const data = collectUnifiedSalePayload();
-      
-      // 2. Build HTML Representation
-      const html = `
-      <div class="p-8 bg-white text-gray-800 font-sans max-w-3xl mx-auto border shadow-sm">
+    const data = collectUnifiedSalePayload();
+    const logoUrl = getActiveBrandLogo();
+    // Safe guard: derive equipment counts from summary if counts are missing
+    const equipmentSummary = buildEquipmentSummary({ multCatchQty: data.mrtCount, rbsQty: data.rbsCount, iltQty: data.iltCount, summary: (data.equipment && data.equipment.summary) || '' });
+    if ((!data.mrtCount || !data.rbsCount || !data.iltCount) && equipmentSummary) {
+      const mrtMatch = equipmentSummary.match(/(\d+)\s*MRT/i);
+      const rbsMatch = equipmentSummary.match(/(\d+)\s*RBS/i);
+      const iltMatch = equipmentSummary.match(/(\d+)\s*ILT/i);
+      data.mrtCount = data.mrtCount || (mrtMatch ? parseInt(mrtMatch[1], 10) : 0);
+      data.rbsCount = data.rbsCount || (rbsMatch ? parseInt(rbsMatch[1], 10) : 0);
+      data.iltCount = data.iltCount || (iltMatch ? parseInt(iltMatch[1], 10) : 0);
+    }
+    const hazardsForPreview = (data.sraHazards && data.sraHazards.length ? data.sraHazards : defaultSraHazards).map(function(h) {
+      return {
+        hazard: h.hazard || h.description || '',
+        control: h.control || h.controlMeasure || '',
+        safe: h.safeToProceed === false ? false : true
+      };
+    }).filter(function(h){ return h.hazard || h.control; });
+
+    const initialFromCounts = (function() {
+      const parts = [];
+      if (data.mrtCount > 0) parts.push(`${data.mrtCount} MRT${data.mrtCount !== 1 ? 's' : ''}`);
+      if (data.rbsCount > 0) parts.push(`${data.rbsCount} RBS${data.rbsCount !== 1 ? 's' : ''}`);
+      if (data.iltCount > 0) parts.push(`${data.iltCount} ILT${data.iltCount !== 1 ? 's' : ''}`);
+      if (!parts.length) return data.initialServiceDescription || 'Initial service';
+      return `Initial service and install ${parts.join(', ')}`;
+    })();
+
+    const sraNotes = data.sraAdditionalHazards || 'None';
+    const costsBlock = `
+      <div class="text-right">
+        <div class="mb-1 text-sm text-gray-600">Initial Price</div>
+        <div class="text-2xl font-bold text-gray-900">$${(Number(data.initialPrice)||0).toFixed(2)}</div>
+        <div class="mt-3 mb-1 text-sm text-gray-600">Avg Monthly</div>
+        <div class="text-2xl font-bold text-gray-900">$${(Number(data.maintenancePrice)||0).toFixed(2)}</div>
+      </div>`;
+
+    const html = `
+      <div class="p-8 bg-white text-gray-800 font-sans max-w-4xl mx-auto border shadow-sm">
         <div class="flex justify-between items-start border-b-2 border-gray-800 pb-4 mb-6">
           <div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-1">START PACKET</h1>
-            <p class="text-sm text-gray-500 font-mono">Packet #${'PKT-' + Math.floor(Math.random()*10000)}</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-1">Start Packet</h1>
+            <p class="text-sm text-gray-600">Prepared for ${data.accountName}</p>
           </div>
           <div class="text-right">
-            <div class="text-xl font-bold text-blue-700">Branch360</div>
-            <p class="text-sm text-gray-500">${data.branchID || 'HOUSTON'}</p>
+            <img src="${logoUrl}" alt="Brand logo" class="h-12 inline-block object-contain bg-white p-1 rounded">
           </div>
         </div>
-
         <div class="grid grid-cols-2 gap-8 mb-8">
           <div>
-            <h3 class="text-xs font-bold uppercase text-gray-500 mb-1">Customer / Service Location</h3>
-            <p class="text-lg font-bold">${data.accountName || 'Unknown Account'}</p>
-            <p>${data.serviceAddress || 'No Address'}</p>
-            <p class="mt-2"><span class="font-semibold">Start Date:</span> ${data.soldDate || 'TBD'}</p>
+            <h3 class="text-xs font-bold uppercase text-gray-500 mb-1">Customer</h3>
+            <p class="text-lg font-bold">${data.accountName}</p>
+            <p>${data.serviceAddress}</p>
           </div>
-          <div>
-            <h3 class="text-xs font-bold uppercase text-gray-500 mb-1">Point of Contact</h3>
-            <p class="font-bold">${data.pocName || '--'}</p>
-            <p>${data.pocPhone || '--'}</p>
-            <p>${data.pocEmail || '--'}</p>
+          <div class="text-right">
+            ${costsBlock}
           </div>
         </div>
-
         <div class="bg-gray-50 border rounded-lg p-5 mb-8">
           <h2 class="text-lg font-bold text-gray-900 border-b pb-2 mb-4">Scope of Work</h2>
-          
-          <div class="mb-4">
-            <p class="text-sm font-bold text-blue-700 uppercase mb-1">Initial Service</p>
-            <p class="text-gray-800">${data.initialServiceDescription || 'None'}</p>
-          </div>
-
-          <div class="mb-4">
-            <p class="text-sm font-bold text-green-700 uppercase mb-1">Recurring Maintenance</p>
-            <p class="text-gray-800">${data.maintenanceScopeDescription || 'None'}</p>
-          </div>
-
-          <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
-             <div>
-               <span class="block text-xs text-gray-500">Frequency</span>
-               <span class="font-semibold">${data.frequency || 0} Visits/Yr</span>
-             </div>
-             <div>
-               <span class="block text-xs text-gray-500">Service Type</span>
-               <span class="font-semibold">${data.serviceType || '--'}</span>
-             </div>
-             <div>
-               <span class="block text-xs text-gray-500">Covered Pests</span>
-               <span class="font-semibold text-xs">${data.coveredPests || '--'}</span>
-             </div>
-          </div>
+          <div class="mb-4"><p class="text-sm font-bold text-blue-700 uppercase mb-1">Initial</p><p>${initialFromCounts}</p></div>
+          <div class="mb-4"><p class="text-sm font-bold text-green-700 uppercase mb-1">Maintenance</p><p>${data.maintenanceScopeDescription || 'Maintenance program'}</p></div>
         </div>
-
         <div class="grid grid-cols-2 gap-8 mb-8">
            <div>
-             <h3 class="font-bold text-gray-900 mb-2">Equipment to Install</h3>
-             <ul class="list-disc pl-5 text-sm space-y-1">
-               ${data.mrtCount > 0 ? `<li><strong>${data.mrtCount}</strong> Multi-Catch (MRT)</li>` : ''}
-               ${data.rbsCount > 0 ? `<li><strong>${data.rbsCount}</strong> Ext. Bait Stations (RBS)</li>` : ''}
-               ${data.iltCount > 0 ? `<li><strong>${data.iltCount}</strong> Insect Light Traps (ILT)</li>` : ''}
-               ${(!data.mrtCount && !data.rbsCount && !data.iltCount) ? '<li>No equipment specified</li>' : ''}
+             <h3 class="font-bold text-gray-900 mb-2">Equipment</h3>
+             <ul class="list-disc pl-5 text-sm">
+               <li>${data.mrtCount || 0} MRTs</li>
+               <li>${data.rbsCount || 0} RBSs</li>
+               <li>${data.iltCount || 0} ILTs</li>
              </ul>
            </div>
-           <div class="bg-blue-50 p-4 rounded text-right">
-             <div class="mb-2">
-               <span class="text-sm text-gray-600">Initial Investment</span>
-               <div class="text-xl font-bold text-gray-900">$${(Number(data.initialPrice)||0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-             </div>
-             <div>
-               <span class="text-sm text-gray-600">Monthly Investment</span>
-               <div class="text-xl font-bold text-gray-900">$${(Number(data.maintenancePrice)||0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-             </div>
+           <div>
+             <h3 class="font-bold text-gray-900 mb-2">Primary Contact</h3>
+             <p class="font-semibold">${data.pocName || 'N/A'}</p>
+             <p class="text-sm">${data.pocEmail || ''}</p>
+             <p class="text-sm">${data.pocPhone || ''}</p>
            </div>
         </div>
-
-        <div class="border-t-2 border-gray-800 pt-4">
-           <h3 class="text-sm font-bold text-gray-900 mb-2">Safety & Risk Assessment</h3>
-           <p class="text-xs text-gray-600 mb-2">
-             Completed by <strong>${data.sraCompletedBy || '--'}</strong> on ${data.sraDate || '--'} at ${data.sraTime || '--'}
-           </p>
-           <div class="text-xs bg-red-50 p-3 rounded border border-red-100">
-             <strong>Identified Hazards:</strong>
-             <ul class="list-disc pl-4 mt-1">
-               ${data.sraHazards && data.sraHazards.length ? data.sraHazards.map(h => `<li>${h.hazard} (Control: ${h.control})</li>`).join('') : '<li>None identified</li>'}
-               ${data.sraAdditionalHazards && data.sraAdditionalHazards !== 'None' ? `<li>Note: ${data.sraAdditionalHazards}</li>` : ''}
-             </ul>
-           </div>
+        <div class="bg-gray-50 border rounded-lg p-5">
+          <h2 class="text-lg font-bold text-gray-900 border-b pb-2 mb-4">Special Notes</h2>
+          <pre class="whitespace-pre-wrap text-sm text-gray-800">${(data.specialNotes || '').trim() || 'None'}</pre>
         </div>
-      </div>
-      <div class="text-center mt-6 pb-4">
-        <button onclick="this.closest('.fixed').remove()" class="px-6 py-2 bg-gray-800 text-white rounded-full font-semibold hover:bg-gray-700 shadow-lg">Close Preview</button>
+        <div class="page-break pt-8 mt-8 border-t border-gray-200" style="page-break-before: always;">
+          <h2 class="text-xl font-bold text-gray-900 mb-2">Safety Risk Assessment (SRA)</h2>
+          <p class="text-sm text-gray-600 mb-4">Completed as part of the start packet. This page is always the final page.</p>
+          <div class="mb-4">
+            <h3 class="text-sm font-semibold text-gray-800 mb-1">Additional Hazards</h3>
+            <p class="text-sm">${sraNotes}</p>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-gray-800 mb-2">Hazard Controls</h3>
+            <div class="border rounded-lg divide-y">
+              ${hazardsForPreview.length ? hazardsForPreview.map(function(h) {
+                return `<div class="grid grid-cols-12 gap-3 p-3 items-center">
+                  <div class="col-span-5">
+                    <p class="text-xs font-semibold text-gray-600 uppercase">Hazard</p>
+                    <p class="text-sm text-gray-900">${h.hazard}</p>
+                  </div>
+                  <div class="col-span-5">
+                    <p class="text-xs font-semibold text-gray-600 uppercase">Control Measure</p>
+                    <p class="text-sm text-gray-900">${h.control}</p>
+                  </div>
+                  <div class="col-span-2 text-right">
+                    <label class="inline-flex items-center space-x-2 text-sm text-gray-800">
+                      <input type="checkbox" disabled ${h.safe ? 'checked' : ''} class="h-4 w-4 text-green-600 border-gray-300 rounded">
+                      <span>Safe</span>
+                    </label>
+                  </div>
+                </div>`;
+              }).join('') : '<div class="p-3 text-sm text-gray-800">Standard controls in place</div>'}
+            </div>
+          </div>
+        </div>
       </div>
     `;
-
-      // 3. Show Modal
-      const modal = document.createElement('div');
-      modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 overflow-y-auto';
-      modal.style.zIndex = '9999'; // Ensure it is on top of everything
-      modal.innerHTML = `<div class="relative w-full max-w-4xl my-8">${html}</div>`;
-      
-      // Click outside to close
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-      });
-      
-      document.body.appendChild(modal);
-    } catch (e) {
-      console.error('Preview failed', e);
-      alert('Preview failed: ' + e.message);
-    }
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4 overflow-y-auto';
+    modal.innerHTML = `<div class="relative w-full max-w-4xl my-8 rounded-lg bg-white shadow-lg" style="max-height:90vh; overflow-y:auto;">${html}<div class="text-center mt-4"><button onclick="this.closest('.fixed').remove()" class="px-6 py-2 bg-gray-800 text-white rounded-full">Close</button></div></div>`;
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
   }
 
   function saveDemoUnifiedSale(payload) {
@@ -3676,7 +3986,7 @@
       loadDashboard();
       return;
     }
-    
+
     const draft = buildStartPacketDraftForSubmission(payload);
     draft.saleRecordID = result && result.recordID;
     function onComplete(message) {
@@ -4689,4 +4999,3 @@
 
 </body>
 </html>
-
