@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salesforce Quote Parser - Integration Example</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    .upload-section {
+      border: 2px dashed #ccc;
+      padding: 30px;
+      text-align: center;
+      border-radius: 8px;
+      margin: 20px 0;
+      background: #fafafa;
+    }
+    .upload-section.active {
+      border-color: #4CAF50;
+      background: #f1f8f4;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .upload-label {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #4CAF50;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+    .upload-label:hover {
+      background: #45a049;
+    }
+    .btn {
+      padding: 12px 24px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #0b7dda;
+    }
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 12px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .status.info {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+    .status.success {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+    .status.error {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+    .status.warning {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+    .result {
+      margin-top: 30px;
+    }
+    .result h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .field-group {
+      margin: 15px 0;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+    .field-label {
+      font-weight: 600;
+      color: #555;
+    }
+    .field-value {
+      padding: 8px 12px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .services-list, .equipment-list {
+      list-style: none;
+      padding: 0;
+    }
+    .services-list li, .equipment-list li {
+      padding: 8px 12px;
+      margin: 5px 0;
+      background: #f9f9f9;
+      border-left: 3px solid #4CAF50;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Salesforce Quote Parser</h1>
+    <p>Upload a Salesforce quote PDF to extract structured data</p>
+
+    <div class="upload-section" id="uploadSection">
+      <label for="salesforceQuoteFile" class="upload-label">
+        📄 Choose PDF File
+      </label>
+      <input type="file"
+             id="salesforceQuoteFile"
+             accept="application/pdf"
+             onchange="handleFileSelect(event)">
+      <p id="fileName" style="margin-top: 15px; color: #666;">No file selected</p>
+    </div>
+
+    <button class="btn" id="parseBtn" onclick="processSalesforceQuote()" disabled>
+      Parse Quote
+    </button>
+
+    <div id="status" class="status info" style="display: none;">
+      Ready to parse
+    </div>
+
+    <div id="result" class="result" style="display: none;">
+      <h2>Parsed Data</h2>
+
+      <h3>Account & Contact Information</h3>
+      <div class="field-group">
+        <span class="field-label">Account Name:</span>
+        <span class="field-value" id="accountName">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Contact Name:</span>
+        <span class="field-value" id="contactName">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Contact Email:</span>
+        <span class="field-value" id="contactEmail">-</span>
+      </div>
+
+      <h3>Service Address</h3>
+      <div class="field-group">
+        <span class="field-label">Address:</span>
+        <span class="field-value" id="serviceAddress">-</span>
+      </div>
+
+      <h3>Account Executive</h3>
+      <div class="field-group">
+        <span class="field-label">AE Name:</span>
+        <span class="field-value" id="aeName">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">AE Email:</span>
+        <span class="field-value" id="aeEmail">-</span>
+      </div>
+
+      <h3>Pricing</h3>
+      <div class="field-group">
+        <span class="field-label">Equipment Cost:</span>
+        <span class="field-value" id="equipmentCost">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Initial Service Cost:</span>
+        <span class="field-value" id="initialCost">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Combined Initial:</span>
+        <span class="field-value" id="combinedInitial">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Monthly Cost:</span>
+        <span class="field-value" id="monthlyCost">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Annual Cost:</span>
+        <span class="field-value" id="annualCost">-</span>
+      </div>
+
+      <h3>Equipment</h3>
+      <ul class="equipment-list" id="equipmentList">
+        <li>No equipment</li>
+      </ul>
+
+      <h3>Services</h3>
+      <ul class="services-list" id="servicesList">
+        <li>No services</li>
+      </ul>
+
+      <h3>Schedule</h3>
+      <div class="field-group">
+        <span class="field-label">Start Date:</span>
+        <span class="field-value" id="startDate">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Start Month:</span>
+        <span class="field-value" id="startMonth">-</span>
+      </div>
+
+      <h3>Covered Pests</h3>
+      <div class="field-value" id="coveredPests" style="padding: 15px;">-</div>
+
+      <h3>Auto-Generated Descriptions</h3>
+      <div class="field-group">
+        <span class="field-label">Initial Service:</span>
+        <span class="field-value" id="initialDesc">-</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Maintenance:</span>
+        <span class="field-value" id="maintenanceDesc">-</span>
+      </div>
+
+      <h3>Raw JSON Output</h3>
+      <pre id="jsonOutput">-</pre>
+    </div>
+  </div>
+
+  <!-- Load PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- Load Parser modules -->
+  <script src="pdf-extractor.js"></script>
+  <script src="salesforce-parser.js"></script>
+
+  <script>
+    // Initialize PDF.js
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    let selectedFile = null;
+
+    function handleFileSelect(event) {
+      selectedFile = event.target.files && event.target.files.length ? event.target.files[0] : null;
+
+      const fileName = document.getElementById('fileName');
+      const parseBtn = document.getElementById('parseBtn');
+      const uploadSection = document.getElementById('uploadSection');
+
+      if (selectedFile) {
+        fileName.textContent = '📄 ' + selectedFile.name;
+        fileName.style.color = '#4CAF50';
+        parseBtn.disabled = false;
+        uploadSection.classList.add('active');
+      } else {
+        fileName.textContent = 'No file selected';
+        fileName.style.color = '#666';
+        parseBtn.disabled = true;
+        uploadSection.classList.remove('active');
+      }
+    }
+
+    async function processSalesforceQuote() {
+      if (!selectedFile) {
+        showStatus('Please select a PDF file', 'error');
+        return;
+      }
+
+      if (!window.pdfjsLib) {
+        showStatus('PDF.js library not loaded', 'error');
+        return;
+      }
+
+      try {
+        showStatus('Extracting PDF text...', 'info');
+
+        // Extract text from PDF
+        const text = await extractTextFromPdfFile(selectedFile);
+
+        console.log('[SF Parser] Extracted text preview:', text.slice(0, 2000));
+
+        showStatus('Parsing quote details...', 'info');
+
+        // Parse the text
+        const draft = parseSalesforceQuoteTextToStartPacketDraft(text);
+
+        showStatus('✅ Quote parsed successfully!', 'success');
+
+        // Display results
+        displayResults(draft);
+
+      } catch (err) {
+        console.error('[SF Parser] Error:', err);
+        showStatus('❌ Failed to parse: ' + err.message, 'error');
+      }
+    }
+
+    function showStatus(message, type = 'info') {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = 'status ' + type;
+      statusEl.style.display = 'block';
+    }
+
+    function formatCurrency(value) {
+      if (value === null || value === undefined) return '-';
+      return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function displayResults(draft) {
+      // Show result section
+      document.getElementById('result').style.display = 'block';
+
+      // Account & Contact
+      document.getElementById('accountName').textContent = draft.accountName || '-';
+      document.getElementById('contactName').textContent = draft.contactName || '-';
+      document.getElementById('contactEmail').textContent = draft.contactEmail || '-';
+
+      // Service Address
+      const addressParts = [
+        draft.serviceAddressLine1,
+        draft.serviceCity,
+        draft.serviceState,
+        draft.serviceZip
+      ].filter(Boolean);
+      document.getElementById('serviceAddress').textContent = addressParts.join(', ') || '-';
+
+      // AE Info
+      document.getElementById('aeName').textContent = draft.aeName || '-';
+      document.getElementById('aeEmail').textContent = draft.aeEmail || '-';
+
+      // Pricing
+      document.getElementById('equipmentCost').textContent = formatCurrency(draft.equipmentOneTimeTotal);
+      document.getElementById('initialCost').textContent = formatCurrency(draft.servicesInitialTotal);
+      document.getElementById('combinedInitial').textContent = formatCurrency(draft.combinedInitialTotal);
+      document.getElementById('monthlyCost').textContent = formatCurrency(draft.servicesMonthlyTotal);
+      document.getElementById('annualCost').textContent = formatCurrency(draft.servicesAnnualTotal);
+
+      // Equipment
+      const equipmentList = document.getElementById('equipmentList');
+      if (draft.equipment && draft.equipment.summary) {
+        const parts = [];
+        if (draft.equipment.multCatchQty > 0) parts.push(`${draft.equipment.multCatchQty} MRT (Multi-Catch Traps)`);
+        if (draft.equipment.rbsQty > 0) parts.push(`${draft.equipment.rbsQty} RBS (Rodent Bait Stations)`);
+        if (draft.equipment.iltQty > 0) parts.push(`${draft.equipment.iltQty} ILT (Insect Light Traps)`);
+        if (draft.equipment.otherEquipment && draft.equipment.otherEquipment.length > 0) {
+          draft.equipment.otherEquipment.forEach(item => {
+            parts.push(`${item.quantity} ${item.name}`);
+          });
+        }
+
+        if (parts.length > 0) {
+          equipmentList.innerHTML = parts.map(p => `<li>${p}</li>`).join('');
+        } else {
+          equipmentList.innerHTML = '<li>No equipment</li>';
+        }
+      } else {
+        equipmentList.innerHTML = '<li>No equipment</li>';
+      }
+
+      // Services
+      const servicesList = document.getElementById('servicesList');
+      if (draft.services && draft.services.length > 0) {
+        servicesList.innerHTML = draft.services.map(svc => {
+          return `<li><strong>${svc.serviceName}</strong> - ${svc.frequencyLabel || 'N/A'} (${svc.servicesPerYear || 0}x/year)</li>`;
+        }).join('');
+      } else {
+        servicesList.innerHTML = '<li>No services</li>';
+      }
+
+      // Schedule
+      document.getElementById('startDate').textContent = draft.requestedStartDate || '-';
+      document.getElementById('startMonth').textContent = draft.startMonth || '-';
+
+      // Covered Pests
+      document.getElementById('coveredPests').textContent =
+        draft.coveredPests && draft.coveredPests.length > 0 ? draft.coveredPests.join(', ') : '-';
+
+      // Descriptions
+      document.getElementById('initialDesc').textContent = draft.initialServiceDescription || '-';
+      document.getElementById('maintenanceDesc').textContent = draft.maintenanceScopeDescription || '-';
+
+      // JSON Output
+      document.getElementById('jsonOutput').textContent = JSON.stringify(draft, null, 2);
+
+      // Scroll to results
+      document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  </script>
+</body>
+</html>
