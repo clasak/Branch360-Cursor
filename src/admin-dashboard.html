@@ -14,33 +14,155 @@
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script src="activity-client.html"></script>
   <style>
-    .tab-button { transition: all 0.2s; }
-    .tab-button.active { background: #2563EB; color: white; }
+    /* Force dark theme globally */
+    * { box-sizing: border-box; }
+    html { background: #1e293b !important; }
+    
+    /* Dark theme styles (default) */
+    body { background: #1e293b !important; color: #f1f5f9; }
+    nav { background: #334155 !important; border-color: #475569 !important; }
+    .bg-white { background: #334155 !important; }
+    .bg-gray-50, .bg-gray-100, .bg-gray-200 { background: #334155 !important; }
+    .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover { background: #475569 !important; }
+    .text-gray-800, .text-gray-900 { color: #f1f5f9 !important; }
+    .text-gray-600, .text-gray-700 { color: #cbd5e1 !important; }
+    .text-gray-500 { color: #94a3b8 !important; }
+    .text-gray-400 { color: #64748b !important; }
+    .border, .border-gray-200, .border-gray-300 { border-color: #475569 !important; }
+    input, select, textarea, .form-control {
+      background: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important;
+    }
+    .shadow, .shadow-sm, .shadow-lg {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    .tab-button { 
+      transition: all 0.2s; 
+      background: #334155 !important; 
+      color: #cbd5e1 !important; 
+      border-color: #475569 !important;
+    }
+    .tab-button:hover { background: #475569 !important; }
+    .tab-button.active { background: #2563EB !important; color: white !important; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .metric-card { transition: transform 0.2s; }
     .metric-card:hover { transform: translateY(-2px); }
+    
+    table { color: #f1f5f9 !important; }
+    table th { color: #94a3b8 !important; background: #1e293b !important; }
+    table td { color: #f1f5f9 !important; border-color: #475569 !important; }
+    table tr:hover { background: #475569 !important; }
+    
+    button { color: inherit; }
+    button.bg-blue-600, button.bg-green-600, button.bg-red-600 { color: white !important; }
+    
+    :root {
+      --brand-primary: #2563eb;
+      --brand-accent: #60a5fa;
+      --brand-dark: #0f172a;
+    }
+    
+    /* Navigation sidebar styles matching unified dashboard */
+    .nav-sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 256px;
+      background: linear-gradient(180deg, var(--brand-dark) 0%, #1f2a3f 100%);
+      border-right: 1px solid #334155;
+      overflow-y: auto;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .nav-button {
+      color: rgba(255, 255, 255, 0.85);
+      background-color: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      width: 100%;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      margin: 0.25rem 0;
+    }
+    .nav-button:hover {
+      background-color: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .nav-button.active {
+      background-color: var(--brand-primary);
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+      border-color: transparent;
+    }
+    .main-with-sidebar {
+      margin-left: 256px;
+    }
   </style>
 </head>
-<body class="bg-gray-100">
+<body style="background: #1e293b !important;">
 
-<!-- Navigation -->
-<nav class="bg-white shadow-sm border-b">
-  <div class="max-w-7xl mx-auto px-4 py-3">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-xl font-bold text-gray-800">Branch360</h1>
-        <p class="text-sm text-gray-600">Admin Dashboard</p>
-      </div>
-      <div class="text-right">
-        <p class="text-sm font-semibold text-gray-800" id="adminName">Loading...</p>
-        <p class="text-xs text-gray-500" id="adminEmail">-</p>
-      </div>
+<!-- Apply theme and hide sidebar in iframe -->
+<script>
+  (function() {
+    // Hide sidebar when loaded in iframe (unified dashboard already has sidebar)
+    if (window.self !== window.top) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .nav-sidebar { display: none !important; }
+        .main-with-sidebar { margin-left: 0 !important; }
+      `;
+      document.head.appendChild(style);
+    }
+  })();
+</script>
+
+<!-- Navigation Sidebar -->
+<aside class="nav-sidebar space-y-2">
+  <div class="flex items-center gap-3 pb-6 border-b border-white/10 mb-4">
+    <img src="https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819" alt="Branch360" class="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow" />
+    <div>
+      <div class="text-xl font-bold text-white">Branch360</div>
+      <p class="text-xs text-white/70">Unified Pilot Dashboard</p>
     </div>
   </div>
-</nav>
+  <button class="nav-button" onclick="window.location.href='?view=ae'">Sales / AE</button>
+  <button class="nav-button" onclick="window.location.href='?view=ae'" style="padding-left: 1.5rem; font-size: 0.9rem; background: rgba(15, 23, 42, 0.25);">📋 Leads</button>
+  <button class="nav-button" onclick="window.location.href='?view=tech'">Technician</button>
+  <button class="nav-button" onclick="window.location.href='?view=ops'">Operations</button>
+  <button class="nav-button" onclick="window.location.href='?view=branch'">Branch Manager</button>
+  <button class="nav-button active" onclick="window.location.href='?view=admin'" style="background: rgba(124, 58, 237, 0.3); border-color: rgba(124, 58, 237, 0.5);">🔐 Admin Dashboard</button>
+  <button class="nav-button" onclick="window.location.href='?view=market'">Market Director</button>
+  <button class="nav-button" onclick="window.location.href='?view=time'">Time Saved</button>
+  <button class="nav-button" onclick="window.location.href='?view=pilot'">90-Day Pilot Report</button>
+  <button class="nav-button" onclick="window.location.href='?view=handoff'">Sales → Ops Handoff</button>
+  <button class="nav-button" onclick="window.location.href='?view=settings'">Settings</button>
+</aside>
 
-<div class="max-w-7xl mx-auto px-4 py-6">
+<!-- Main Content with Sidebar -->
+<div class="main-with-sidebar">
+  <!-- Navigation -->
+  <nav style="background: #334155 !important;" class="shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-xl font-bold text-gray-800">Branch360</h1>
+          <p class="text-sm text-gray-600">Admin Dashboard</p>
+        </div>
+        <div class="text-right">
+          <p class="text-sm font-semibold text-gray-800" id="adminName">Loading...</p>
+          <p class="text-xs text-gray-500" id="adminEmail">-</p>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="w-full px-6 py-6">
   
   <!-- Quick Stats -->
   <div class="mb-6">
@@ -551,7 +673,7 @@
         <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-bold">How ROI is Calculated</h3>
-            <button onclick="document.getElementById('execROIInfoModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            <button onclick="document.getElementById('execROIInfoModal').classList.add('hidden')" aria-label="Close modal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
           </div>
           <div class="space-y-4 text-sm text-gray-700">
             <div>
@@ -654,7 +776,7 @@
   <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <h3 class="text-xl font-semibold text-gray-900">Add New User</h3>
-      <button onclick="closeAddUserModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeAddUserModal()" aria-label="Close add user modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <div>
@@ -702,7 +824,7 @@
   <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <h3 class="text-xl font-semibold text-gray-900">Edit User</h3>
-      <button onclick="closeEditUserModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeEditUserModal()" aria-label="Close edit user modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <input type="hidden" id="editUserID">
@@ -761,7 +883,7 @@
   <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <h3 class="text-xl font-semibold text-gray-900">Add New Territory</h3>
-      <button onclick="closeAddTerritoryModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeAddTerritoryModal()" aria-label="Close add territory modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <div>
@@ -808,7 +930,7 @@
   <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <h3 class="text-xl font-semibold text-gray-900">Edit Territory</h3>
-      <button onclick="closeEditTerritoryModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeEditTerritoryModal()" aria-label="Close edit territory modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <input type="hidden" id="editTerritoryID">
@@ -856,7 +978,7 @@
   <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <h3 class="text-xl font-semibold text-gray-900">Upload Territories CSV</h3>
-      <button onclick="closeUploadCSVModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeUploadCSVModal()" aria-label="Close upload CSV modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <div class="bg-blue-50 border border-blue-200 rounded p-3">
@@ -894,7 +1016,7 @@
         <p class="text-xs uppercase tracking-wide text-gray-500">Deployment Info</p>
         <h3 class="text-xl font-semibold text-gray-900">Apps Script Deployment Status</h3>
       </div>
-      <button onclick="closeDeploymentModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeDeploymentModal()" aria-label="Close deployment modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4" id="deploymentStatusContent">
       <p class="text-gray-600">Loading deployment information...</p>
@@ -1969,7 +2091,7 @@
     mapboxgl.accessToken = mapboxToken;
     territoryMap = new mapboxgl.Map({
       container: 'territoryMap',
-      style: 'mapbox://styles/mapbox/streets-v11',
+      style: 'mapbox://styles/mapbox/dark-v11',
       center: [-95.3698, 29.7604],
       zoom: 10
     });
@@ -2696,6 +2818,9 @@
     initAdminDashboard();
   }
 </script>
+
+</div>
+<!-- End main-with-sidebar -->
 
 </body>
 </html>

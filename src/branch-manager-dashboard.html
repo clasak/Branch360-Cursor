@@ -10,33 +10,175 @@
   <meta name="apple-mobile-web-app-title" content="Branch360">
   <link rel="manifest" href="manifest.json">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    /* Force dark theme globally */
+    * { box-sizing: border-box; }
+    html { background: #1e293b !important; }
+    
+    /* Dark theme styles (default) */
+    body { background: #1e293b !important; color: #f1f5f9; }
+    .bg-white { background: #334155 !important; }
+    .bg-gray-50, .bg-gray-100 { background: #334155 !important; }
+    .bg-blue-50 { background: rgba(37, 99, 235, 0.2) !important; }
+    .bg-yellow-50 { background: rgba(234, 179, 8, 0.2) !important; }
+    .bg-green-50 { background: rgba(34, 197, 94, 0.2) !important; }
+    .bg-red-50 { background: rgba(239, 68, 68, 0.2) !important; }
+    .bg-indigo-50 { background: rgba(67, 56, 202, 0.2) !important; }
+    .text-gray-800, .text-gray-900 { color: #f1f5f9 !important; }
+    .text-gray-600, .text-gray-700 { color: #cbd5e1 !important; }
+    .text-gray-500 { color: #94a3b8 !important; }
+    .text-gray-400 { color: #64748b !important; }
+    .border, .border-gray-200 { border-color: #475569 !important; }
+    input, select, textarea {
+      background: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important;
+    }
+    .shadow, .shadow-sm, .shadow-lg {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Dark mode styles for legacy compatibility */
+    body.dark-mode { background: #1e293b; color: #f1f5f9; }
+    body.dark-mode nav { background: #334155; border-color: #475569; }
+    body.dark-mode .bg-white { background: #334155 !important; }
+    body.dark-mode .text-gray-800, body.dark-mode .text-gray-900 { color: #f1f5f9 !important; }
+    body.dark-mode .text-gray-600, body.dark-mode .text-gray-700 { color: #cbd5e1 !important; }
+    body.dark-mode .text-gray-500 { color: #94a3b8 !important; }
+    body.dark-mode .text-gray-400 { color: #64748b !important; }
+    body.dark-mode .border, body.dark-mode .border-gray-200 { border-color: #475569 !important; }
+    body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+      background: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important;
+    }
+    body.dark-mode .shadow, body.dark-mode .shadow-sm, body.dark-mode .shadow-lg {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    :root {
+      --brand-primary: #2563eb;
+      --brand-accent: #60a5fa;
+      --brand-dark: #0f172a;
+    }
+    
+    /* Navigation sidebar styles matching unified dashboard */
+    .nav-sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 256px;
+      background: linear-gradient(180deg, var(--brand-dark) 0%, #1f2a3f 100%);
+      border-right: 1px solid #334155;
+      overflow-y: auto;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .nav-button {
+      color: rgba(255, 255, 255, 0.85);
+      background-color: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      width: 100%;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      margin: 0.25rem 0;
+    }
+    .nav-button:hover {
+      background-color: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .nav-button.active {
+      background-color: var(--brand-primary);
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+      border-color: transparent;
+    }
+    .main-with-sidebar {
+      margin-left: 256px;
+    }
+  </style>
 </head>
-<body class="bg-gray-100">
+<body style="background: #1e293b;">
 
-<nav class="bg-indigo-900 text-white p-4">
-  <h1 class="text-xl font-bold">Branch Manager Dashboard</h1>
-  <p class="text-sm opacity-75" id="managerName">Loading...</p>
-</nav>
+<!-- Apply theme from parent or localStorage -->
+<script>
+  (function() {
+    try {
+      const savedTheme = window.localStorage ? window.localStorage.getItem('branch360Theme') : null;
+      if (savedTheme === 'dark' || document.documentElement.classList.contains('dark-mode')) {
+        document.body.classList.add('dark-mode', 'bg-gray-900');
+        document.body.classList.remove('bg-gray-50');
+      }
+    } catch(e) {
+      console.log('Theme init:', e);
+    }
+    
+    // Hide sidebar when loaded in iframe (unified dashboard already has sidebar)
+    if (window.self !== window.top) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .nav-sidebar { display: none !important; }
+        .main-with-sidebar { margin-left: 0 !important; }
+      `;
+      document.head.appendChild(style);
+    }
+  })();
+</script>
 
-<div class="max-w-7xl mx-auto px-4 py-6">
+<!-- Navigation Sidebar -->
+<aside class="nav-sidebar space-y-2">
+  <div class="flex items-center gap-3 pb-6 border-b border-white/10 mb-4">
+    <img src="https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819" alt="Branch360" class="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow" />
+    <div>
+      <div class="text-xl font-bold text-white">Branch360</div>
+      <p class="text-xs text-white/70">Unified Pilot Dashboard</p>
+    </div>
+  </div>
+  <button class="nav-button" onclick="window.location.href='?view=ae'">Sales / AE</button>
+  <button class="nav-button" onclick="window.location.href='?view=ae'" style="padding-left: 1.5rem; font-size: 0.9rem; background: rgba(15, 23, 42, 0.25);">📋 Leads</button>
+  <button class="nav-button" onclick="window.location.href='?view=tech'">Technician</button>
+  <button class="nav-button" onclick="window.location.href='?view=ops'">Operations</button>
+  <button class="nav-button active" onclick="window.location.href='?view=branch'">Branch Manager</button>
+  <button class="nav-button" onclick="window.location.href='?view=admin'" style="background: rgba(124, 58, 237, 0.3); border-color: rgba(124, 58, 237, 0.5);">🔐 Admin Dashboard</button>
+  <button class="nav-button" onclick="window.location.href='?view=market'">Market Director</button>
+  <button class="nav-button" onclick="window.location.href='?view=time'">Time Saved</button>
+  <button class="nav-button" onclick="window.location.href='?view=pilot'">90-Day Pilot Report</button>
+  <button class="nav-button" onclick="window.location.href='?view=handoff'">Sales → Ops Handoff</button>
+  <button class="nav-button" onclick="window.location.href='?view=settings'">Settings</button>
+</aside>
+
+<!-- Main Content with Sidebar -->
+<div class="main-with-sidebar">
+  <nav class="bg-indigo-900 text-white p-4">
+    <h1 class="text-xl font-bold">Branch Manager Dashboard</h1>
+    <p class="text-sm opacity-75" id="managerName">Loading...</p>
+  </nav>
+
+  <div class="w-full px-6 py-6">
   
   <!-- Action Buttons -->
   <div class="mb-6 flex flex-wrap gap-3">
-    <button id="btn-generate-report" 
+    <button id="btn-generate-report" aria-label="Generate daily report"
       class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">
       📊 Generate Daily Report
     </button>
-    <button id="btn-weekly-trends" 
+    <button id="btn-weekly-trends" aria-label="View weekly trends"
       class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">
       📈 View Weekly Trends
     </button>
-    <button id="btn-export-data" 
+    <button id="btn-export-data" aria-label="Export data"
       class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">
       💾 Export Data
     </button>
-    <button id="btn-detailed-pipeline" 
+    <button id="btn-detailed-pipeline" aria-label="View detailed pipeline"
       class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">
       💼 Detailed Pipeline
+    </button>
+    <button id="btn-export-pipeline" aria-label="Export pipeline data"
+      class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">
+      📤 Pipeline Export
     </button>
     <button id="btn-team-message" 
       class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">
@@ -186,7 +328,12 @@
   function renderSalesLeaderboard(team) {
     const container = document.getElementById('salesLeaderboard');
     if (team.length === 0) {
-      container.innerHTML = '<p class="text-gray-500 text-sm">No sales team members found</p>';
+      container.innerHTML = `
+        <div class="text-sm text-gray-500">
+          <p class="font-semibold text-gray-600">No sales team members found for this branch.</p>
+          <p class="text-xs text-gray-500 mt-1">Assign AEs to the branch in <span class="font-semibold">Admin → Users</span> (or verify branch IDs in the Users sheet).</p>
+        </div>
+      `;
       return;
     }
     container.innerHTML = team.map((ae, index) => `
@@ -214,7 +361,12 @@
   function renderOpsTeam(team) {
     const container = document.getElementById('opsTeam');
     if (team.length === 0) {
-      container.innerHTML = '<p class="text-gray-500 text-sm">No operations team members found</p>';
+      container.innerHTML = `
+        <div class="text-sm text-gray-500">
+          <p class="font-semibold text-gray-600">No operations team members found for this branch.</p>
+          <p class="text-xs text-gray-500 mt-1">Add technicians/ops managers to the branch or verify branch IDs in the Users sheet.</p>
+        </div>
+      `;
       return;
     }
     container.innerHTML = team.map(tech => `
@@ -294,84 +446,185 @@
 
   // Action Functions
   function generateDailyReport() {
-    if (!confirm('Generate daily cadence report for today?')) return;
-    
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            alert('Daily report generated successfully! Summary ID: ' + result.summaryID);
-            loadDashboard();
-          } else {
-            alert('Failed to generate report: ' + (result.message || 'Unknown error'));
-          }
-        })
-        .withFailureHandler(function(error) {
-          alert('Error generating report: ' + error.message);
-        })
-        .generateBranchDailyReport();
-    } else {
-      alert('Daily report generation (local mode - connect to backend API)');
-    }
+    const confirmModal = createModal('Generate Daily Report', `
+      <p class="text-sm text-gray-600 mb-4">Generate today’s branch cadence report. It may take a moment.</p>
+      <div class="flex justify-end gap-3">
+        <button type="button" data-action="cancel" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300">Cancel</button>
+        <button type="button" data-action="run" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Generate</button>
+      </div>
+    `);
+    document.body.appendChild(confirmModal);
+    const cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
+    const runBtn = confirmModal.querySelector('[data-action="run"]');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => confirmModal.remove());
+    if (runBtn) runBtn.addEventListener('click', () => {
+      confirmModal.remove();
+      const task = createTaskModal('Generating Daily Report', 'Starting report generation…');
+      document.body.appendChild(task.overlay);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.success) {
+              task.done('Daily report generated.');
+              if (result.summaryID) {
+                task.addHtml(`<p class="text-sm text-gray-600"><span class="font-semibold">Summary ID:</span> <code class="bg-gray-100 px-1 rounded">${escapeHtml(result.summaryID)}</code></p>`);
+              }
+              loadDashboard();
+            } else {
+              task.done('Report generation failed.');
+              task.addHtml(`<p class="text-sm text-red-600">${escapeHtml((result && result.message) ? result.message : 'Unknown error')}</p>`);
+            }
+          })
+          .withFailureHandler(function(error) {
+            task.done('Report generation failed.');
+            task.addHtml(`<p class="text-sm text-red-600">${escapeHtml(error && error.message ? error.message : 'Unknown error')}</p>`);
+          })
+          .generateBranchDailyReport();
+      } else {
+        task.done('Not available in local/demo mode.');
+        task.addHtml('<p class="text-sm text-gray-600">Connect the Apps Script backend to generate reports.</p>');
+      }
+    });
   }
 
   function viewWeeklyTrends() {
-    if (!dashboardData.weekTrends) {
-      alert('Weekly trends data not available');
+    const trends = dashboardData && dashboardData.weekTrends ? dashboardData.weekTrends : null;
+    if (!trends) {
+      const m = createModal('Weekly Trends', `<p class="text-sm text-gray-600">Weekly trends data is not available yet for this environment.</p>`);
+      document.body.appendChild(m);
       return;
     }
-    
-    const trends = dashboardData.weekTrends;
+
     const change = parseFloat(trends.change) || 0;
-    const changeColor = change >= 0 ? 'green' : 'red';
     const changeSymbol = change >= 0 ? '↑' : '↓';
-    
-    const message = `Weekly Sales Trends
-═══════════════════
-
-This Week: $${trends.thisWeek.toLocaleString()}
-Last Week: $${trends.lastWeek.toLocaleString()}
-Change: ${changeSymbol} ${Math.abs(change)}%
-
-${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Review strategy.'}`;
-    
-    alert(message);
+    const m = createModal('Weekly Trends', `
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+        <div class="bg-gray-50 rounded p-3"><div class="text-xs text-gray-500">This Week</div><div class="font-bold">$${(trends.thisWeek || 0).toLocaleString()}</div></div>
+        <div class="bg-gray-50 rounded p-3"><div class="text-xs text-gray-500">Last Week</div><div class="font-bold">$${(trends.lastWeek || 0).toLocaleString()}</div></div>
+        <div class="bg-gray-50 rounded p-3"><div class="text-xs text-gray-500">Change</div><div class="font-bold">${changeSymbol} ${Math.abs(change)}%</div></div>
+      </div>
+      <p class="text-xs text-gray-500 mt-2">${change >= 0 ? 'Sales are trending up.' : 'Sales are trending down. Review strategy.'}</p>
+    `);
+    document.body.appendChild(m);
   }
 
   function exportBranchData() {
-    if (!confirm('Export branch data to CSV?')) return;
-    
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success && result.url) {
-            window.open(result.url, '_blank');
-            alert('Data exported successfully!');
-          } else {
-            alert('Export completed. Check your downloads folder.');
-          }
-        })
-        .withFailureHandler(function(error) {
-          alert('Error exporting data: ' + error.message);
-        })
-        .exportBranchManagerData();
-    } else {
-      alert('Export data (local mode - connect to backend API)');
-    }
+    const confirmModal = createModal('Export Data', `
+      <p class="text-sm text-gray-600 mb-4">Export branch data as a CSV download.</p>
+      <div class="flex justify-end gap-3">
+        <button type="button" data-action="cancel" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300">Cancel</button>
+        <button type="button" data-action="run" class="px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700">Export CSV</button>
+      </div>
+    `);
+    document.body.appendChild(confirmModal);
+    const cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
+    const runBtn = confirmModal.querySelector('[data-action="run"]');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => confirmModal.remove());
+    if (runBtn) runBtn.addEventListener('click', () => {
+      confirmModal.remove();
+      const task = createTaskModal('Exporting Data', 'Preparing export…');
+      document.body.appendChild(task.overlay);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.success) {
+              // Try to open the file in a new tab (Drive preview link)
+              if (result.url) {
+                try { window.open(result.url, '_blank'); } catch (e) {}
+                task.done('Export ready.');
+                task.addHtml(`
+                  <p class="text-sm text-gray-600">If your download didn’t start, use the link below:</p>
+                  <a class="text-sm text-blue-600 hover:underline break-all" href="${escapeHtml(result.url)}" target="_blank" rel="noopener">Open export file</a>
+                `);
+              } else {
+                task.done('Export completed.');
+                task.addHtml('<p class="text-sm text-gray-600">The backend did not return a download link.</p>');
+              }
+            } else {
+              task.done('Export failed.');
+              task.addHtml(`<p class="text-sm text-red-600">${escapeHtml((result && result.message) ? result.message : 'Unknown error')}</p>`);
+            }
+          })
+          .withFailureHandler(function(error) {
+            task.done('Export failed.');
+            task.addHtml(`<p class="text-sm text-red-600">${escapeHtml(error && error.message ? error.message : 'Unknown error')}</p>`);
+          })
+          .exportBranchManagerData();
+      } else {
+        task.done('Not available in local/demo mode.');
+        task.addHtml('<p class="text-sm text-gray-600">Connect the Apps Script backend to export data.</p>');
+      }
+    });
   }
 
   function viewDetailedPipeline() {
+    const task = createTaskModal('Detailed Pipeline', 'Loading pipeline entries…');
+    document.body.appendChild(task.overlay);
+
+    const onData = function(data) {
+      task.overlay.remove();
+      showPipelineModal(data || { entries: [] });
+    };
+
     if (typeof google !== 'undefined' && google.script && google.script.run) {
       google.script.run
-        .withSuccessHandler(function(data) {
-          showPipelineModal(data);
-        })
+        .withSuccessHandler(onData)
         .withFailureHandler(function(error) {
-          alert('Error loading pipeline: ' + error.message);
+          task.done('Failed to load pipeline.');
+          task.addHtml(`<p class="text-sm text-red-600">${escapeHtml(error && error.message ? error.message : 'Unknown error')}</p>`);
         })
         .getDetailedBranchPipeline();
     } else {
-      showPipelineModal({ entries: [] });
+      onData({ entries: [] });
+    }
+  }
+
+  function exportPipelineCsv() {
+    const task = createTaskModal('Pipeline Export', 'Preparing pipeline export…');
+    document.body.appendChild(task.overlay);
+
+    const onData = function(data) {
+      const entries = (data && Array.isArray(data.entries)) ? data.entries : [];
+      if (!entries.length) {
+        task.done('No pipeline entries found.');
+        task.addHtml('<p class="text-sm text-gray-600">There is nothing to export yet.</p>');
+        return;
+      }
+
+      const header = ['Customer','Stage','Value','AE','Date'];
+      const csv = [
+        header.join(','),
+        ...entries.map(e => ([
+          String(e.customerName || '').replace(/"/g, '""'),
+          String(e.stage || '').replace(/"/g, '""'),
+          String(e.value || 0),
+          String(e.aeName || '').replace(/"/g, '""'),
+          String(e.date || '').replace(/"/g, '""')
+        ].map(v => `"${v}"`).join(',')))
+      ].join('\n');
+
+      const fileName = `branch360-pipeline-${new Date().toISOString().slice(0,10)}.csv`;
+      const ok = safeDownloadTextFile(fileName, csv, 'text/csv;charset=utf-8');
+      if (ok) {
+        task.done('Pipeline export ready. Download started.');
+      } else {
+        task.done('Pipeline export ready, but download was blocked.');
+        task.addHtml('<p class="text-sm text-gray-600">Your browser may be blocking downloads in this environment. Try again in production.</p>');
+      }
+    };
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(onData)
+        .withFailureHandler(function(error) {
+          task.done('Pipeline export failed.');
+          task.addHtml(`<p class="text-sm text-red-600">${escapeHtml(error && error.message ? error.message : 'Unknown error')}</p>`);
+        })
+        .getDetailedBranchPipeline();
+    } else {
+      onData({ entries: [] });
     }
   }
 
@@ -652,29 +905,107 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
     document.body.appendChild(modal);
   }
 
-  function createModal(title, content) {
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function safeDownloadTextFile(filename, content, mimeType) {
+    try {
+      const blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'download.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return true;
+    } catch (e) {
+      console.warn('Download failed', e);
+      return false;
+    }
+  }
+
+  function createModal(title, content, options = {}) {
     const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-    overlay.onclick = function(e) {
-      if (e.target === overlay) {
-        overlay.remove();
-      }
-    };
-    
+    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('tabindex', '-1');
+
     const modal = document.createElement('div');
     modal.className = 'bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto';
     modal.onclick = function(e) { e.stopPropagation(); };
-    
+
+    const titleId = 'b360-modal-title-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    overlay.setAttribute('aria-labelledby', titleId);
+
     modal.innerHTML = `
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-bold text-gray-800">${title}</h3>
-        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        <h3 class="text-xl font-bold text-gray-800" id="${titleId}">${escapeHtml(title)}</h3>
+        <button type="button" data-modal-close class="text-gray-500 hover:text-gray-700 text-2xl" aria-label="Close modal">&times;</button>
       </div>
       ${content}
     `;
-    
+
     overlay.appendChild(modal);
+
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+      if (options.onClose) options.onClose();
+    };
+
+    overlay.onclick = function(e) {
+      if (e.target === overlay && options.closeOnBackdrop !== false) close();
+    };
+
+    const closeBtn = overlay.querySelector('[data-modal-close]');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+
+    const escHandler = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', escHandler);
+
+    setTimeout(() => { (closeBtn || overlay).focus(); }, 0);
     return overlay;
+  }
+
+  function createTaskModal(title, initialStatus) {
+    const modalId = 'b360-task-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const overlay = createModal(title, `
+      <div class="flex items-start gap-3">
+        <div class="b360-spinner" aria-hidden="true" style="width:22px;height:22px;border:3px solid rgba(148,163,184,0.35);border-top-color:rgba(37,99,235,1);border-radius:9999px;animation:b360-spin 0.8s linear infinite;"></div>
+        <div class="flex-1">
+          <p id="${modalId}-status" class="text-sm text-gray-600">${escapeHtml(initialStatus || 'Working...')}</p>
+          <div id="${modalId}-details" class="mt-3 space-y-2"></div>
+        </div>
+      </div>
+      <style>@keyframes b360-spin{to{transform:rotate(360deg);}}</style>
+    `, { closeOnBackdrop: false });
+
+    const statusEl = overlay.querySelector('#' + modalId + '-status');
+    const detailsEl = overlay.querySelector('#' + modalId + '-details');
+    const spinnerEl = overlay.querySelector('.b360-spinner');
+
+    const api = {
+      overlay,
+      setStatus: (text) => { if (statusEl) statusEl.textContent = text || ''; },
+      addHtml: (html) => { if (detailsEl) detailsEl.insertAdjacentHTML('beforeend', html); },
+      done: (finalText) => {
+        if (spinnerEl) spinnerEl.style.display = 'none';
+        if (finalText) api.setStatus(finalText);
+      }
+    };
+
+    return api;
   }
 
   // Set up event listeners for clickable elements
@@ -691,6 +1022,9 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
     
     const btnPipeline = document.getElementById('btn-detailed-pipeline');
     if (btnPipeline) btnPipeline.addEventListener('click', viewDetailedPipeline);
+
+    const btnPipelineExport = document.getElementById('btn-export-pipeline');
+    if (btnPipelineExport) btnPipelineExport.addEventListener('click', exportPipelineCsv);
     
     const btnMessage = document.getElementById('btn-team-message');
     if (btnMessage) btnMessage.addEventListener('click', sendTeamMessage);
@@ -746,6 +1080,9 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
     });
   }
 </script>
+
+</div>
+<!-- End main-with-sidebar -->
 
 </body>
 </html>

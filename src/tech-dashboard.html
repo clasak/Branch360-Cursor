@@ -13,44 +13,176 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script src="activity-client.html"></script>
+  <style>
+    /* Dark theme styles (default) */
+    body { background: #1e293b; color: #f1f5f9; }
+    .bg-white { background: #334155 !important; }
+    .bg-gray-50 { background: #334155 !important; }
+    .bg-blue-50 { background: rgba(37, 99, 235, 0.2) !important; }
+    .bg-yellow-50 { background: rgba(234, 179, 8, 0.2) !important; }
+    .bg-green-50 { background: rgba(34, 197, 94, 0.2) !important; }
+    .text-gray-800, .text-gray-900 { color: #f1f5f9 !important; }
+    .text-gray-600, .text-gray-700 { color: #cbd5e1 !important; }
+    .text-gray-500 { color: #94a3b8 !important; }
+    .text-gray-400 { color: #64748b !important; }
+    .border, .border-gray-200 { border-color: #475569 !important; }
+    input, select, textarea {
+      background: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important;
+    }
+    .shadow, .shadow-sm, .shadow-lg {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Dark mode styles for legacy compatibility */
+    body.dark-mode { background: #1e293b; color: #f1f5f9; }
+    body.dark-mode nav { background: #334155; border-color: #475569; }
+    body.dark-mode .bg-white { background: #334155 !important; }
+    body.dark-mode .text-gray-800, body.dark-mode .text-gray-900 { color: #f1f5f9 !important; }
+    body.dark-mode .text-gray-600, body.dark-mode .text-gray-700 { color: #cbd5e1 !important; }
+    body.dark-mode .text-gray-500 { color: #94a3b8 !important; }
+    body.dark-mode .text-gray-400 { color: #64748b !important; }
+    body.dark-mode .border, body.dark-mode .border-gray-200 { border-color: #475569 !important; }
+    body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+      background: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important;
+    }
+    body.dark-mode .shadow, body.dark-mode .shadow-sm, body.dark-mode .shadow-lg {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    :root {
+      --brand-primary: #2563eb;
+      --brand-accent: #60a5fa;
+      --brand-dark: #0f172a;
+    }
+    
+    /* Navigation sidebar styles matching unified dashboard */
+    .nav-sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 256px;
+      background: linear-gradient(180deg, var(--brand-dark) 0%, #1f2a3f 100%);
+      border-right: 1px solid #334155;
+      overflow-y: auto;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .nav-button {
+      color: rgba(255, 255, 255, 0.85);
+      background-color: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      width: 100%;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      margin: 0.25rem 0;
+    }
+    .nav-button:hover {
+      background-color: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .nav-button.active {
+      background-color: var(--brand-primary);
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+      border-color: transparent;
+    }
+    .main-with-sidebar {
+      margin-left: 256px;
+    }
+  </style>
 </head>
-<body class="bg-gray-100">
+<body style="background: #1e293b;">
 
-<nav class="bg-blue-900 text-white p-4">
-  <div class="max-w-7xl mx-auto">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-xl font-bold">Branch360 Technician</h1>
-        <p class="text-sm opacity-75" id="techName">Loading...</p>
-      </div>
-      <button onclick="openLeadForm()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-semibold">
-        + Submit Lead
-      </button>
+<!-- Apply theme from parent or localStorage -->
+<script>
+  (function() {
+    try {
+      const savedTheme = window.localStorage ? window.localStorage.getItem('branch360Theme') : null;
+      if (savedTheme === 'dark' || document.documentElement.classList.contains('dark-mode')) {
+        document.body.classList.add('dark-mode', 'bg-gray-900');
+        document.body.classList.remove('bg-gray-50');
+      }
+    } catch(e) {
+      console.log('Theme init:', e);
+    }
+    
+    // Hide sidebar when loaded in iframe (unified dashboard already has sidebar)
+    if (window.self !== window.top) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .nav-sidebar { display: none !important; }
+        .main-with-sidebar { margin-left: 0 !important; }
+      `;
+      document.head.appendChild(style);
+    }
+  })();
+</script>
+
+<!-- Navigation Sidebar -->
+<aside class="nav-sidebar space-y-2">
+  <div class="flex items-center gap-3 pb-6 border-b border-white/10 mb-4">
+    <img src="https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819" alt="Branch360" class="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow" />
+    <div>
+      <div class="text-xl font-bold text-white">Branch360</div>
+      <p class="text-xs text-white/70">Unified Pilot Dashboard</p>
     </div>
   </div>
-</nav>
+  <button class="nav-button" onclick="window.location.href='?view=ae'">Sales / AE</button>
+  <button class="nav-button" onclick="window.location.href='?view=ae'" style="padding-left: 1.5rem; font-size: 0.9rem; background: rgba(15, 23, 42, 0.25);">📋 Leads</button>
+  <button class="nav-button active" onclick="window.location.href='?view=tech'">Technician</button>
+  <button class="nav-button" onclick="window.location.href='?view=ops'">Operations</button>
+  <button class="nav-button" onclick="window.location.href='?view=branch'">Branch Manager</button>
+  <button class="nav-button" onclick="window.location.href='?view=admin'" style="background: rgba(124, 58, 237, 0.3); border-color: rgba(124, 58, 237, 0.5);">🔐 Admin Dashboard</button>
+  <button class="nav-button" onclick="window.location.href='?view=market'">Market Director</button>
+  <button class="nav-button" onclick="window.location.href='?view=time'">Time Saved</button>
+  <button class="nav-button" onclick="window.location.href='?view=pilot'">90-Day Pilot Report</button>
+  <button class="nav-button" onclick="window.location.href='?view=handoff'">Sales → Ops Handoff</button>
+  <button class="nav-button" onclick="window.location.href='?view=settings'">Settings</button>
+</aside>
 
-<div class="max-w-7xl mx-auto px-4 py-6">
+<!-- Main Content with Sidebar -->
+<div class="main-with-sidebar">
+  <nav class="bg-blue-900 text-white p-4">
+    <div class="w-full">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-xl font-bold">Branch360 Technician</h1>
+          <p class="text-sm opacity-75" id="techName">Loading...</p>
+        </div>
+        <button onclick="openLeadForm()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-semibold">
+          + Submit Lead
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="w-full px-6 py-6">
   
   <!-- Quick Actions -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-    <button onclick="viewRoute()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+    <button onclick="viewRoute()" aria-label="View my route" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
       <div class="text-3xl mb-2">🗺️</div>
       <div class="font-semibold">My Route</div>
     </button>
     
-    <button onclick="openLeadForm()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+    <button onclick="openLeadForm()" aria-label="Submit a lead" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
       <div class="text-3xl mb-2">📝</div>
       <div class="font-semibold">Submit Lead</div>
     </button>
     
-    <button onclick="viewInstalls()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+    <button onclick="viewInstalls()" aria-label="View installations" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
       <div class="text-3xl mb-2">🔧</div>
       <div class="font-semibold">Installations</div>
       <div class="text-sm text-gray-600" id="pendingInstallsCount">0</div>
     </button>
     
-    <button onclick="reportIssue()" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
+    <button onclick="reportIssue()" aria-label="Report a service issue" class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition text-center">
       <div class="text-3xl mb-2">⚠️</div>
       <div class="font-semibold">Report Issue</div>
     </button>
@@ -79,7 +211,7 @@
   <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-4 border-b">
       <h3 class="text-lg font-bold text-gray-800" id="directionsAddress">Directions</h3>
-      <button onclick="closeDirectionsModal()" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+      <button onclick="closeDirectionsModal()" aria-label="Close directions" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
     </div>
     <div class="flex-1 relative overflow-hidden" style="min-height: 400px; height: 500px;">
       <div id="directionsMap" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
@@ -88,6 +220,62 @@
       <button onclick="openInMapsApp()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
         Open in Apple Maps
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Report Issue Modal (internal - avoids blocked external links) -->
+<div id="reportIssueModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id==='reportIssueModal')closeReportIssueModal()">
+  <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center p-4 border-b">
+      <h3 class="text-lg font-bold text-gray-800">⚠️ Report Service Issue</h3>
+      <button onclick="closeReportIssueModal()" aria-label="Close report issue modal" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+    </div>
+    <div class="p-4 space-y-4">
+      <p class="text-sm text-gray-600">Use this form to report an issue to Operations. Submissions are logged and can trigger notifications.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="issueCustomerName" class="block text-sm font-semibold text-gray-700 mb-1">Customer Name *</label>
+          <input id="issueCustomerName" type="text" class="w-full border rounded px-3 py-2" placeholder="Customer / account name" />
+        </div>
+        <div>
+          <label for="issueType" class="block text-sm font-semibold text-gray-700 mb-1">Issue Type *</label>
+          <select id="issueType" class="w-full border rounded px-3 py-2">
+            <option value="">Select type…</option>
+            <option>Missed Stop</option>
+            <option>Service Quality</option>
+            <option>Scheduling</option>
+            <option>Customer Complaint</option>
+            <option>Equipment</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label for="issueSeverity" class="block text-sm font-semibold text-gray-700 mb-1">Severity</label>
+          <select id="issueSeverity" class="w-full border rounded px-3 py-2">
+            <option>Low</option>
+            <option selected>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div>
+          <label for="issueTrackerEntryId" class="block text-sm font-semibold text-gray-700 mb-1">Tracker Entry ID (optional)</label>
+          <input id="issueTrackerEntryId" type="text" class="w-full border rounded px-3 py-2" placeholder="Entry ID (if applicable)" />
+        </div>
+      </div>
+
+      <div>
+        <label for="issueDescription" class="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
+        <textarea id="issueDescription" class="w-full border rounded px-3 py-2" rows="5" placeholder="Describe what happened, and any next steps needed…"></textarea>
+      </div>
+
+      <div id="issueSubmitStatus" class="text-sm text-gray-600 hidden"></div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeReportIssueModal()" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300">Cancel</button>
+        <button type="button" id="issueSubmitBtn" onclick="submitReportIssue()" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Submit</button>
+      </div>
     </div>
   </div>
 </div>
@@ -205,15 +393,26 @@
     }
     
     container.innerHTML = leads.map(lead => `
-      <div class="flex justify-between items-center p-3 border-b cursor-pointer hover:bg-blue-50 transition-colors" onclick="editLead('${lead.leadID || ''}', '${lead.customer || ''}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editLead('${lead.leadID || ''}', '${lead.customer || ''}')}">
-        <div>
-          <p class="font-semibold">${lead.customer}</p>
-          <p class="text-sm text-gray-600">${formatDate(lead.date)}</p>
+      <div class="border-l-4 ${getStatusBorderColor(lead.status)} bg-blue-50 p-4 rounded mb-3">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h3 class="font-bold text-gray-800">${lead.customer}</h3>
+            <p class="text-sm text-gray-600"><strong>POC:</strong> ${lead.pocName || 'N/A'}</p>
+            <p class="text-sm text-gray-600"><strong>Phone:</strong> ${lead.phone || 'N/A'}</p>
+            <p class="text-sm text-gray-600"><strong>Location:</strong> ${lead.address || 'N/A'}</p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs px-2 py-1 rounded ${getStatusColor(lead.status)}">${lead.status}</span>
+            <p class="text-xs text-gray-500 mt-1">${formatDate(lead.date)}</p>
+            <p class="text-xs text-gray-500">AE: ${lead.assignedAE}</p>
+          </div>
         </div>
-        <div class="text-right">
-          <span class="text-xs px-2 py-1 rounded ${getStatusColor(lead.status)}">${lead.status}</span>
-          <p class="text-xs text-gray-500 mt-1">AE: ${lead.assignedAE}</p>
-        </div>
+        ${lead.notes ? `
+          <div class="mt-2 p-2 bg-yellow-50 rounded">
+            <p class="text-xs text-gray-700"><strong>Issues:</strong></p>
+            <p class="text-sm text-gray-800">${lead.notes}</p>
+          </div>
+        ` : ''}
       </div>
     `).join('');
   }
@@ -268,6 +467,15 @@
       case 'Contacted': return 'bg-yellow-100 text-yellow-800';
       case 'Converted': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+  
+  function getStatusBorderColor(status) {
+    switch(status) {
+      case 'New': return 'border-blue-500';
+      case 'Contacted': return 'border-yellow-500';
+      case 'Converted': return 'border-green-500';
+      default: return 'border-gray-500';
     }
   }
   
@@ -481,7 +689,7 @@
         try {
           directionsMap = new mapboxgl.Map({
             container: 'directionsMap',
-            style: 'mapbox://styles/mapbox/streets-v12',
+            style: 'mapbox://styles/mapbox/dark-v11',
             center: [-95.3698, 29.7604], // Default to Houston
             zoom: 10,
             attributionControl: true
@@ -785,8 +993,132 @@
   }
   
   function reportIssue() {
-    // Navigate to issue reporting form
-    window.location.href = 'report-issue.html';
+    openReportIssueModal();
+  }
+
+  function openReportIssueModal() {
+    const modal = document.getElementById('reportIssueModal');
+    if (!modal) return;
+
+    // Reset fields
+    const status = document.getElementById('issueSubmitStatus');
+    if (status) {
+      status.classList.add('hidden');
+      status.textContent = '';
+    }
+    const btn = document.getElementById('issueSubmitBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Submit';
+    }
+
+    ['issueCustomerName','issueType','issueSeverity','issueTrackerEntryId','issueDescription'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (id === 'issueSeverity') el.value = 'Medium';
+      else el.value = '';
+    });
+
+    modal.classList.remove('hidden');
+
+    // ESC to close
+    const escHandler = function(e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeReportIssueModal();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+  }
+
+  function closeReportIssueModal() {
+    const modal = document.getElementById('reportIssueModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function submitReportIssue() {
+    const customerName = (document.getElementById('issueCustomerName') || {}).value || '';
+    const issueType = (document.getElementById('issueType') || {}).value || '';
+    const severity = (document.getElementById('issueSeverity') || {}).value || 'Medium';
+    const trackerEntryID = (document.getElementById('issueTrackerEntryId') || {}).value || '';
+    const description = (document.getElementById('issueDescription') || {}).value || '';
+
+    const status = document.getElementById('issueSubmitStatus');
+    const btn = document.getElementById('issueSubmitBtn');
+
+    if (!customerName.trim() || !issueType.trim() || !description.trim()) {
+      if (status) {
+        status.classList.remove('hidden');
+        status.classList.remove('text-green-600');
+        status.classList.add('text-red-600');
+        status.textContent = 'Please fill out Customer Name, Issue Type, and Description.';
+      }
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
+    }
+    if (status) {
+      status.classList.remove('hidden');
+      status.classList.remove('text-red-600', 'text-green-600');
+      status.classList.add('text-gray-600');
+      status.textContent = 'Submitting issue…';
+    }
+
+    const issueData = {
+      customerName: customerName.trim(),
+      issueType: issueType.trim(),
+      severity: severity,
+      description: description.trim(),
+      trackerEntryID: trackerEntryID.trim()
+    };
+
+    const runner = getAppsScriptRunner();
+    if (runner && runner.reportServiceIssue) {
+      runner
+        .withSuccessHandler(function(result) {
+          if (result && result.success) {
+            if (status) {
+              status.classList.remove('text-gray-600', 'text-red-600');
+              status.classList.add('text-green-600');
+              status.textContent = 'Issue submitted successfully. Issue ID: ' + (result.issueID || '');
+            }
+            setTimeout(closeReportIssueModal, 800);
+          } else {
+            if (status) {
+              status.classList.remove('text-gray-600', 'text-green-600');
+              status.classList.add('text-red-600');
+              status.textContent = 'Failed to submit issue: ' + (result && result.message ? result.message : 'Unknown error');
+            }
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Submit';
+            }
+          }
+        })
+        .withFailureHandler(function(error) {
+          if (status) {
+            status.classList.remove('text-gray-600', 'text-green-600');
+            status.classList.add('text-red-600');
+            status.textContent = 'Error submitting issue: ' + (error && error.message ? error.message : 'Unknown error');
+          }
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Submit';
+          }
+        })
+        .reportServiceIssue(issueData);
+    } else {
+      // Demo/local mode fallback
+      if (status) {
+        status.classList.remove('text-gray-600', 'text-red-600');
+        status.classList.add('text-green-600');
+        status.textContent = 'Issue captured (demo mode). In production, this will notify Operations.';
+      }
+      setTimeout(closeReportIssueModal, 800);
+    }
   }
   
   function getDemoTechData() {
@@ -805,8 +1137,54 @@
         }
       ],
       leadsSubmitted: [
-        { customer: 'Bayou Coffee', date: now.toISOString(), status: 'New', assignedAE: 'Alex Taylor' },
-        { customer: 'Garden Heights HOA', date: new Date(now - 86400000).toISOString(), status: 'Contacted', assignedAE: 'Maria Lopez' }
+        { 
+          leadID: 'LEAD-TECH-001',
+          customer: 'Bayou Coffee',
+          pocName: 'Sarah Johnson',
+          phone: '(713) 555-9001',
+          email: 'sarah@bayoucoffee.com',
+          address: '1201 Caroline St, Houston, TX 77002',
+          zipCode: '77002',
+          serviceType: 'GPC Interior/Exterior',
+          leadType: 'Commercial',
+          notes: 'Customer seeing roaches in kitchen area near espresso machine. Also noticed some mice droppings in back storage room. Looking for comprehensive pest control solution.',
+          date: now.toISOString(), 
+          status: 'New', 
+          assignedAE: 'Alex Taylor',
+          submittedBy: 'Jordan Ellis (Tech)'
+        },
+        { 
+          leadID: 'LEAD-TECH-002',
+          customer: 'Garden Heights HOA',
+          pocName: 'Michael Chen',
+          phone: '(713) 555-9002',
+          email: 'mchen@gardenheights.com',
+          address: '4500 Garden Oaks Blvd, Houston, TX 77018',
+          zipCode: '77018',
+          serviceType: 'Rodent Control',
+          leadType: 'Property Management',
+          notes: 'HOA president noticed rodent activity around community dumpsters. Residents reporting mice in multiple units. Need exclusion work and ongoing monitoring for 200-unit complex.',
+          date: new Date(now - 86400000).toISOString(), 
+          status: 'Contacted', 
+          assignedAE: 'Maria Lopez',
+          submittedBy: 'Jordan Ellis (Tech)'
+        },
+        { 
+          leadID: 'LEAD-TECH-003',
+          customer: 'Downtown Auto Body',
+          pocName: 'Carlos Rodriguez',
+          phone: '(713) 555-9003',
+          email: 'carlos@dtautobody.com',
+          address: '2100 Milam St, Houston, TX 77002',
+          zipCode: '77002',
+          serviceType: 'Rodent Control',
+          leadType: 'Commercial',
+          notes: 'Shop manager concerned about rats chewing through wiring in customer vehicles. Seeing droppings in garage bay area. Urgent - already had 2 customer complaints.',
+          date: new Date(now - 86400000 * 2).toISOString(), 
+          status: 'New', 
+          assignedAE: 'Alex Taylor',
+          submittedBy: 'Jordan Ellis (Tech)'
+        }
       ]
     };
   }
@@ -826,6 +1204,9 @@
     });
   }
 </script>
+
+</div>
+<!-- End main-with-sidebar -->
 
 </body>
 </html>

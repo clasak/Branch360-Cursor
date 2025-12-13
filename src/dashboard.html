@@ -28,8 +28,29 @@
       display: none !important;
     }
     body {
-      background: linear-gradient(140deg, var(--brand-dark) 0%, #1e1b4b 25%, #f1f5f9 75%);
+      background: #1e293b;
       min-height: 100vh;
+    }
+    
+    /* Handoff Pipeline Styles */
+    #handoffPipeline > div {
+      max-height: 600px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+    }
+    #handoffPipeline > div::-webkit-scrollbar {
+      width: 6px;
+    }
+    #handoffPipeline > div::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #handoffPipeline > div::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.5);
+      border-radius: 3px;
+    }
+    #handoffPipeline > div::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(156, 163, 175, 0.7);
     }
     .nav-button {
       color: rgba(255, 255, 255, 0.85);
@@ -43,8 +64,8 @@
       border-color: rgba(255, 255, 255, 0.3);
     }
     .nav-button.active {
-      background-color: #ffffff;
-      color: var(--brand-primary);
+      background-color: var(--brand-primary);
+      color: #ffffff;
       font-weight: 700;
       box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
       border-color: transparent;
@@ -52,10 +73,20 @@
     iframe.persona-frame {
       border: none;
       width: 100%;
-      height: 80vh;
-      background: #fff;
+      height: calc(100vh - 80px);
+      min-height: 800px;
+      background: #334155;
       border-radius: 0.75rem;
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    /* Improve iframe behavior on smaller screens */
+    @media (max-width: 768px) {
+      iframe.persona-frame {
+        height: calc(100vh - 120px);
+        min-height: 520px;
+        border-radius: 0.5rem;
+      }
     }
     aside {
       background: linear-gradient(180deg, var(--brand-dark) 0%, #1f2a3f 100%);
@@ -87,7 +118,7 @@
       background-color: #ffffff !important;
     }
     main {
-      background: rgba(255, 255, 255, 0.95);
+      background: #1e293b;
       border-radius: 2rem 0 0 2rem;
       box-shadow: -30px 0 80px rgba(15, 23, 42, 0.2);
     }
@@ -97,31 +128,32 @@
     
     /* Ensure header content is visible */
     header, header * {
-      color: #111827 !important;
+      color: #f1f5f9 !important;
     }
     
-    header .text-gray-500 { color: #6b7280 !important; }
-    header .text-gray-900 { color: #111827 !important; }
-    header label { color: #374151 !important; }
+    header .text-gray-500 { color: #94a3b8 !important; }
+    header .text-gray-900 { color: #f1f5f9 !important; }
+    header label { color: #cbd5e1 !important; }
     header input, header select {
-      color: #111827 !important;
-      background-color: #ffffff !important;
+      color: #f1f5f9 !important;
+      background-color: #334155 !important;
+      border-color: #475569 !important;
     }
     header button.bg-blue-600,
     header button[class*="bg-"] {
       color: #ffffff !important;
     }
     .surface-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
+      background: #334155;
+      border: 1px solid #475569;
       border-radius: 1rem;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.3);
     }
     input, select, textarea {
-      background: #ffffff;
-      color: #0f172a;
-      border: 1px solid #d1d5db;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      background: #334155;
+      color: #f1f5f9;
+      border: 1px solid #475569;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
     #refreshBtn, #branchExportBtn, #pilotRunBtn, #googleEarthBtn, #prospectSearchInput {
       transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -133,22 +165,22 @@
     
     /* Ensure all text is visible - OVERRIDE ANY CONFLICTING STYLES */
     main, main *, section, section * {
-      color: #111827 !important;
+      color: #f1f5f9 !important;
     }
     
     main h1, main h2, main h3, main h4, main h5, main h6,
     section h1, section h2, section h3, section h4, section h5, section h6 {
-      color: #111827 !important;
+      color: #f1f5f9 !important;
       font-weight: 700 !important;
     }
     
     main p, main span, main div:not(button):not(.nav-button):not(.submenu-button),
     section p, section span, section div:not(button):not(.nav-button):not(.submenu-button) {
-      color: #111827 !important;
+      color: #f1f5f9 !important;
     }
     
     main label, section label {
-      color: #111827 !important;
+      color: #cbd5e1 !important;
     }
     
     /* Ensure buttons are visible and styled - EXCEPT sidebar nav buttons */
@@ -167,10 +199,11 @@
       color: #ffffff !important;
     }
     
-    /* Gray/outline buttons - dark text on white background */
+    /* Gray/outline buttons - light text on dark background */
     main button.border, main button:not([class*="bg-blue"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-indigo"]):not(.bg-blue-600):not(.bg-green-600):not(.bg-red-600):not(.bg-purple-600):not(.bg-emerald-600):not(.bg-indigo-600) {
-      color: #374151 !important;
-      background-color: #ffffff !important;
+      color: #f1f5f9 !important;
+      background-color: #334155 !important;
+      border-color: #475569 !important;
     }
     
     /* Ensure buttons with text-white class work */
@@ -181,8 +214,9 @@
     /* Ensure form elements are visible */
     main input, main select, main textarea,
     section input, section select, section textarea {
-      color: #111827 !important;
-      background-color: #ffffff !important;
+      color: #f1f5f9 !important;
+      background-color: #334155 !important;
+      border-color: #475569 !important;
     }
     
     /* Ensure links are visible */
@@ -191,30 +225,31 @@
     }
     
     /* Ensure text-gray utilities work */
-    main .text-gray-900, section .text-gray-900 { color: #111827 !important; }
-    main .text-gray-800, section .text-gray-800 { color: #1f2937 !important; }
-    main .text-gray-700, section .text-gray-700 { color: #374151 !important; }
-    main .text-gray-600, section .text-gray-600 { color: #4b5563 !important; }
-    main .text-gray-500, section .text-gray-500 { color: #6b7280 !important; }
-    main .text-gray-400, section .text-gray-400 { color: #9ca3af !important; }
+    main .text-gray-900, section .text-gray-900 { color: #f1f5f9 !important; }
+    main .text-gray-800, section .text-gray-800 { color: #e2e8f0 !important; }
+    main .text-gray-700, section .text-gray-700 { color: #cbd5e1 !important; }
+    main .text-gray-600, section .text-gray-600 { color: #94a3b8 !important; }
+    main .text-gray-500, section .text-gray-500 { color: #94a3b8 !important; }
+    main .text-gray-400, section .text-gray-400 { color: #64748b !important; }
     
     /* Ensure tables are visible */
     main table, section table {
-      color: #111827 !important;
+      color: #f1f5f9 !important;
     }
     main table th, section table th {
-      color: #6b7280 !important;
+      color: #94a3b8 !important;
       font-weight: 600 !important;
     }
     main table td, section table td {
-      color: #111827 !important;
+      color: #f1f5f9 !important;
     }
     
     /* Ensure surface cards have visible content */
     main .surface-card, main .bg-white,
     section .surface-card, section .bg-white {
-      background-color: #ffffff !important;
-      color: #111827 !important;
+      background-color: #334155 !important;
+      color: #f1f5f9 !important;
+      border-color: #475569 !important;
     }
     
     main .surface-card *, main .bg-white *,
@@ -332,15 +367,28 @@
     
     /* Ensure white backgrounds are visible */
     .bg-white {
-      background-color: #ffffff;
+      background-color: #334155;
     }
     
+    /* Colored backgrounds for pipeline stages */
+    .bg-blue-50 { background: rgba(37, 99, 235, 0.2) !important; }
+    .bg-yellow-50 { background: rgba(234, 179, 8, 0.2) !important; }
+    .bg-green-50 { background: rgba(34, 197, 94, 0.2) !important; }
+    .bg-red-50 { background: rgba(239, 68, 68, 0.2) !important; }
+    .bg-purple-50 { background: rgba(168, 85, 247, 0.2) !important; }
+    
+    /* Hover states */
+    .hover\:bg-gray-50:hover { background: #475569 !important; }
+    .hover\:bg-blue-100:hover { background: rgba(37, 99, 235, 0.3) !important; }
+    .hover\:bg-yellow-100:hover { background: rgba(234, 179, 8, 0.3) !important; }
+    .hover\:bg-green-100:hover { background: rgba(34, 197, 94, 0.3) !important; }
+    
     /* Ensure text colors are visible */
-    .text-gray-900 { color: #111827; }
-    .text-gray-800 { color: #1f2937; }
-    .text-gray-700 { color: #374151; }
-    .text-gray-600 { color: #4b5563; }
-    .text-gray-500 { color: #6b7280; }
+    .text-gray-900 { color: #f1f5f9; }
+    .text-gray-800 { color: #e2e8f0; }
+    .text-gray-700 { color: #cbd5e1; }
+    .text-gray-600 { color: #94a3b8; }
+    .text-gray-500 { color: #94a3b8; }
     .text-white { color: #ffffff; }
     
     /* Ensure button colors */
@@ -356,6 +404,21 @@
       max-height: 300px !important;
       height: 300px !important;
       width: 100% !important;
+    }
+
+    /* Simple spinner used for long-running tasks */
+    .b360-spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(148, 163, 184, 0.35);
+      border-top-color: rgba(37, 99, 235, 1);
+      border-radius: 9999px;
+      animation: b360-spin 0.8s linear infinite;
+      flex: 0 0 auto;
+    }
+
+    @keyframes b360-spin {
+      to { transform: rotate(360deg); }
     }
     
     /* Ensure chart containers have proper height constraints */
@@ -411,32 +474,32 @@
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="handoff" data-roles="ops,branch,admin">Sales → Ops Handoff</button>
       <button class="nav-button w-full text-left px-3 py-2 rounded-lg" data-view="settings" data-roles="branch,admin">Settings</button>
     </aside>
-    <main class="flex-1 p-6 space-y-4">
-      <header class="flex flex-wrap items-center justify-between bg-white p-4 rounded-xl shadow-sm">
-        <div class="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-4">
-          <div>
-            <label class="text-sm text-gray-500 block">Branch</label>
-            <select id="branchSelect" class="border rounded-lg px-3 py-2">
+    <main class="flex-1 p-6 space-y-4 overflow-x-hidden">
+      <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between surface-card p-4 rounded-xl shadow-sm gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="min-w-[140px]">
+            <label class="text-sm text-gray-500 block mb-1">Branch</label>
+            <select id="branchSelect" class="border rounded-lg px-3 py-2 w-full">
               <option value="BRN-001">Houston</option>
             </select>
           </div>
-          <div>
-            <label class="text-sm text-gray-500 block">Start Date</label>
-            <input type="date" id="startDate" class="border rounded-lg px-3 py-2" />
+          <div class="min-w-[140px]">
+            <label class="text-sm text-gray-500 block mb-1">Start Date</label>
+            <input type="date" id="startDate" class="border rounded-lg px-3 py-2 w-full" />
           </div>
-          <div>
-            <label class="text-sm text-gray-500 block">End Date</label>
-            <input type="date" id="endDate" class="border rounded-lg px-3 py-2" />
+          <div class="min-w-[140px]">
+            <label class="text-sm text-gray-500 block mb-1">End Date</label>
+            <input type="date" id="endDate" class="border rounded-lg px-3 py-2 w-full" />
           </div>
-          <div>
-            <label class="text-sm text-gray-500 block">AE Filter</label>
-            <select id="aeFilter" class="border rounded-lg px-3 py-2">
+          <div class="min-w-[140px]">
+            <label class="text-sm text-gray-500 block mb-1">AE Filter</label>
+            <select id="aeFilter" class="border rounded-lg px-3 py-2 w-full">
               <option value="">All AEs</option>
             </select>
           </div>
-          <div>
-            <label class="text-sm text-gray-500 block">Service Type</label>
-            <select id="serviceFilter" class="border rounded-lg px-3 py-2">
+          <div class="min-w-[140px]">
+            <label class="text-sm text-gray-500 block mb-1">Service Type</label>
+            <select id="serviceFilter" class="border rounded-lg px-3 py-2 w-full">
               <option value="">All</option>
               <option value="GPC">GPC</option>
               <option value="Rodent">Rodent</option>
@@ -446,7 +509,7 @@
             </select>
           </div>
         </div>
-        <div class="flex items-center gap-5">
+        <div class="flex flex-wrap items-center gap-3">
           <div>
             <p class="text-xs text-gray-500 uppercase tracking-wide">Active User</p>
             <p id="personaLabel" class="text-sm font-semibold text-gray-900">Demo Persona</p>
@@ -469,16 +532,17 @@
       <section id="view-branch" class="view hidden space-y-4">
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mb-4">
-          <button id="btn-generate-report" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">📊 Generate Daily Report</button>
-          <button id="btn-weekly-trends" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">📈 View Weekly Trends</button>
-          <button id="btn-export-data" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💾 Export Data</button>
-          <button id="btn-detailed-pipeline" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💼 Detailed Pipeline</button>
-          <button id="btn-team-message" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💬 Team Message</button>
+          <button id="btn-generate-report" aria-label="Generate daily report" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">📊 Generate Daily Report</button>
+          <button id="btn-weekly-trends" aria-label="View weekly trends" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">📈 View Weekly Trends</button>
+          <button id="btn-export-data" aria-label="Export data" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💾 Export Data</button>
+          <button id="btn-detailed-pipeline" aria-label="View detailed pipeline" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💼 Detailed Pipeline</button>
+          <button id="btn-export-pipeline" aria-label="Export pipeline data" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">📤 Pipeline Export</button>
+          <button id="btn-team-message" aria-label="Send team message" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg cursor-pointer">💬 Team Message</button>
         </div>
         
         <!-- Today's Summary -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="surface-card rounded-lg shadow p-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-lg font-bold text-gray-800">📈 Sales Today</h2>
               <button id="btn-sales-details" class="text-sm text-blue-600 hover:underline cursor-pointer">View Details →</button>
@@ -503,7 +567,7 @@
             </div>
           </div>
           
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="surface-card rounded-lg shadow p-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-lg font-bold text-gray-800">🔧 Operations Today</h2>
               <button id="btn-ops-details" class="text-sm text-blue-600 hover:underline cursor-pointer">View Details →</button>
@@ -526,19 +590,19 @@
         
         <!-- Team Performance -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="surface-card rounded-lg shadow p-6">
             <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 Sales Team Leaderboard</h3>
             <div id="branchSalesLeaderboard">Loading...</div>
           </div>
           
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="surface-card rounded-lg shadow p-6">
             <h3 class="text-lg font-bold text-gray-800 mb-4">👷 Operations Team</h3>
             <div id="branchOpsTeam">Loading...</div>
           </div>
         </div>
         
         <!-- Pipeline Overview -->
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="surface-card rounded-lg shadow p-6">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-bold text-gray-800">💼 Branch Pipeline</h3>
             <button id="btn-pipeline-all" class="text-sm text-blue-600 hover:underline cursor-pointer">View All →</button>
@@ -568,13 +632,13 @@
 
       <section id="view-market" class="view hidden space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="marketCards"></div>
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-2">New Starts Trend</h2>
           <div style="height: 300px; position: relative;">
             <canvas id="trendChart"></canvas>
           </div>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-2">AE Summary</h2>
           <div class="overflow-x-auto">
             <table class="min-w-full" id="marketAeTable"></table>
@@ -584,13 +648,13 @@
 
       <section id="view-time" class="view hidden space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="timeCards"></div>
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-2">Weekly Hours Saved</h2>
           <div style="height: 300px; position: relative;">
             <canvas id="timeChart"></canvas>
           </div>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-2">Team Breakdown</h2>
           <div class="overflow-x-auto">
             <table class="min-w-full" id="timeTable"></table>
@@ -600,7 +664,7 @@
 
       <section id="view-route" class="view hidden space-y-4">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="bg-white rounded-xl p-4 shadow space-y-4">
+          <div class="surface-card rounded-xl p-4 shadow space-y-4">
             <div id="territoryList"></div>
             <div>
               <h4 class="text-sm font-semibold text-gray-700 mb-2">Heatmap</h4>
@@ -608,7 +672,7 @@
             </div>
           </div>
           <div class="lg:col-span-2 space-y-4">
-            <div class="bg-white rounded-xl p-4 shadow">
+            <div class="surface-card rounded-xl p-4 shadow">
               <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
                 <div>
                   <h2 class="text-lg font-bold">Prospects</h2>
@@ -624,7 +688,7 @@
               <div class="overflow-x-auto" id="prospectTable"></div>
               <p id="prospectEmpty" class="text-center text-gray-500 text-sm mt-3">Select a territory to see prospects.</p>
             </div>
-            <div class="bg-white rounded-xl p-4 shadow hidden" id="pricingHelperSection">
+            <div class="surface-card rounded-xl p-4 shadow hidden" id="pricingHelperSection">
               <h2 class="text-lg font-bold mb-4">Pricing Helper</h2>
               <form id="pricingForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -667,7 +731,7 @@
       </section>
 
       <section id="view-pilot" class="view hidden space-y-4">
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label class="text-sm text-gray-500 block">Pilot Start</label>
@@ -693,23 +757,23 @@
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="pilotCards"></div>
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-2">Executive Summary</h2>
           <p class="text-sm text-gray-700" id="pilotSummary">Report will generate once data is available.</p>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow" id="pilotRoleBreakdownSection">
+        <div class="surface-card rounded-xl p-4 shadow" id="pilotRoleBreakdownSection">
           <h2 class="text-lg font-bold mb-2">Breakdown by Role</h2>
           <div class="overflow-x-auto">
             <table class="min-w-full" id="pilotRoleBreakdown"></table>
           </div>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow" id="pilotActionBreakdownSection">
+        <div class="surface-card rounded-xl p-4 shadow" id="pilotActionBreakdownSection">
           <h2 class="text-lg font-bold mb-2">Breakdown by Action Type</h2>
           <div class="overflow-x-auto">
             <table class="min-w-full" id="pilotActionBreakdown"></table>
           </div>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-3">
             <h2 class="text-lg font-bold" id="pilotTableTitle">Per-User Breakdown</h2>
             <div class="flex gap-2">
@@ -723,7 +787,7 @@
           </div>
           <p id="pilotEmpty" class="hidden text-center text-gray-500 text-sm mt-3">No activity logged for this range yet.</p>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-2">Weekly Trend</h2>
           <div style="height: 300px; position: relative;">
             <canvas id="pilotChart"></canvas>
@@ -731,12 +795,111 @@
         </div>
       </section>
 
-      <section id="view-handoff" class="view hidden">
-        <div class="bg-white rounded-xl p-4 shadow">
-          <h2 class="text-lg font-bold mb-3">Sales → Ops Handoff Queue</h2>
-          <p class="text-sm text-gray-500 mb-2">Sold opportunities awaiting start packets.</p>
-          <div class="overflow-x-auto" id="handoffTable"></div>
-          <p id="handoffEmpty" class="text-center text-gray-500 text-sm mt-3">No handoffs pending.</p>
+      <section id="view-handoff" class="view hidden space-y-4">
+        <!-- Header with Stats -->
+        <div class="surface-card rounded-xl p-6 shadow">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <div>
+              <h2 class="text-2xl font-bold mb-1">Sales → Ops Handoff</h2>
+              <p class="text-sm text-gray-500">Track sold opportunities through the handoff pipeline</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="loadHandoffQueue()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm">
+                🔄 Refresh
+              </button>
+            </div>
+          </div>
+          
+          <!-- Quick Stats -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
+              <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Not Started</div>
+              <div class="text-2xl font-bold text-red-600" id="handoffStatNotCreated">0</div>
+            </div>
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
+              <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">In Draft</div>
+              <div class="text-2xl font-bold text-yellow-600" id="handoffStatDraft">0</div>
+            </div>
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+              <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">In Progress</div>
+              <div class="text-2xl font-bold text-blue-600" id="handoffStatProgress">0</div>
+            </div>
+            <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3">
+              <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Pipeline</div>
+              <div class="text-2xl font-bold text-emerald-600" id="handoffStatTotal">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="surface-card rounded-xl p-4 shadow">
+          <div class="flex flex-col md:flex-row gap-3">
+            <input type="text" id="handoffSearch" placeholder="Search by customer, address, or AE..." 
+              class="flex-1 border rounded-lg px-4 py-2 text-sm" onkeyup="filterHandoffCards()">
+            <select id="handoffStatusFilter" onchange="filterHandoffCards()" 
+              class="border rounded-lg px-4 py-2 text-sm">
+              <option value="">All Statuses</option>
+              <option value="Not Created">Not Created</option>
+              <option value="Draft">Draft</option>
+              <option value="Packet Drafted">Packet Drafted</option>
+              <option value="Assign Specialist">Assign Specialist</option>
+              <option value="Awaiting Install">Awaiting Install</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Pipeline View -->
+        <div class="surface-card rounded-xl p-6 shadow">
+          <h3 class="text-lg font-bold mb-4">Handoff Pipeline</h3>
+          
+          <!-- Pipeline Stages -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="handoffPipeline">
+            <!-- Stage 1: Not Created -->
+            <div class="bg-red-50 dark:bg-red-900/10 rounded-lg p-4 border-2 border-red-200 dark:border-red-800">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+                  <span class="text-xl">🚨</span>
+                  <span>Not Started</span>
+                </h4>
+                <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded" id="countNotCreated">0</span>
+              </div>
+              <div class="text-xs text-gray-600 dark:text-gray-400 mb-3">Start packets need to be created</div>
+              <div class="space-y-2" id="handoffNotCreated"></div>
+            </div>
+
+            <!-- Stage 2: Draft / In Progress -->
+            <div class="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-4 border-2 border-yellow-200 dark:border-yellow-800">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="font-bold text-yellow-700 dark:text-yellow-400 flex items-center gap-2">
+                  <span class="text-xl">📝</span>
+                  <span>In Progress</span>
+                </h4>
+                <span class="bg-yellow-600 text-white text-xs font-bold px-2 py-1 rounded" id="countInProgress">0</span>
+              </div>
+              <div class="text-xs text-gray-600 dark:text-gray-400 mb-3">Packets being prepared</div>
+              <div class="space-y-2" id="handoffInProgress"></div>
+            </div>
+
+            <!-- Stage 3: Ready / Awaiting -->
+            <div class="bg-emerald-50 dark:bg-emerald-900/10 rounded-lg p-4 border-2 border-emerald-200 dark:border-emerald-800">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                  <span class="text-xl">✅</span>
+                  <span>Ready / Awaiting</span>
+                </h4>
+                <span class="bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded" id="countReady">0</span>
+              </div>
+              <div class="text-xs text-gray-600 dark:text-gray-400 mb-3">Ready for next steps</div>
+              <div class="space-y-2" id="handoffReady"></div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div id="handoffEmpty" class="text-center py-8 hidden">
+            <div class="text-4xl mb-2">📦</div>
+            <p class="text-gray-500">No handoffs in the pipeline</p>
+            <p class="text-sm text-gray-400 mt-1">Sold opportunities will appear here automatically</p>
+          </div>
         </div>
       </section>
 
@@ -745,7 +908,7 @@
       </section>
 
       <section id="view-settings" class="view hidden space-y-4">
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-3">Brand Settings</h2>
           <p class="text-sm text-gray-500 mb-4">Select which brand preset should theme Branch360. Future iterations will persist this per branch.</p>
           <div id="brandPresetGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -759,7 +922,7 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-4">Display Preferences</h2>
           <div class="space-y-4">
             <div class="flex items-center justify-between">
@@ -789,7 +952,7 @@
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="settingShowDollarValues" class="sr-only peer" checked>
-                <div class="w-11"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer"></div>
               </label>
             </div>
             <div class="flex items-center justify-between">
@@ -820,7 +983,7 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-4">Notification Settings</h2>
           <div class="space-y-4">
             <div class="flex items-center justify-between">
@@ -830,7 +993,7 @@
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="settingEmailNotifications" class="sr-only peer" checked>
-                <div class="w-11"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer"></div>
               </label>
             </div>
             <div class="flex items-center justify-between">
@@ -856,7 +1019,7 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-4">Export & Data Settings</h2>
           <div class="space-y-4">
             <div class="flex items-center justify-between">
@@ -878,7 +1041,7 @@
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="settingIncludeCharts" class="sr-only peer" checked>
-                <div class="w-11"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer"></div>
               </label>
             </div>
             <div class="flex items-center justify-between">
@@ -888,13 +1051,13 @@
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="settingAutoSaveDrafts" class="sr-only peer" checked>
-                <div class="w-11"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer"></div>
               </label>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-4">Advanced Settings</h2>
           <div class="space-y-3">
             <button id="settingClearCache" class="w-full md:w-auto bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition">Clear Local Cache</button>
@@ -903,7 +1066,7 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 shadow">
+        <div class="surface-card rounded-xl p-4 shadow">
           <h2 class="text-lg font-bold mb-3">Environment</h2>
           <div class="flex items-center justify-between">
             <p class="text-sm text-gray-500">Current mode mirrors the Demo/Live toggle in the header.</p>
@@ -1025,9 +1188,12 @@
         ]
       },
       handoff: [
-        { customer: 'Texas Thrift Midtown', address: '1234 Westheimer Rd', aeName: 'Blair Sloat', soldDate: new Date().toISOString(), packetStatus: 'Packet Drafted' },
-        { customer: 'Montrose Medical', address: '450 Westheimer Rd', aeName: 'Demo AE 2', soldDate: new Date(Date.now() - 86400000 * 3).toISOString(), packetStatus: 'Assign Specialist' },
-        { customer: 'Galleria Offices', address: '5085 Westheimer Rd', aeName: 'Cody L.', soldDate: new Date(Date.now() - 86400000 * 6).toISOString(), packetStatus: 'Awaiting Install' }
+        { trackerEntryID: 'ENTRY-001', customer: 'Texas Thrift Midtown', address: '1234 Westheimer Rd', aeName: 'Blair Sloat', soldDate: new Date().toISOString(), packetStatus: 'Not Created' },
+        { trackerEntryID: 'ENTRY-002', customer: 'Montrose Medical', address: '450 Westheimer Rd', aeName: 'Demo AE 2', soldDate: new Date(Date.now() - 86400000 * 2).toISOString(), packetStatus: 'Not Created' },
+        { trackerEntryID: 'ENTRY-003', customer: 'Downtown Storage Co', address: '1818 Commerce St', aeName: 'Blair Sloat', soldDate: new Date(Date.now() - 86400000 * 5).toISOString(), packetStatus: 'Draft' },
+        { trackerEntryID: 'ENTRY-004', customer: 'Bayou Coffee Roasters', address: '2200 San Jacinto', aeName: 'Cody L.', soldDate: new Date(Date.now() - 86400000 * 4).toISOString(), packetStatus: 'Packet Drafted' },
+        { trackerEntryID: 'ENTRY-005', customer: 'Galleria Offices', address: '5085 Westheimer Rd', aeName: 'Demo AE 2', soldDate: new Date(Date.now() - 86400000 * 8).toISOString(), packetStatus: 'Assign Specialist' },
+        { trackerEntryID: 'ENTRY-006', customer: 'Heights Medical Center', address: '890 Heights Blvd', aeName: 'Blair Sloat', soldDate: new Date(Date.now() - 86400000 * 10).toISOString(), packetStatus: 'Awaiting Install' }
       ]
     };
     let currentRole = null;
@@ -1073,7 +1239,7 @@
     const submenuStartPacket = document.getElementById('submenuStartPacket');
     if (submenuStartPacket) {
       submenuStartPacket.addEventListener('click', function() {
-        if (!currentRole || currentRole === 'ae' || currentRole === 'branch') {
+        if (!currentRole || currentRole === 'ae' || currentRole === 'branch' || currentRole === 'admin') {
           openSalesforceImport();
         }
       });
@@ -1822,32 +1988,180 @@
     }
 
     function renderHandoffQueue(rows) {
-      const table = document.getElementById('handoffTable');
+      // Store the raw data for filtering
+      window.handoffQueueData = rows || [];
+      
       const empty = document.getElementById('handoffEmpty');
       if (!rows || rows.length === 0) {
-        table.innerHTML = '';
         empty.classList.remove('hidden');
+        document.getElementById('handoffPipeline').classList.add('hidden');
+        updateHandoffStats([], [], []);
         return;
       }
+      
       empty.classList.add('hidden');
-      const headers = ['Customer', 'Address', 'AE', 'Sold Date', 'Packet Status', 'Actions'];
-      const tableRows = rows.map(function(row) {
-        const recordID = row.recordID || row.id || '';
+      document.getElementById('handoffPipeline').classList.remove('hidden');
+      
+      // Categorize items by stage
+      const notCreated = [];
+      const inProgress = [];
+      const ready = [];
+      
+      rows.forEach(function(row) {
+        const status = row.packetStatus || 'Not Created';
+        if (status === 'Not Created' || status === 'Pending') {
+          notCreated.push(row);
+        } else if (status === 'Draft' || status === 'Packet Drafted') {
+          inProgress.push(row);
+        } else {
+          ready.push(row);
+        }
+      });
+      
+      // Render each column
+      renderHandoffColumn('handoffNotCreated', notCreated, 'notCreated');
+      renderHandoffColumn('handoffInProgress', inProgress, 'inProgress');
+      renderHandoffColumn('handoffReady', ready, 'ready');
+      
+      // Update stats and counts
+      updateHandoffStats(notCreated, inProgress, ready);
+    }
+    
+    function renderHandoffColumn(containerId, items, stage) {
+      const container = document.getElementById(containerId);
+      if (!items || items.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 text-xs py-4">No items</div>';
+        return;
+      }
+      
+      container.innerHTML = items.map(function(row) {
+        const recordID = (row.trackerEntryID || row.recordID || row.id || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         const customer = (row.customer || 'N/A').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         const address = (row.address || 'N/A').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        const actions = (row.packetStatus === 'Pending' || !row.packetStatus)
-          ? `<button onclick="createStartPacketFromHandoff('${recordID}', '${customer}', '${address}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Create Start Packet</button>`
-          : `<span class="text-xs text-gray-500">${row.packetStatus}</span>`;
-        return [
-          row.customer || 'N/A',
-          row.address || 'N/A',
-          row.aeName || 'N/A',
-          row.soldDate ? new Date(row.soldDate).toLocaleDateString() : '--',
-          row.packetStatus || 'Pending',
-          actions
-        ];
+        const aeName = row.aeName || 'N/A';
+        const soldDate = row.soldDate ? new Date(row.soldDate) : null;
+        const daysAgo = soldDate ? Math.floor((Date.now() - soldDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        const urgency = daysAgo > 7 ? 'high' : daysAgo > 3 ? 'medium' : 'low';
+        const urgencyColor = urgency === 'high' ? 'red' : urgency === 'medium' ? 'yellow' : 'gray';
+        const urgencyIcon = urgency === 'high' ? '🔥' : urgency === 'medium' ? '⚠️' : '🕐';
+        
+        let actionButton = '';
+        if (stage === 'notCreated') {
+          actionButton = `
+            <button onclick="createStartPacketFromHandoff('${recordID}', '${customer}', '${address}')" 
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg mt-2">
+              ➕ Create Packet
+            </button>`;
+        } else if (stage === 'inProgress') {
+          actionButton = `
+            <button onclick="viewHandoffDetails('${recordID}')" 
+              class="w-full bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-2 rounded-lg mt-2">
+              👁️ View Details
+            </button>`;
+        } else {
+          actionButton = `
+            <button onclick="viewHandoffDetails('${recordID}')" 
+              class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg mt-2">
+              ✓ View Status
+            </button>`;
+        }
+        
+        return `
+          <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow" 
+            data-customer="${customer.toLowerCase()}" 
+            data-address="${address.toLowerCase()}" 
+            data-ae="${aeName.toLowerCase()}"
+            data-status="${row.packetStatus || 'Not Created'}">
+            <div class="flex items-start justify-between mb-2">
+              <div class="font-semibold text-sm text-gray-800 dark:text-gray-200 flex-1">${row.customer || 'N/A'}</div>
+              <span class="text-${urgencyColor}-600 text-lg ml-2" title="${daysAgo} days since sold">${urgencyIcon}</span>
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+              <div class="flex items-start">
+                <span class="mr-1">📍</span>
+                <span class="flex-1">${row.address || 'N/A'}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <span class="mr-1">👤</span>
+                  <span>${aeName}</span>
+                </div>
+                <span class="text-gray-400">${daysAgo}d ago</span>
+              </div>
+            </div>
+            ${actionButton}
+          </div>`;
+      }).join('');
+    }
+    
+    function updateHandoffStats(notCreated, inProgress, ready) {
+      const total = notCreated.length + inProgress.length + ready.length;
+      document.getElementById('handoffStatNotCreated').textContent = notCreated.length;
+      document.getElementById('handoffStatDraft').textContent = inProgress.length;
+      document.getElementById('handoffStatProgress').textContent = inProgress.length;
+      document.getElementById('handoffStatTotal').textContent = total;
+      document.getElementById('countNotCreated').textContent = notCreated.length;
+      document.getElementById('countInProgress').textContent = inProgress.length;
+      document.getElementById('countReady').textContent = ready.length;
+    }
+    
+    function filterHandoffCards() {
+      const searchTerm = (document.getElementById('handoffSearch').value || '').toLowerCase();
+      const statusFilter = document.getElementById('handoffStatusFilter').value;
+      
+      const allCards = document.querySelectorAll('#handoffPipeline [data-customer]');
+      let visibleCount = 0;
+      
+      allCards.forEach(function(card) {
+        const customer = card.getAttribute('data-customer') || '';
+        const address = card.getAttribute('data-address') || '';
+        const ae = card.getAttribute('data-ae') || '';
+        const status = card.getAttribute('data-status') || '';
+        
+        const matchesSearch = !searchTerm || 
+          customer.includes(searchTerm) || 
+          address.includes(searchTerm) || 
+          ae.includes(searchTerm);
+        const matchesStatus = !statusFilter || status === statusFilter;
+        
+        if (matchesSearch && matchesStatus) {
+          card.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          card.classList.add('hidden');
+        }
       });
-      table.innerHTML = tableTemplate(headers, tableRows);
+      
+      // Show/hide empty state based on visible cards
+      const isEmpty = visibleCount === 0;
+      document.getElementById('handoffEmpty').classList.toggle('hidden', !isEmpty);
+      document.getElementById('handoffPipeline').classList.toggle('hidden', isEmpty);
+    }
+    
+    function viewHandoffDetails(recordID) {
+      // Find the record in the stored data
+      const record = window.handoffQueueData.find(function(item) {
+        return (item.trackerEntryID || item.recordID || item.id) === recordID;
+      });
+      
+      if (!record) {
+        alert('Record not found: ' + recordID);
+        return;
+      }
+      
+      const soldDate = record.soldDate ? new Date(record.soldDate).toLocaleDateString() : 'Unknown';
+      const message = `Handoff Details
+═══════════════════
+
+Customer: ${record.customer || 'N/A'}
+Address: ${record.address || 'N/A'}
+AE: ${record.aeName || 'N/A'}
+Sold Date: ${soldDate}
+Packet Status: ${record.packetStatus || 'Not Created'}
+
+Record ID: ${recordID}`;
+      
+      alert(message);
     }
     
     function createStartPacketFromHandoff(recordID, customer, address) {
@@ -1997,9 +2311,34 @@
       if (enabled) {
         document.documentElement.classList.add('dark-mode');
         document.body.classList.add('dark-mode');
+        if (window.localStorage) {
+          window.localStorage.setItem('branch360Theme', 'dark');
+        }
       } else {
         document.documentElement.classList.remove('dark-mode');
         document.body.classList.remove('dark-mode');
+        if (window.localStorage) {
+          window.localStorage.setItem('branch360Theme', 'light');
+        }
+      }
+      
+      // Propagate theme to all iframes
+      try {
+        const iframes = document.querySelectorAll('iframe.persona-frame');
+        iframes.forEach(function(iframe) {
+          if (iframe.contentWindow && iframe.contentWindow.document) {
+            const iframeBody = iframe.contentWindow.document.body;
+            if (enabled) {
+              iframeBody.classList.add('dark-mode', 'bg-gray-900');
+              iframeBody.classList.remove('bg-gray-50', 'bg-gray-100');
+            } else {
+              iframeBody.classList.remove('dark-mode', 'bg-gray-900');
+              iframeBody.classList.add('bg-gray-50');
+            }
+          }
+        });
+      } catch(e) {
+        console.log('Could not propagate theme to iframes:', e);
       }
     }
 
@@ -2099,7 +2438,7 @@
       grid.innerHTML = presets.map(function(preset) {
         const selected = (window.pendingBrandSelection || '') === preset.key;
         return `<div class="border rounded-xl p-4 flex gap-4 items-center ${selected ? 'border-blue-500 shadow-lg' : 'border-gray-200'}">
-          <img src="${preset.logo}" alt="${preset.name} logo" class="w-16 h-16 object-contain bg-white rounded-lg p-2" />
+          <img src="${preset.logo}" alt="${preset.name} logo" class="w-16 h-16 object-contain surface-card rounded-lg p-2" />
           <div class="flex-1">
             <p class="font-bold text-gray-800">${preset.name}</p>
             <p class="text-xs text-gray-500">Primary: ${preset.colors.primary} • Accent: ${preset.colors.accent}</p>
@@ -2594,7 +2933,7 @@
   }
 
     function cardTemplate(label, value, sub) {
-      return `<div class="bg-white rounded-xl p-4 shadow"><p class="text-sm text-gray-500">${label}</p><p class="text-2xl font-bold">${value}</p>${sub ? `<span class="block text-xs text-gray-500 mt-1">${sub}</span>` : ''}</div>`;
+      return `<div class="surface-card rounded-xl p-4 shadow"><p class="text-sm text-gray-500">${label}</p><p class="text-2xl font-bold">${value}</p>${sub ? `<span class="block text-xs text-gray-500 mt-1">${sub}</span>` : ''}</div>`;
     }
 
     function tableTemplate(headers, rows) {
@@ -2638,85 +2977,245 @@
 
     function exportBranchReport() {
       const filters = getFilters();
+      const task = createTaskModal('Exporting Data', 'Preparing export…');
+      document.body.appendChild(task.overlay);
+
+      const btn = document.getElementById('btn-export-data');
+      if (btn) { btn.disabled = true; btn.classList.add('opacity-70'); }
+
       let activityToken = window.ActivityClient ? ActivityClient.start('BM_EXPORT_REPORT', filters.branchId, { role: 'Branch Manager' }) : null;
       callServerCustom('exportBranchReport', filters, function(result) {
         if (activityToken && window.ActivityClient) {
           ActivityClient.finish(activityToken, { success: result && result.success });
           activityToken = null;
         }
-        if (result && result.content) {
-          const blob = new Blob([result.content], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = result.fileName || 'branch-report.txt';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+
+        const fileName = (result && result.fileName) ? result.fileName : `branch360-export-${new Date().toISOString().slice(0,10)}.txt`;
+        const content = (result && result.content) ? String(result.content) : '';
+
+        if (content) {
+          const ok = safeDownloadTextFile(fileName, content, 'text/plain;charset=utf-8');
+          if (ok) {
+            task.done('Export ready. Download started.');
+          } else {
+            task.done('Export ready, but download was blocked.');
+            task.addHtml('<p class="text-sm text-gray-600">Your browser may be blocking downloads in this environment. Try again in production or use a different browser.</p>');
+          }
         } else {
-          alert('Branch report prepared.');
+          task.done('Export completed.');
+          task.addHtml('<p class="text-sm text-gray-600">No file content was returned by the backend.</p>');
         }
-      }, { success: true });
+
+        setTimeout(() => {
+          if (btn) { btn.disabled = false; btn.classList.remove('opacity-70'); }
+        }, 800);
+      }, { success: true, content: 'Export not available in this environment.' });
     }
 
     // Branch Manager Action Functions
     function generateDailyReport() {
-      if (!confirm('Generate daily cadence report for today?')) return;
+      const confirmModal = createModal('Generate Daily Report', `
+        <p class="text-sm text-gray-600 mb-4">This will generate today’s branch cadence report. It may take a moment.</p>
+        <div class="flex justify-end gap-3">
+          <button type="button" data-action="cancel" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300">Cancel</button>
+          <button type="button" data-action="run" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Generate</button>
+        </div>
+      `);
+      document.body.appendChild(confirmModal);
+
+      const cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
+      const runBtn = confirmModal.querySelector('[data-action="run"]');
+      if (cancelBtn) cancelBtn.addEventListener('click', () => confirmModal.remove());
+      if (runBtn) runBtn.addEventListener('click', () => {
+        confirmModal.remove();
+        startDailyReportGeneration();
+      });
+    }
+
+    function startDailyReportGeneration() {
+      const task = createTaskModal('Generating Daily Report', 'Starting report generation…');
+      document.body.appendChild(task.overlay);
+
+      const btn = document.getElementById('btn-generate-report');
+      if (btn) { btn.disabled = true; btn.classList.add('opacity-70'); }
+
       if (typeof google !== 'undefined' && google.script && google.script.run) {
         google.script.run
           .withSuccessHandler(function(result) {
-            if (result.success) {
-              alert('Daily report generated successfully! Summary ID: ' + result.summaryID);
+            if (result && result.success) {
+              task.done('Daily report generated.');
+              const summaryID = result.summaryID ? String(result.summaryID) : '';
+              if (summaryID) {
+                task.addHtml(`
+                  <div class="text-sm text-gray-600">
+                    <div><span class="font-semibold">Summary ID:</span> <code class="bg-gray-100 px-1 rounded">${escapeHtml(summaryID)}</code></div>
+                    <p class="text-xs text-gray-500 mt-1">If you don’t see it immediately, refresh in 30–60 seconds.</p>
+                  </div>
+                `);
+              }
               loadBranchKPIs();
             } else {
-              alert('Failed to generate report: ' + (result.message || 'Unknown error'));
+              task.done('Report generation failed.');
+              task.addHtml(`<p class="text-sm text-red-600">${escapeHtml((result && result.message) ? result.message : 'Unknown error')}</p>`);
             }
           })
           .withFailureHandler(function(error) {
-            alert('Error generating report: ' + error.message);
+            task.done('Report generation failed.');
+            task.addHtml(`<p class="text-sm text-red-600">${escapeHtml(error && error.message ? error.message : 'Unknown error')}</p>`);
           })
           .generateBranchDailyReport();
       } else {
-        alert('Daily report generation (local mode - connect to backend API)');
+        task.done('Not available in local/demo mode.');
+        task.addHtml('<p class="text-sm text-gray-600">Connect the Apps Script backend to generate reports.</p>');
       }
+
+      setTimeout(() => {
+        if (btn) { btn.disabled = false; btn.classList.remove('opacity-70'); }
+      }, 800);
     }
 
     function viewWeeklyTrends() {
+      const task = createTaskModal('Weekly Trends', 'Loading weekly trends…');
+      document.body.appendChild(task.overlay);
+
       callServer('getWeekTrends', function(data) {
         if (data && data.thisWeek !== undefined) {
+          task.done('Weekly trends loaded.');
           const change = parseFloat(data.change) || 0;
           const changeSymbol = change >= 0 ? '↑' : '↓';
-          const message = `Weekly Sales Trends
-═══════════════════
-
-This Week: $${(data.thisWeek || 0).toLocaleString()}
-Last Week: $${(data.lastWeek || 0).toLocaleString()}
-Change: ${changeSymbol} ${Math.abs(change)}%
-
-${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Review strategy.'}`;
-          alert(message);
+          task.addHtml(`
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+              <div class="bg-gray-50 rounded p-3"><div class="text-xs text-gray-500">This Week</div><div class="font-bold">$${(data.thisWeek || 0).toLocaleString()}</div></div>
+              <div class="bg-gray-50 rounded p-3"><div class="text-xs text-gray-500">Last Week</div><div class="font-bold">$${(data.lastWeek || 0).toLocaleString()}</div></div>
+              <div class="bg-gray-50 rounded p-3"><div class="text-xs text-gray-500">Change</div><div class="font-bold">${changeSymbol} ${Math.abs(change)}%</div></div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">${change >= 0 ? 'Sales are trending up.' : 'Sales are trending down. Review strategy.'}</p>
+          `);
         } else {
-          alert('Weekly trends data not available');
+          task.done('Weekly trends unavailable.');
+          task.addHtml('<p class="text-sm text-gray-600">No weekly trend data is configured yet for this environment.</p>');
         }
       }, { thisWeek: 0, lastWeek: 0, change: 0 });
     }
 
     function exportBranchData() {
-      if (!confirm('Export branch data to CSV?')) return;
-      exportBranchReport();
+      const confirmModal = createModal('Export Data', `
+        <p class="text-sm text-gray-600 mb-4">Export branch data as a CSV download.</p>
+        <div class="flex justify-end gap-3">
+          <button type="button" data-action="cancel" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300">Cancel</button>
+          <button type="button" data-action="run" class="px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700">Export CSV</button>
+        </div>
+      `);
+      document.body.appendChild(confirmModal);
+      const cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
+      const runBtn = confirmModal.querySelector('[data-action="run"]');
+      if (cancelBtn) cancelBtn.addEventListener('click', () => confirmModal.remove());
+      if (runBtn) runBtn.addEventListener('click', () => {
+        confirmModal.remove();
+        exportBranchReport();
+      });
     }
 
     function viewDetailedPipeline() {
+      const task = createTaskModal('Detailed Pipeline', 'Loading pipeline entries…');
+      document.body.appendChild(task.overlay);
+
       callServer('getDetailedBranchPipeline', function(data) {
-        if (data && data.entries) {
-          const entries = data.entries.slice(0, 10);
-          const message = entries.length > 0 
-            ? 'Pipeline Entries:\n\n' + entries.map(e => `${e.customerName}: $${e.value.toLocaleString()} (${e.stage})`).join('\n')
-            : 'No pipeline entries found';
-          alert(message);
+        if (data && Array.isArray(data.entries)) {
+          task.overlay.remove();
+          showDetailedPipelineModal(data);
         } else {
-          alert('Pipeline data not available');
+          task.done('Pipeline data unavailable.');
+          task.addHtml('<p class="text-sm text-gray-600">No detailed pipeline data is configured yet for this environment.</p>');
+        }
+      }, { entries: [] });
+    }
+
+    function showDetailedPipelineModal(data) {
+      const entries = Array.isArray(data && data.entries) ? data.entries : [];
+
+      const exportCsv = () => {
+        if (!entries.length) {
+          alert('No pipeline entries to export.');
+          return;
+        }
+
+        const header = ['Customer','Stage','Value','AE','Date'];
+        const csv = [
+          header.join(','),
+          ...entries.map(e => ([
+            String(e.customerName || '').replace(/"/g, '""'),
+            String(e.stage || '').replace(/"/g, '""'),
+            String(e.value || 0),
+            String(e.aeName || '').replace(/"/g, '""'),
+            String(e.date || '').replace(/"/g, '""')
+          ].map(v => `"${v}"`).join(',')))
+        ].join('\n');
+
+        const fileName = `branch360-pipeline-${new Date().toISOString().slice(0,10)}.csv`;
+        const ok = safeDownloadTextFile(fileName, csv, 'text/csv;charset=utf-8');
+        if (!ok) {
+          alert('Download failed. Your browser may be blocking downloads in this environment.');
+        }
+      };
+
+      const modal = createModal('Detailed Pipeline', `
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <p class="text-sm text-gray-600">Showing ${entries.length} entries.</p>
+          <button type="button" data-action="export" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">Export Pipeline CSV</button>
+        </div>
+        <div class="space-y-2">
+          ${entries.length ? entries.slice(0, 100).map(entry => `
+            <div class="border-l-4 border-blue-500 bg-gray-50 p-3 rounded">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-semibold text-gray-800">${escapeHtml(entry.customerName || 'Unknown')}</p>
+                  <p class="text-sm text-gray-600">Stage: ${escapeHtml(entry.stage || 'N/A')} • Value: $${Number(entry.value || 0).toLocaleString()}</p>
+                  <p class="text-xs text-gray-500">AE: ${escapeHtml(entry.aeName || 'Unknown')} • Date: ${escapeHtml(entry.date || '')}</p>
+                </div>
+              </div>
+            </div>
+          `).join('') : '<p class="text-gray-500 text-sm">No pipeline entries found for this branch.</p>'}
+          ${entries.length > 100 ? `<p class="text-xs text-gray-500 mt-2">Showing first 100 entries. Export CSV to see all.</p>` : ''}
+        </div>
+      `);
+
+      document.body.appendChild(modal);
+      const exportBtn = modal.querySelector('[data-action="export"]');
+      if (exportBtn) exportBtn.addEventListener('click', exportCsv);
+    }
+
+    function exportPipelineCsv() {
+      const task = createTaskModal('Pipeline Export', 'Preparing pipeline export…');
+      document.body.appendChild(task.overlay);
+
+      callServer('getDetailedBranchPipeline', function(data) {
+        const entries = (data && Array.isArray(data.entries)) ? data.entries : [];
+        if (!entries.length) {
+          task.done('No pipeline entries found.');
+          task.addHtml('<p class="text-sm text-gray-600">There is nothing to export yet.</p>');
+          return;
+        }
+
+        const header = ['Customer','Stage','Value','AE','Date'];
+        const csv = [
+          header.join(','),
+          ...entries.map(e => ([
+            String(e.customerName || '').replace(/"/g, '""'),
+            String(e.stage || '').replace(/"/g, '""'),
+            String(e.value || 0),
+            String(e.aeName || '').replace(/"/g, '""'),
+            String(e.date || '').replace(/"/g, '""')
+          ].map(v => `"${v}"`).join(',')))
+        ].join('\n');
+
+        const fileName = `branch360-pipeline-${new Date().toISOString().slice(0,10)}.csv`;
+        const ok = safeDownloadTextFile(fileName, csv, 'text/csv;charset=utf-8');
+        if (ok) {
+          task.done('Pipeline export ready. Download started.');
+        } else {
+          task.done('Pipeline export ready, but download was blocked.');
+          task.addHtml('<p class="text-sm text-gray-600">Your browser may be blocking downloads in this environment. Try again in production.</p>');
         }
       }, { entries: [] });
     }
@@ -2888,11 +3387,16 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
       const container = document.getElementById('branchSalesLeaderboard');
       if (!container) return;
       if (!team || team.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-sm">No sales team members found</p>';
+        container.innerHTML = `
+          <div class="text-sm text-gray-500">
+            <p class="font-semibold text-gray-600">No sales team members found for this branch.</p>
+            <p class="text-xs text-gray-500 mt-1">If this is unexpected, confirm users are assigned to this branch in <span class="font-semibold">Admin → Users</span>.</p>
+          </div>
+        `;
         return;
       }
       container.innerHTML = team.map((ae, index) => `
-        <div class="flex justify-between items-center p-3 ${index === 0 ? 'bg-yellow-50' : 'bg-gray-50'} rounded mb-2 cursor-pointer hover:shadow-md transition" data-ae-id="${ae.email || ae.userID || ''}" data-action="view-ae">
+        <div class="flex justify-between items-center p-3 ${index === 0 ? 'bg-yellow-900 bg-opacity-20' : 'bg-slate-700'} rounded mb-2 cursor-pointer hover:shadow-md transition" data-ae-id="${ae.email || ae.userID || ''}" data-action="view-ae">
           <div>
             <span class="font-semibold">${index + 1}. ${ae.name}</span>
             <p class="text-xs text-gray-600">TAP: ${ae.monthTAP} | Quotes: ${ae.monthQuotes}</p>
@@ -2916,7 +3420,12 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
       const container = document.getElementById('branchOpsTeam');
       if (!container) return;
       if (!team || team.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-sm">No operations team members found</p>';
+        container.innerHTML = `
+          <div class="text-sm text-gray-500">
+            <p class="font-semibold text-gray-600">No operations team members found for this branch.</p>
+            <p class="text-xs text-gray-500 mt-1">Add technicians/ops managers to the branch or verify branch IDs in the Users sheet.</p>
+          </div>
+        `;
         return;
       }
       container.innerHTML = team.map(tech => `
@@ -2946,7 +3455,7 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
       }
       
       container.innerHTML = `
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="surface-card rounded-lg shadow p-6">
           <h3 class="text-lg font-bold text-gray-800 mb-4">⚠️ Alerts (${alerts.length})</h3>
           ${alerts.map((alert, index) => `
             <div class="border-l-4 ${alert.severity === 'high' ? 'border-red-500 bg-red-50' : 'border-yellow-500 bg-yellow-50'} p-3 rounded mb-2 cursor-pointer hover:shadow-md transition" data-alert-index="${index}" data-action="view-alert">
@@ -2989,29 +3498,110 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
       });
     }
 
-    function createModal(title, content) {
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function safeDownloadTextFile(filename, content, mimeType) {
+      try {
+        const blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'download.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return true;
+      } catch (e) {
+        console.warn('Download failed', e);
+        return false;
+      }
+    }
+
+    function createModal(title, content, options = {}) {
       const overlay = document.createElement('div');
-      overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-      overlay.onclick = function(e) {
-        if (e.target === overlay) {
-          overlay.remove();
-        }
-      };
-      
+      overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('tabindex', '-1');
+
       const modal = document.createElement('div');
       modal.className = 'bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto';
       modal.onclick = function(e) { e.stopPropagation(); };
-      
+
+      const titleId = 'b360-modal-title-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      overlay.setAttribute('aria-labelledby', titleId);
+
       modal.innerHTML = `
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-bold text-gray-800">${title}</h3>
-          <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+          <h3 class="text-xl font-bold text-gray-800" id="${titleId}">${escapeHtml(title)}</h3>
+          <button type="button" data-modal-close class="text-gray-500 hover:text-gray-700 text-2xl" aria-label="Close modal">&times;</button>
         </div>
         ${content}
       `;
-      
+
       overlay.appendChild(modal);
+
+      const close = () => {
+        overlay.remove();
+        document.removeEventListener('keydown', escHandler);
+        if (options.onClose) options.onClose();
+      };
+
+      overlay.onclick = function(e) {
+        if (e.target === overlay && options.closeOnBackdrop !== false) close();
+      };
+
+      const closeBtn = overlay.querySelector('[data-modal-close]');
+      if (closeBtn) closeBtn.addEventListener('click', close);
+
+      const escHandler = (e) => {
+        if (e.key === 'Escape') close();
+      };
+      document.addEventListener('keydown', escHandler);
+
+      // Focus management
+      setTimeout(() => {
+        (closeBtn || overlay).focus();
+      }, 0);
+
       return overlay;
+    }
+
+    function createTaskModal(title, initialStatus) {
+      const modalId = 'b360-task-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const overlay = createModal(title, `
+        <div class="flex items-start gap-3">
+          <div class="b360-spinner" aria-hidden="true"></div>
+          <div class="flex-1">
+            <p id="${modalId}-status" class="text-sm text-gray-600">${escapeHtml(initialStatus || 'Working...')}</p>
+            <div id="${modalId}-details" class="mt-3 space-y-2"></div>
+          </div>
+        </div>
+      `, { closeOnBackdrop: false });
+
+      const statusEl = overlay.querySelector('#' + modalId + '-status');
+      const detailsEl = overlay.querySelector('#' + modalId + '-details');
+      const spinnerEl = overlay.querySelector('.b360-spinner');
+
+      const api = {
+        overlay,
+        setStatus: (text) => { if (statusEl) statusEl.textContent = text || ''; },
+        addHtml: (html) => { if (detailsEl) detailsEl.insertAdjacentHTML('beforeend', html); },
+        done: (finalText) => {
+          if (spinnerEl) spinnerEl.style.display = 'none';
+          if (finalText) api.setStatus(finalText);
+        }
+      };
+
+      return api;
     }
 
     // Set up branch manager button event listeners
@@ -3027,6 +3617,9 @@ ${change >= 0 ? '✓ Sales are trending up!' : '⚠ Sales are trending down. Rev
       
       const btnPipeline = document.getElementById('btn-detailed-pipeline');
       if (btnPipeline) btnPipeline.addEventListener('click', viewDetailedPipeline);
+
+      const btnPipelineExport = document.getElementById('btn-export-pipeline');
+      if (btnPipelineExport) btnPipelineExport.addEventListener('click', exportPipelineCsv);
       
       const btnMessage = document.getElementById('btn-team-message');
       if (btnMessage) btnMessage.addEventListener('click', sendTeamMessage);

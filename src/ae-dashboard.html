@@ -29,35 +29,175 @@
     .highlight-flash { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.6); transition: box-shadow 0.3s ease; }
     .chip-button { border: 1px solid #d1d5db; border-radius: 9999px; padding: 0.25rem 0.9rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
     .chip-button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    
+    /* Dark theme styles (default) */
+    body { background: #1e293b; color: #f1f5f9; }
+    nav { background: #334155; border-color: #475569; }
+    .bg-white { background: #334155 !important; }
+    .bg-gray-50 { background: #334155 !important; }
+    .bg-indigo-50 { background: rgba(67, 56, 202, 0.2) !important; }
+    .bg-blue-50 { background: rgba(37, 99, 235, 0.2) !important; }
+    .bg-yellow-50 { background: rgba(234, 179, 8, 0.2) !important; }
+    .bg-green-50 { background: rgba(34, 197, 94, 0.2) !important; }
+    .bg-red-50 { background: rgba(239, 68, 68, 0.2) !important; }
+    .bg-purple-50 { background: rgba(168, 85, 247, 0.2) !important; }
+    .border-blue-100 { border-color: rgba(37, 99, 235, 0.3) !important; }
+    .text-gray-800, .text-gray-900 { color: #f1f5f9 !important; }
+    .text-gray-600, .text-gray-700 { color: #cbd5e1 !important; }
+    .text-gray-500 { color: #94a3b8 !important; }
+    .text-gray-400 { color: #64748b !important; }
+    .text-indigo-700 { color: #c7d2fe !important; }
+    .text-indigo-900 { color: #e0e7ff !important; }
+    .text-indigo-600 { color: #a5b4fc !important; }
+    .border, .border-gray-200 { border-color: #475569 !important; }
+    .border-indigo-200 { border-color: #4338ca !important; }
+    input, select, textarea {
+      background: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important;
+    }
+    .shadow, .shadow-sm, .shadow-lg {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Dark mode styles for legacy compatibility */
+    body.dark-mode { background: #1e293b; color: #f1f5f9; }
+    body.dark-mode nav { background: #334155; border-color: #475569; }
+    body.dark-mode .bg-white { background: #334155 !important; }
+    body.dark-mode .text-gray-800, body.dark-mode .text-gray-900 { color: #f1f5f9 !important; }
+    body.dark-mode .text-gray-600, body.dark-mode .text-gray-700 { color: #cbd5e1 !important; }
+    body.dark-mode .text-gray-500 { color: #94a3b8 !important; }
+    body.dark-mode .text-gray-400 { color: #64748b !important; }
+    body.dark-mode .border, body.dark-mode .border-gray-200 { border-color: #475569 !important; }
+    body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+      background: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important;
+    }
+    body.dark-mode .shadow, body.dark-mode .shadow-sm, body.dark-mode .shadow-lg {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    :root {
+      --brand-primary: #2563eb;
+      --brand-accent: #60a5fa;
+      --brand-dark: #0f172a;
+    }
+    
+    /* Navigation sidebar styles matching unified dashboard */
+    .nav-sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 256px;
+      background: linear-gradient(180deg, var(--brand-dark) 0%, #1f2a3f 100%);
+      border-right: 1px solid #334155;
+      overflow-y: auto;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .nav-button {
+      color: rgba(255, 255, 255, 0.85);
+      background-color: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      width: 100%;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      margin: 0.25rem 0;
+    }
+    .nav-button:hover {
+      background-color: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .nav-button.active {
+      background-color: var(--brand-primary);
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+      border-color: transparent;
+    }
+    .main-with-sidebar {
+      margin-left: 256px;
+    }
   </style>
 </head>
-<body class="bg-gray-100">
+<body style="background: #1e293b;">
 
-<!-- Navigation -->
-<nav class="bg-white shadow-sm border-b">
-  <div class="max-w-7xl mx-auto px-4 py-3">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-xl font-bold text-gray-800">Branch360</h1>
-        <p class="text-sm text-gray-600">Account Executive Dashboard</p>
-      </div>
-      <div class="text-right">
-        <p class="text-sm font-semibold" id="userName">Loading...</p>
-        <p class="text-xs text-gray-500" id="userBranch"></p>
-      </div>
+<!-- Apply theme from parent or localStorage -->
+<script>
+  (function() {
+    try {
+      const savedTheme = window.localStorage ? window.localStorage.getItem('branch360Theme') : null;
+      if (savedTheme === 'dark' || document.documentElement.classList.contains('dark-mode')) {
+        document.body.classList.add('dark-mode', 'bg-gray-900');
+        document.body.classList.remove('bg-gray-50');
+      }
+    } catch(e) {
+      console.log('Theme init:', e);
+    }
+    
+    // Hide sidebar when loaded in iframe (unified dashboard already has sidebar)
+    if (window.self !== window.top) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .nav-sidebar { display: none !important; }
+        .main-with-sidebar { margin-left: 0 !important; }
+      `;
+      document.head.appendChild(style);
+    }
+  })();
+</script>
+
+<!-- Navigation Sidebar -->
+<aside class="nav-sidebar space-y-2">
+  <div class="flex items-center gap-3 pb-6 border-b border-white/10 mb-4">
+    <img src="https://ik.imagekit.io/9cyexhymf/Presto-X%20Logo-ARentokilCompany.png?updatedAt=1762540113819" alt="Branch360" class="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow" />
+    <div>
+      <div class="text-xl font-bold text-white">Branch360</div>
+      <p class="text-xs text-white/70">Unified Pilot Dashboard</p>
     </div>
   </div>
-</nav>
+  <button class="nav-button active" onclick="window.location.href='?view=ae'">Sales / AE</button>
+  <button class="nav-button" onclick="window.location.href='?view=ae'" style="padding-left: 1.5rem; font-size: 0.9rem; background: rgba(15, 23, 42, 0.25);">📋 Leads</button>
+  <button class="nav-button" onclick="window.location.href='?view=tech'">Technician</button>
+  <button class="nav-button" onclick="window.location.href='?view=ops'">Operations</button>
+  <button class="nav-button" onclick="window.location.href='?view=branch'">Branch Manager</button>
+  <button class="nav-button" onclick="window.location.href='?view=admin'" style="background: rgba(124, 58, 237, 0.3); border-color: rgba(124, 58, 237, 0.5);">🔐 Admin Dashboard</button>
+  <button class="nav-button" onclick="window.location.href='?view=market'">Market Director</button>
+  <button class="nav-button" onclick="window.location.href='?view=time'">Time Saved</button>
+  <button class="nav-button" onclick="window.location.href='?view=pilot'">90-Day Pilot Report</button>
+  <button class="nav-button" onclick="window.location.href='?view=handoff'">Sales → Ops Handoff</button>
+  <button class="nav-button" onclick="window.location.href='?view=settings'">Settings</button>
+</aside>
 
-<div class="max-w-7xl mx-auto px-4 py-6">
-  <div class="mb-6">
-    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between">
-      <div>
-        <p class="text-sm text-indigo-700 font-semibold">⏱ My Time Saved</p>
-        <p id="myTimeSavedValue" class="text-2xl font-bold text-indigo-900">--</p>
-        <p id="myTimeSavedDetails" class="text-xs text-indigo-600">Time saved metrics will appear here as you work your leads.</p>
+<!-- Main Content with Sidebar -->
+<div class="main-with-sidebar">
+  <!-- Navigation Header -->
+  <nav class="bg-white shadow-sm border-b">
+    <div class="w-full px-4 py-3">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-xl font-bold text-gray-800">Branch360</h1>
+          <p class="text-sm text-gray-600">Account Executive Dashboard</p>
+        </div>
+        <div class="text-right">
+          <p class="text-sm font-semibold" id="userName">Loading...</p>
+          <p class="text-xs text-gray-500" id="userBranch"></p>
+        </div>
       </div>
-      <div class="mt-3 md:mt-0 text-sm text-indigo-600">
+    </div>
+  </nav>
+
+  <div class="w-full px-6 py-6">
+  <div class="mb-6">
+    <div class="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between" style="background: rgba(67, 56, 202, 0.15); border-color: rgba(67, 56, 202, 0.3);">
+      <div>
+        <p class="text-sm font-semibold" style="color: #a5b4fc;">⏱ My Time Saved</p>
+        <p id="myTimeSavedValue" class="text-2xl font-bold" style="color: #e0e7ff;">--</p>
+        <p id="myTimeSavedDetails" class="text-xs" style="color: #a5b4fc;">Time saved metrics will appear here as you work your leads.</p>
+      </div>
+      <div class="mt-3 md:mt-0 text-sm" style="color: #a5b4fc;">
         Tracking your lead contact + conversion activity automatically.
       </div>
     </div>
@@ -129,7 +269,7 @@
           <button id="viewMapBtn" onclick="switchView('map')" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
             🗺️ Map
           </button>
-          <button id="viewListBtn" onclick="switchView('list')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">
+          <button id="viewListBtn" onclick="switchView('list')" class="px-4 py-2 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600">
             📋 List
           </button>
         </div>
@@ -161,7 +301,7 @@
         </div>
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Calendar Integration</label>
-          <button onclick="loadProspectsFromCalendar()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
+          <button onclick="loadProspectsFromCalendar()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">
             📅 Load from Calendar
           </button>
         </div>
@@ -169,15 +309,15 @@
       
       <!-- Map View -->
       <div id="mapView" class="hidden">
-        <div id="prospectMap" style="height: 600px; border-radius: 8px; overflow: hidden;" class="border border-gray-200"></div>
+        <div id="prospectMap" style="height: 600px; border-radius: 8px; overflow: hidden;" class="border border-gray-700"></div>
         <div class="mt-4 flex items-center justify-between">
           <div class="text-sm text-gray-600">
             <span id="mapProspectCount">0</span> prospects shown
           </div>
           <div class="flex gap-2">
-            <button onclick="zoomMapIn()" class="px-3 py-1 bg-gray-200 rounded text-sm">Zoom In</button>
-            <button onclick="zoomMapOut()" class="px-3 py-1 bg-gray-200 rounded text-sm">Zoom Out</button>
-            <button onclick="resetMapView()" class="px-3 py-1 bg-gray-200 rounded text-sm">Reset</button>
+            <button onclick="zoomMapIn()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm">Zoom In</button>
+            <button onclick="zoomMapOut()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm">Zoom Out</button>
+            <button onclick="resetMapView()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm">Reset</button>
           </div>
         </div>
       </div>
@@ -344,10 +484,25 @@
             </button>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto max-h-96 overflow-y-auto">
           <table class="min-w-full text-sm" id="quoteTrackerTable"></table>
         </div>
         <p id="quoteTrackerEmpty" class="text-center text-gray-500 text-sm mt-3">Import a Salesforce quote to see it here.</p>
+      </div>
+      
+      <!-- Sold Quotes Tracker -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-lg font-bold text-gray-800">✅ Sold Quotes</h3>
+            <p class="text-sm text-gray-500">Quotes marked as sold - start packets generated.</p>
+          </div>
+          <span id="soldQuotesCount" class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold">0 sold</span>
+        </div>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto">
+          <table class="min-w-full text-sm" id="soldQuotesTable"></table>
+        </div>
+        <p id="soldQuotesEmpty" class="text-center text-gray-500 text-sm mt-3">No sold quotes yet.</p>
       </div>
       
       <!-- Upcoming Tasks -->
@@ -447,7 +602,7 @@
         <p class="text-xs uppercase tracking-wide text-gray-500">Unified Entry</p>
         <h3 class="text-xl font-semibold text-gray-900">Create New Start Packet</h3>
       </div>
-      <button onclick="closeUnifiedSaleForm()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeUnifiedSaleForm()" aria-label="Close sale form" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <form id="unifiedSaleForm" class="px-6 py-4 modal-scroll space-y-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -675,7 +830,7 @@
         <p class="text-xs uppercase tracking-wide text-gray-500">Salesforce Quote Import</p>
         <h3 class="text-xl font-semibold text-gray-900">Upload Quote PDF</h3>
       </div>
-      <button onclick="closeSalesforceImportModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeSalesforceImportModal()" aria-label="Close Salesforce import modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <p class="text-sm text-gray-600">
@@ -708,7 +863,7 @@
         <p class="text-xs uppercase tracking-wide text-gray-500">Pipeline Drilldown</p>
         <h3 class="text-xl font-semibold text-gray-900">Sales & Lead Pipeline</h3>
       </div>
-      <button onclick="closePipelineDetailModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closePipelineDetailModal()" aria-label="Close pipeline detail modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-5">
       <div id="pipelineSummaryList" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
@@ -735,7 +890,7 @@
         <p class="text-xs uppercase tracking-wide text-gray-500">MTD Metrics</p>
         <h3 class="text-xl font-semibold text-gray-900">Month-to-Date Details</h3>
       </div>
-      <button onclick="closeMonthDetailModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeMonthDetailModal()" aria-label="Close month detail modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <div class="grid grid-cols-2 gap-4" id="monthDetailMetrics"></div>
@@ -758,7 +913,7 @@
         <p class="text-xs uppercase tracking-wide text-gray-500">Follow-Up Queue</p>
         <h3 class="text-xl font-semibold text-gray-900">Manage Tasks</h3>
       </div>
-      <button onclick="closeFollowUpModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeFollowUpModal()" aria-label="Close follow-up modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -799,7 +954,7 @@
         <p class="text-xs uppercase tracking-wide text-gray-500">Salesforce Quotes</p>
         <h3 class="text-xl font-semibold text-gray-900">Tracker & Actions</h3>
       </div>
-      <button onclick="closeQuoteTrackerModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button onclick="closeQuoteTrackerModal()" aria-label="Close quote tracker modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
     </div>
     <div class="px-6 py-4 space-y-4">
       <div class="overflow-x-auto" id="quoteTrackerModalBody">
@@ -1018,14 +1173,178 @@
       container.innerHTML = '<p class="text-gray-500 text-sm">No new leads</p>';
       return;
     }
-    container.innerHTML = leads.slice(0, 3).map(function(lead) {
+    container.innerHTML = leads.slice(0, 3).map(function(lead, index) {
+      const isTechLead = lead.source === 'Technician';
+      const borderColor = isTechLead ? 'border-purple-500' : 'border-blue-500';
+      const bgColor = isTechLead ? 'bg-purple-50' : 'bg-blue-50';
+      const hoverColor = isTechLead ? 'hover:bg-purple-100' : 'hover:bg-blue-100';
+      
       return `
-        <div class="border-l-4 border-blue-500 bg-blue-50 p-3 rounded">
-          <p class="font-semibold text-gray-800">${lead.customer_name}</p>
+        <div class="border-l-4 ${borderColor} ${bgColor} p-3 rounded cursor-pointer ${hoverColor} transition-colors" onclick="showLeadDetail(${index})">
+          <div class="flex items-start justify-between mb-1">
+            <p class="font-semibold text-gray-800">${lead.customer_name}</p>
+            ${isTechLead ? '<span class="text-xs bg-purple-600 text-white px-2 py-0.5 rounded">👷 Tech</span>' : ''}
+          </div>
           <p class="text-sm text-gray-600">${lead.service_address}</p>
-          <a href="tel:${lead.phone || ''}" class="text-xs text-blue-600 hover:underline">${lead.phone || ''}</a>
+          ${isTechLead && lead.special_notes ? `<p class="text-xs text-gray-600 mt-1 italic">"${lead.special_notes.substring(0, 60)}..."</p>` : ''}
+          <div class="flex items-center justify-between mt-2">
+            <a href="tel:${lead.phone || ''}" class="text-xs text-blue-600 hover:underline" onclick="event.stopPropagation()">${lead.phone || ''}</a>
+            <button type="button" onclick="event.stopPropagation(); startPacketFromNewLead('${lead.recordId || ''}')" class="text-xs font-semibold text-blue-600 hover:text-blue-800">
+              ${isTechLead ? 'Qualify' : 'Start Packet'}
+            </button>
+          </div>
         </div>`;
     }).join('');
+  }
+  
+  function showLeadDetail(leadIndex) {
+    const leads = (dashboardData && dashboardData.newLeads) || [];
+    const lead = leads[leadIndex];
+    if (!lead) return;
+    
+    const isTechLead = lead.source === 'Technician';
+    
+    const modalHtml = `
+      <div id="leadDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="closeLeadDetailModal()">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+          <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <h3 class="text-xl font-bold text-gray-800">Lead Details</h3>
+              ${isTechLead ? '<span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-semibold">👷 Tech Lead</span>' : '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-semibold">💼 Sales Lead</span>'}
+            </div>
+            <button type="button" onclick="closeLeadDetailModal()" aria-label="Close lead detail modal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+          </div>
+          
+          <div class="p-6">
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm font-semibold text-gray-600">Customer Name</label>
+                <p class="text-lg font-bold text-gray-800">${lead.customer_name || 'N/A'}</p>
+              </div>
+              
+              ${isTechLead && lead.pocName ? `
+              <div>
+                <label class="text-sm font-semibold text-gray-600">Point of Contact</label>
+                <p class="text-gray-800">${lead.pocName}</p>
+              </div>
+              ` : ''}
+              
+              <div>
+                <label class="text-sm font-semibold text-gray-600">Service Address</label>
+                <p class="text-gray-800">${lead.service_address || 'N/A'}</p>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-sm font-semibold text-gray-600">Phone</label>
+                  <p class="text-gray-800"><a href="tel:${lead.phone || ''}" class="text-blue-600 hover:underline">${lead.phone || 'N/A'}</a></p>
+                </div>
+                ${isTechLead && lead.email ? `
+                <div>
+                  <label class="text-sm font-semibold text-gray-600">Email</label>
+                  <p class="text-gray-800"><a href="mailto:${lead.email}" class="text-blue-600 hover:underline">${lead.email}</a></p>
+                </div>
+                ` : ''}
+              </div>
+              
+              <div>
+                <label class="text-sm font-semibold text-gray-600">Service Type Needed</label>
+                <p class="text-gray-800">${lead.service_name || 'N/A'}</p>
+              </div>
+              
+              ${!isTechLead && lead.covered_pests ? `
+              <div>
+                <label class="text-sm font-semibold text-gray-600">Covered Pests</label>
+                <p class="text-gray-800">${lead.covered_pests}</p>
+              </div>
+              ` : ''}
+              
+              ${!isTechLead && (lead.initial_price || lead.maintenance_price) ? `
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-sm font-semibold text-gray-600">Initial Price</label>
+                  <p class="text-lg font-bold text-green-600">$${(lead.initial_price || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-semibold text-gray-600">Monthly Price</label>
+                  <p class="text-lg font-bold text-green-600">$${(lead.maintenance_price || 0).toLocaleString()}</p>
+                </div>
+              </div>
+              ` : ''}
+              
+              ${lead.special_notes ? `
+              <div>
+                <label class="text-sm font-semibold text-gray-600">${isTechLead ? 'Customer Issues & Notes' : 'Special Notes'}</label>
+                <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mt-1">
+                  <p class="text-gray-800">${lead.special_notes}</p>
+                </div>
+              </div>
+              ` : ''}
+              
+              ${isTechLead && lead.submittedBy ? `
+              <div>
+                <label class="text-sm font-semibold text-gray-600">Submitted By</label>
+                <p class="text-gray-800">${lead.submittedBy} (Technician)</p>
+              </div>
+              ` : ''}
+            </div>
+            
+            <div class="mt-6 flex gap-3">
+              <button type="button" onclick="startPacketFromNewLead('${lead.recordId || ''}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg">
+                ${isTechLead ? 'Qualify & Start Packet' : 'Start Packet'}
+              </button>
+              <button type="button" onclick="closeLeadDetailModal()" class="flex-1 border border-gray-300 text-gray-700 font-semibold px-6 py-3 rounded-lg hover:bg-gray-50">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const existingModal = document.getElementById('leadDetailModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+  
+  function closeLeadDetailModal() {
+    const modal = document.getElementById('leadDetailModal');
+    if (modal) modal.remove();
+  }
+  
+  function startPacketFromNewLead(recordId) {
+    closeLeadDetailModal();
+    if (!recordId) {
+      openUnifiedSaleForm();
+      return;
+    }
+    
+    const allLeads = (dashboardData && dashboardData.newLeads) || [];
+    const lead = allLeads.find(function(l) { return l.recordId === recordId; });
+    
+    if (!lead) {
+      openUnifiedSaleForm();
+      return;
+    }
+    
+    const draft = fillDraftDefaults({
+      accountName: lead.customer_name || '',
+      serviceAddressLine1: lead.service_address || '',
+      branchId: (dashboardData && dashboardData.user ? (dashboardData.user.branchID || dashboardData.user.BranchID) : 'HOUSTON'),
+      servicesInitialTotal: lead.initial_price || 0,
+      servicesMonthlyTotal: lead.maintenance_price || 0,
+      combinedInitialTotal: lead.initial_price || 0,
+      combinedMonthlyTotal: lead.maintenance_price || 0,
+      services: [{
+        serviceName: lead.service_name || 'Custom Program',
+        category: 'New',
+        descriptionText: lead.special_notes || 'New lead from dashboard'
+      }]
+    });
+    
+    applyStartPacketDraft(draft);
+    openUnifiedSaleForm();
   }
   
   function renderTasks(tasks) {
@@ -1212,17 +1531,24 @@
     const empty = document.getElementById('quoteTrackerEmpty');
     const badge = document.getElementById('quoteTrackerCount');
     if (!table || !empty || !badge) return;
-    if (!quoteTrackerEntries.length) {
+    
+    // Filter out sold items - they go to the sold tracker
+    const activeEntries = quoteTrackerEntries.filter(function(entry) {
+      return entry.status !== 'Sold';
+    });
+    
+    if (!activeEntries.length) {
       table.innerHTML = '';
       empty.classList.remove('hidden');
       badge.textContent = '0 tracked';
       renderQuoteTrackerModal();
+      renderSoldQuotes();
       return;
     }
     empty.classList.add('hidden');
-    badge.textContent = quoteTrackerEntries.length + ' tracked';
+    badge.textContent = activeEntries.length + ' tracked';
     const headers = ['Account', 'Status', 'Uploaded', 'Value', 'Actions'];
-    const rows = quoteTrackerEntries.slice(0, 6).map(function(entry) {
+    const rows = activeEntries.map(function(entry) {
       return `
         <tr class="border-t">
           <td class="px-3 py-2">
@@ -1242,6 +1568,44 @@
       return `<th class="text-left text-xs uppercase tracking-wide text-gray-500 px-3 py-2">${h}</th>`;
     }).join('')}</tr></thead><tbody>${rows}</tbody>`;
     renderQuoteTrackerModal();
+    renderSoldQuotes();
+  }
+
+  function renderSoldQuotes() {
+    const table = document.getElementById('soldQuotesTable');
+    const empty = document.getElementById('soldQuotesEmpty');
+    const badge = document.getElementById('soldQuotesCount');
+    if (!table || !empty || !badge) return;
+    
+    // Filter sold items
+    const soldEntries = quoteTrackerEntries.filter(function(entry) {
+      return entry.status === 'Sold';
+    });
+    
+    if (!soldEntries.length) {
+      table.innerHTML = '';
+      empty.classList.remove('hidden');
+      badge.textContent = '0 sold';
+      return;
+    }
+    empty.classList.add('hidden');
+    badge.textContent = soldEntries.length + ' sold';
+    const headers = ['Account', 'Status', 'Sold Date', 'Value'];
+    const rows = soldEntries.map(function(entry) {
+      return `
+        <tr class="border-t">
+          <td class="px-3 py-2">
+            <p class="font-semibold text-gray-800">${entry.accountName}</p>
+            <p class="text-xs text-gray-500">${entry.serviceAddress || ''}</p>
+          </td>
+          <td class="px-3 py-2 text-sm">${humanizeQuoteStatus(entry)}</td>
+          <td class="px-3 py-2 text-sm text-gray-500">${formatRelativeTime(entry.soldAt || entry.uploadedAt)}</td>
+          <td class="px-3 py-2 text-sm font-semibold">${formatCurrencyShort(entry.initial || entry.monthly || 0)}</td>
+        </tr>`;
+    }).join('');
+    table.innerHTML = `<thead><tr>${headers.map(function(h) {
+      return `<th class="text-left text-xs uppercase tracking-wide text-gray-500 px-3 py-2">${h}</th>`;
+    }).join('')}</tr></thead><tbody>${rows}</tbody>`;
   }
 
   function openQuoteTrackerModal() {
@@ -1481,14 +1845,15 @@
   }
 
   function markQuoteTrackerSold(trackerId, saleRecordID) {
+    // If no tracker ID is provided, this sale wasn't initiated from quote tracker, so skip
     if (!trackerId && !saleRecordID) return;
     const entry = quoteTrackerEntries.find(function(item) {
       if (trackerId && item.id === trackerId) return true;
       if (saleRecordID && item.saleRecordID === saleRecordID) return true;
       return false;
     });
+    // If no entry found, this sale wasn't from quote tracker, so just skip silently
     if (!entry) {
-      alert('Quote entry not found.');
       return;
     }
     if (entry.status === 'Sold') {
@@ -3567,6 +3932,12 @@
       logBookCheckbox.checked = true;
     }
     
+    // PNOL Required default from parser
+    const pnolCheckbox = document.getElementById('unifiedPNOL');
+    if (pnolCheckbox && (draft.pnolRequired === true || draft.pnolRequired === 'Yes')) {
+      pnolCheckbox.checked = true;
+    }
+    
     // Equipment counts
     const mrtCountInput = document.getElementById('unifiedMRTCount');
     if (mrtCountInput) {
@@ -4094,15 +4465,60 @@
       });
     }
     const pipeline = buildDemoPipeline(state.unifiedSales);
-    const newLeadRows = state.unifiedSales.filter(function(sale) {
+    const now = new Date();
+    
+    // Combine sales-based leads and technician-submitted leads
+    const salesLeads = state.unifiedSales.filter(function(sale) {
       return (sale.Status || '').toLowerCase() === 'new sale';
     }).slice(0, 5).map(function(sale) {
       return {
+        recordId: sale.RecordID,
         customer_name: sale.AccountName,
         service_address: sale.ServiceAddress,
-        phone: sale.POCPhone
+        phone: sale.POCPhone,
+        service_name: sale.ServiceName,
+        covered_pests: sale.CoveredPests,
+        initial_price: sale.InitialPrice,
+        maintenance_price: sale.MaintenancePrice,
+        special_notes: sale.SpecialNotes,
+        source: 'Sales'
       };
     });
+    
+    // Add technician-submitted leads (no pricing yet)
+    const techLeads = [
+      {
+        recordId: 'LEAD-TECH-001',
+        customer_name: 'Bayou Coffee',
+        pocName: 'Sarah Johnson',
+        phone: '(713) 555-9001',
+        email: 'sarah@bayoucoffee.com',
+        service_address: '1201 Caroline St, Houston, TX 77002',
+        zipCode: '77002',
+        service_name: 'GPC Interior/Exterior',
+        leadType: 'Commercial',
+        special_notes: 'Customer seeing roaches in kitchen area near espresso machine. Also noticed some mice droppings in back storage room. Looking for comprehensive pest control solution.',
+        source: 'Technician',
+        submittedBy: 'Jordan Ellis'
+      },
+      {
+        recordId: 'LEAD-TECH-003',
+        customer_name: 'Downtown Auto Body',
+        pocName: 'Carlos Rodriguez',
+        phone: '(713) 555-9003',
+        email: 'carlos@dtautobody.com',
+        service_address: '2100 Milam St, Houston, TX 77002',
+        zipCode: '77002',
+        service_name: 'Rodent Control',
+        leadType: 'Commercial',
+        special_notes: 'Shop manager concerned about rats chewing through wiring in customer vehicles. Seeing droppings in garage bay area. Urgent - already had 2 customer complaints.',
+        source: 'Technician',
+        submittedBy: 'Jordan Ellis'
+      }
+    ];
+    
+    const newLeadRows = techLeads.concat(salesLeads);
+    
     return {
       user: state.user,
       todayMetrics: state.todayMetrics,
@@ -4199,6 +4615,7 @@
           ServiceName: 'GPC Interior/Exterior',
           CoveredPests: 'Rodents, Roaches',
           SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0101',
           Status: 'Proposal',
           InitialPrice: 3200,
           MaintenancePrice: 950,
@@ -4217,6 +4634,7 @@
           ServiceName: 'Rodent & Fly Program',
           CoveredPests: 'Rodents, Flies',
           SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0202',
           Status: 'Negotiation',
           InitialPrice: 5800,
           MaintenancePrice: 1200,
@@ -4235,6 +4653,7 @@
           ServiceName: 'Mosquito & GPC Combo',
           CoveredPests: 'Mosquito, Roach',
           SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0303',
           Status: 'Sold',
           InitialPrice: 2500,
           MaintenancePrice: 600,
@@ -4253,6 +4672,7 @@
           ServiceName: 'GPC & Rodent Bundle',
           CoveredPests: 'Rodents, Common Roaches',
           SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0404',
           Status: 'New Sale',
           InitialPrice: 4100,
           MaintenancePrice: 1600,
@@ -4260,6 +4680,158 @@
           ServiceMonths: 'JAN,MAR,MAY,JUL,SEP,NOV',
           serviceMonths: ['JAN','MAR','MAY','JUL','SEP','NOV'],
           SpecialNotes: 'High security building - badge required',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1005',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 0.5).toISOString(),
+          AccountName: 'Memorial Park Fitness',
+          ServiceAddress: '6100 Memorial Dr, Houston, TX',
+          ServiceName: 'Rodent Control & Exclusion',
+          CoveredPests: 'Rodents, Mice',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0505',
+          Status: 'New Sale',
+          InitialPrice: 3800,
+          MaintenancePrice: 1100,
+          Frequency: 12,
+          ServiceMonths: 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
+          serviceMonths: serviceMonthValues,
+          SpecialNotes: 'Multiple entry points - full exclusion needed',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1006',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 3).toISOString(),
+          AccountName: 'Heights Food Hall',
+          ServiceAddress: '123 Heights Blvd, Houston, TX',
+          ServiceName: 'Fly & Rodent Control',
+          CoveredPests: 'Flies, Rodents',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0606',
+          Status: 'Proposal',
+          InitialPrice: 2800,
+          MaintenancePrice: 850,
+          Frequency: 12,
+          ServiceMonths: 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
+          serviceMonths: serviceMonthValues,
+          SpecialNotes: 'Multiple food vendors - need comprehensive coverage',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1007',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 4).toISOString(),
+          AccountName: 'River Oaks Apartments',
+          ServiceAddress: '2200 Westheimer Rd, Houston, TX',
+          ServiceName: 'Rodent Exclusion',
+          CoveredPests: 'Rodents',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0707',
+          Status: 'Negotiation',
+          InitialPrice: 4500,
+          MaintenancePrice: 1300,
+          Frequency: 12,
+          ServiceMonths: 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
+          serviceMonths: serviceMonthValues,
+          SpecialNotes: '200-unit complex - ongoing maintenance needed',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1008',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 6).toISOString(),
+          AccountName: 'Downtown Restaurant Supply',
+          ServiceAddress: '500 Travis St, Houston, TX',
+          ServiceName: 'Full GPC Program',
+          CoveredPests: 'Roaches, Rodents, Flies',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0808',
+          Status: 'Sold',
+          InitialPrice: 3300,
+          MaintenancePrice: 900,
+          Frequency: 12,
+          ServiceMonths: 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
+          serviceMonths: serviceMonthValues,
+          SpecialNotes: 'Warehouse + office space coverage',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1009',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 0.3).toISOString(),
+          AccountName: 'Rice Village Shopping Center',
+          ServiceAddress: '2519 University Blvd, Houston, TX',
+          ServiceName: 'Commercial GPC Program',
+          CoveredPests: 'Roaches, Ants, Spiders',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0606',
+          Status: 'New Sale',
+          InitialPrice: 5200,
+          MaintenancePrice: 1500,
+          Frequency: 12,
+          ServiceMonths: 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
+          serviceMonths: serviceMonthValues,
+          SpecialNotes: 'Multi-tenant location - coordinate with property manager',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1007',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 0.2).toISOString(),
+          AccountName: 'Houston Food Bank',
+          ServiceAddress: '535 Portwall St, Houston, TX',
+          ServiceName: 'Food Safety Pest Control',
+          CoveredPests: 'Rodents, Roaches, Stored Product Pests',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0707',
+          Status: 'New Sale',
+          InitialPrice: 6500,
+          MaintenancePrice: 1800,
+          Frequency: 12,
+          ServiceMonths: 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
+          serviceMonths: serviceMonthValues,
+          SpecialNotes: 'HACCP compliance required - detailed documentation',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1008',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 0.1).toISOString(),
+          AccountName: 'Downtown Corporate Plaza',
+          ServiceAddress: '1200 Smith St, Houston, TX',
+          ServiceName: 'Executive Office Pest Control',
+          CoveredPests: 'Ants, Spiders, Occasional Invaders',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0808',
+          Status: 'New Sale',
+          InitialPrice: 2800,
+          MaintenancePrice: 850,
+          Frequency: 12,
+          ServiceMonths: 'FEB,APR,JUN,AUG,OCT,DEC',
+          serviceMonths: ['FEB','APR','JUN','AUG','OCT','DEC'],
+          SpecialNotes: 'After-hours service preferred - minimal disruption',
+          sraHazards: []
+        },
+        {
+          RecordID: 'SALE-1009',
+          BranchID: 'HOUSTON',
+          SoldDate: new Date(now - 86400000 * 0.05).toISOString(),
+          AccountName: 'Heights Brewery & Taproom',
+          ServiceAddress: '1617 W 18th St, Houston, TX',
+          ServiceName: 'Bar & Restaurant Pest Program',
+          CoveredPests: 'Fruit Flies, Roaches, Rodents',
+          SalesRepIDs: 'AE-HTX-001',
+          POCPhone: '(713) 555-0909',
+          Status: 'New Sale',
+          InitialPrice: 3400,
+          MaintenancePrice: 1050,
+          Frequency: 12,
+          ServiceMonths: 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
+          serviceMonths: serviceMonthValues,
+          SpecialNotes: 'Drain fly treatment and bar area focus',
           sraHazards: []
         }
       ],
@@ -4632,7 +5204,7 @@
       mapboxgl.accessToken = token;
       map = new mapboxgl.Map({
         container: 'prospectMap',
-        style: 'mapbox://styles/mapbox/streets-v11',
+        style: 'mapbox://styles/mapbox/dark-v11',
         center: [-95.3698, 29.7604], // Houston default
         zoom: 11
       });
@@ -4656,7 +5228,7 @@
     if (!mapContainer) return;
     
     mapContainer.innerHTML = `
-      <div class="flex flex-col items-center justify-center h-full bg-gray-100 text-gray-600 p-8">
+      <div class="flex flex-col items-center justify-center h-full bg-gray-800 text-gray-300 p-8">
         <div class="text-4xl mb-4">🗺️</div>
         <p class="text-center font-semibold mb-2">Map View Unavailable</p>
         <p class="text-center text-sm mb-4">${message || 'Mapbox token configuration required.'}</p>
@@ -4901,7 +5473,7 @@
               <p class="text-xs uppercase tracking-wide text-gray-500">Prospect Details</p>
               <h3 class="text-xl font-semibold text-gray-900">${prospect.customer || 'Unknown'}</h3>
             </div>
-            <button onclick="closeProspectDetailModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            <button onclick="closeProspectDetailModal()" aria-label="Close prospect detail modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
           </div>
           <div class="px-6 py-4 space-y-4">
             <div>
@@ -4996,6 +5568,9 @@
     initTerritoryView();
   }
 </script>
+
+</div>
+<!-- End main-with-sidebar -->
 
 </body>
 </html>
