@@ -9,7 +9,6 @@ const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
 const SRC_DIR = path.join(__dirname, '..', 'src');
-const INDEX_TEMPLATE = createIndexTemplate();
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
@@ -64,17 +63,34 @@ function createIndexTemplate() {
       <style>
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 2rem; }
         h1 { margin-bottom: 1rem; }
+        h2 { margin-top: 1.75rem; }
         ul { list-style: none; padding: 0; }
         li { margin: 0.25rem 0; }
         a { color: #2563eb; text-decoration: none; font-weight: 600; }
         a:hover { text-decoration: underline; }
+        code { background: #f3f4f6; padding: 0.15rem 0.35rem; border-radius: 6px; }
+        .note { color: #374151; }
       </style>
     </head>
     <body>
       <h1>Branch360 Local Preview</h1>
+      <p class="note">This page is your hub to view everything browser-renderable in this repo.</p>
+
+      <h2>Apps Script / Web dashboards (from <code>/src</code>)</h2>
       <p>Select a dashboard to preview:</p>
       <ul>${listItems}</ul>
       <p>Default: <a href="/dashboard.html">Unified Dashboard</a></p>
+
+      <h2>Territory Manager web app (separate server)</h2>
+      <ul>
+        <li><a href="http://localhost:3001/">Territory Manager: Home</a> <span class="note">(runs on port 3001)</span></li>
+        <li><a href="http://localhost:3001/dashboard">Territory Manager: Dashboard</a></li>
+        <li><a href="http://localhost:3001/territories">Territory Manager: Territories</a></li>
+      </ul>
+      <p class="note">If those links 404, start it with: <code>cd branch360-territory-manager && npm install && npm run dev</code></p>
+
+      <h2>Not browser-previewable here</h2>
+      <p class="note"><code>.gs</code> server code runs inside Google Apps Script; iOS/Android folders are native apps.</p>
     </body>
   </html>`;
 }
@@ -96,6 +112,7 @@ function resolveFilePath(urlPath) {
 }
 
 function sendIndex(res) {
+  const INDEX_TEMPLATE = createIndexTemplate();
   res.writeHead(200, { 'Content-Type': 'text/html; charset=UTF-8' });
   res.end(INDEX_TEMPLATE);
 }
